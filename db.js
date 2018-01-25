@@ -45,7 +45,8 @@ class GameDb {
     }
 
     async getUnits(ids) {
-
+        let units = await Unit.where('id').in(ids).find()
+        return items
     }
 
     async getItem(id) {
@@ -54,7 +55,8 @@ class GameDb {
     }
 
     async getItems(ids) {
-
+        let items = await Item.where('id').in(ids).find()
+        return items
     }
 }
 
