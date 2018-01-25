@@ -1,15 +1,15 @@
-const RNG = require('./rng')
+const RNG = require('../rng')
+const { StatUtil } = require('./stats')
 
-const { Stats } = require('./stats')
-const { StatTable } = require('./stattable')
+const { StatTable } = require('../stattable')
 
-const { Tier, TierStatCount } = require('./tier')
+const { Tier, TierStatCount } = require('../tier')
 
-const { ItemMod, ItemModTable } = require('./itemmod')
-const { ItemClass } = require('./itemclass')
-const { ItemTable } = require('./itemtable')
+const { ItemMod, ItemModTable } = require('../itemmod')
+const { ItemClass } = require('../itemclass')
+const { ItemTable } = require('../itemtable')
 
-class Item {
+class ItemUtil {
     static createWeaponDescriptor() {
         let weapon = {
             weapon_class: 0,
@@ -52,21 +52,21 @@ class Item {
     }
 
     static createDescriptor(itemClass) {
-        let item = Item.createBaseDescriptor()
+        let item = ItemUtil.createBaseDescriptor()
 
         switch(itemClass) {
             case ItemClass.ARMOR: {
-                item.descriptor = Item.createArmorDescriptor()
+                item.descriptor = ItemUtil.createArmorDescriptor()
                 break
             }
 
             case ItemClass.WEAPON: {
-                item.descriptor = Item.createWeaponDescriptor()
+                item.descriptor = ItemUtil.createWeaponDescriptor()
                 break
             }
 
             case ItemClass.JEWEL: {
-                item.descriptor = Item.createJewelDescriptor()
+                item.descriptor = ItemUtil.createJewelDescriptor()
                 break
             }
 
@@ -78,7 +78,7 @@ class Item {
     }
 
     static generateItem(itemClass, tier, rarity) {
-        let item = Item.createDescriptor(itemClass)
+        let item = ItemUtil.createDescriptor(itemClass)
         item.tier = tier
         item.rarity = rarity
 
@@ -94,7 +94,7 @@ class Item {
                 Object.values(mod.stat_descriptor).map((desc) => {
                     //console.log(`stat desc ${JSON.stringify(desc)}`)
                     let value = RNG.getRandomInt(desc.min_value, desc.max_value)
-                    let stat = Stats.createDescriptor(desc.id, value)
+                    let stat = StatUtil.createDescriptor(desc.id, value)
                     //console.log(`${JSON.stringify(stat)}`)
                     item.stats.push(stat)
                 })
@@ -109,4 +109,4 @@ class Item {
     }
 }
 
-module.exports = { Item }
+module.exports = { ItemUtil }

@@ -3,7 +3,7 @@ Flag.ARMOR =            0x01
 Flag.WEAPON =           0x01 << 1
 Flag.JEWEL =            0x01 << 2
 
-createEntry = (id, name, flag) => {
+function createEntry(id, name, flag) {
     return {
         id,
         name,

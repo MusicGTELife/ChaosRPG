@@ -25,7 +25,7 @@ JewelleryClass.CHARM =          0x04
 */
 
 function createEntry(code, itemClass, itemSubClass, name) {
-    return item = {
+    return {
         code,
         item_class: itemClass,
         item_sub_class: itemSubClass,

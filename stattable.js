@@ -1,6 +1,8 @@
 const StatFlag = {}
-StatFlag.BASE = 0x01
-StatFlag.UNIT = 0x02
+StatFlag.BASE =         0x01
+StatFlag.UNIT =         0x01 << 1
+StatFlag.PLAYER =       0x01 << 2
+StatFlag.MONSTER =      0x01 << 4
 
 function createStatTableEntry(id, flags, nameShort, nameLong, minValue, maxValue) {
     return {
@@ -33,10 +35,15 @@ StatTable.EVADE = _(0x0121, StatFlag.BASE, "CtE", "Chance to evade", 1, 75)
 
 StatTable.ALL_ATTR = _(0x0300, StatFlag.BASE, "AllAttr", "All attributes", 1, 32)
 
-StatTable.UNIT_EXP = _(0x8000, StatFlag.UNIT, "UnitExp", "Unit Experience", 0, Number.MAX_SAFE_INTEGER)
+// Unit specific stats
 StatTable.UNIT_HP = _(0x8001, StatFlag.UNIT, "UnitHP", "Unit Hit Points", 0, 65536)
 StatTable.UNIT_MP = _(0x8002, StatFlag.UNIT, "UnitMP", "Unit Mana Points", 0, 65536)
 StatTable.UNIT_HP_MAX = _(0x8003, StatFlag.UNIT, "UnitHPMax", "Unit Max hit points", 0, 65536)
 StatTable.UNIT_MP_MAX = _(0x8004, StatFlag.UNIT, "UnitMPMax", "Unit Mana Points", 0, 65536)
+
+// Player specific stats
+StatTable.UNIT_EXP = _(0x8000, StatFlag.UNIT|StatFlag.PLAYER, "PlayerExp", "Player Experience", 0, Number.MAX_SAFE_INTEGER)
+
+// Monster specific stats
 
 module.exports = { StatTable, StatFlag }

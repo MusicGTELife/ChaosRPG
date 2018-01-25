@@ -3,7 +3,6 @@ const Discord = require('discord.js')
 const RNG = require('./rng')
 const { GameDb } = require('./db')
 
-const { Stats } = require('./stats')
 const { StatTable } = require('./stattable')
 
 const { Tier, TierStatCount } = require('./tier')
@@ -12,9 +11,16 @@ const { ItemClass } = require('./itemclass')
 const { ItemRarity } = require('./itemrarity')
 const { ItemTable } = require('./itemtable')
 
-const { Item } = require('./item')
-const { Player, PlayerType } = require('./player')
+const { UnitType } = require('./unit')
+const { PlayerType, Player, Mage, Warrior, Rogue } = require('./player')
 const { Monster, MonsterType } = require('./monster')
+
+// utility classes
+const { ItemUtil } = require('./util/item')
+const { StatUtil } = require('./util/stats')
+const { UnitUtil } = require('./util/unit')
+const { PlayerUtil } = require('./util/player')
+//const { MonsterUtil } = require('./util/monster')
 
 const FightType = { }
 FightType.SUPERBOSS = { id: 9999, name: "Super Boss" }
@@ -26,22 +32,33 @@ FightType.NORMAL = { id: 0, name: "Common" }
 
 class MarkdownHelper {
     static addBoldSeq(str) {
-        return str = `**${str}**`
+        return `**${str}**`
     }
 
     static addCodeSeq(str, lang) {
-        return str = `\`\`\`${lang}\n${str}\`\`\``
+        return `\`\`\`${lang}\n${str}\`\`\``
     }
 }
 
 class Game {
-    constructor() {
+    constructor(token) {
         this.discord = new Discord.Client()
+        this.token = token
         this.gameDb = new GameDb()
 
-        this.player = new Player(this)
-        this.monster = new Monster(this)
-        this.item = new Item(this)
+        this.item = new ItemUtil(this)
+        this.unit = new UnitUtil(this)
+        this.player = new PlayerUtil(this)
+        //this.monster = new Monster(this)
+    }
+
+    async init() {
+        console.log('running game')
+        await this.run()
+    }
+
+    syncinit() {
+        this.init()
     }
 
     timeout(ms) {
@@ -139,9 +156,9 @@ class Game {
         this.discord.on('message', message => { this.onMessage(message) })
         this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
 
-        this.discord.login('')
+        this.discord.login(this.token)
 
-        let itemObj = Item.generateItem(ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
+        let itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -150,7 +167,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = Item.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+1
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -159,7 +176,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = Item.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+2
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -168,14 +185,17 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
+        // generate test player
         console.log('creating player')
-        let playerObj = Player.createDescriptor(PlayerType.MAGE.id, 1)
+        let playerObj = UnitUtil.createBaseDescriptor(UnitType.PLAYER.id)
         playerObj.equipment[0] = 0x1337
         playerObj.equipment[1] = 0x1337+1
         playerObj.equipment[2] = 0x1337+2
         playerObj.id = 0xbeef
 
-        let player = await this.gameDb.createPlayer(playerObj)
+        console.log(`${JSON.stringify(playerObj)}`)
+
+        let player = await this.gameDb.createUnit(playerObj)
         if (player) {
             let items = await this.player.getEquippedItems(player)
             item = await this.gameDb.getItem(itemObj.id)
@@ -189,4 +209,6 @@ class Game {
     }
 }
 
-module.exports = { Game }
+const token = ''
+let game = new Game(token)
+game.syncinit()

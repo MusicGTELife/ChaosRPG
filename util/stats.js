@@ -1,6 +1,6 @@
-const { StatResolver, StatModifier } = require('./statmodifier')
+const { StatResolver, StatModifier } = require('../statmodifier')
 
-class Stats {
+class StatUtil {
     static getReducedStats(stats) {
         // reduce into a map with summed stat values
         let reducedMap = stats.reduce((prev, curr) => {
@@ -59,4 +59,4 @@ class Stats {
     }
 }
 
-module.exports = { Stats }
+module.exports = { StatUtil }
