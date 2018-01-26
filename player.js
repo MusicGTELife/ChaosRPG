@@ -1,5 +1,4 @@
 const { UnitType } = require('./unit')
-const { UnitUtil } = require('./util/unit')
 
 const { StatTable } = require('./stattable')
 

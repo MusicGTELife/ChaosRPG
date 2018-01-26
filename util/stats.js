@@ -1,6 +1,18 @@
 const { StatResolver, StatModifier } = require('../statmodifier')
 
 class StatUtil {
+    static applyOverrides(stats, overrides) {
+        overrides.map(stat => {
+            let base = stats.find(base => base.id === stat.id)
+            if (base) {
+                console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
+                base.value = stat.value
+            } else {
+                stats.push(stat.id, stat.flag, stat.value)
+            }
+        })
+    }
+
     static getReducedStats(stats) {
         // reduce into a map with summed stat values
         let reducedMap = stats.reduce((prev, curr) => {

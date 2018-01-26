@@ -7,16 +7,6 @@ class UnitUtil {
         this.game = game
     }
 
-    static applyOverrides(stats, overrides) {
-        overrides.map(stat => {
-            let base = stats.find(base => base.id === stat.id)
-            if (base) {
-                console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
-                base.value = stat.value
-            }
-        })
-    }
-
 /*
     static createStatsDescriptor(type, id) {
         let stats = ({
@@ -49,6 +39,30 @@ class UnitUtil {
             equipment: [],
             descriptor
         }
+    }
+
+    async getStats(unit) {
+        if (unit)
+            return await unit.get('stats')
+
+        console.log('no unit')
+        return null
+    }
+
+    async getEquipment(unit) {
+        if (unit)
+            return await unit.get('equipment')
+
+        console.log('no unit')
+        return null
+    }
+
+    async getInventory(unit) {
+        if (unit)
+            return await unit.get('inventory')
+
+        console.log('no unit')
+        return null
     }
 }
 

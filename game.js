@@ -85,11 +85,15 @@ class Game {
             return FightType.NORMAL
     }
 
+    onError(error) {
+        console.log(`error, ${error}`)
+    }
+
     onReady() {
         console.log('I am ready!')
         this.discord.user.setActivity('ChaosRPG', { type: 'PLAYING' })
 
-        return
+/*
         let embed = new Discord.RichEmbed().setColor(3447003)
             .setDescription('**Character Inventory**')
             //.addBlankField()
@@ -120,6 +124,7 @@ class Game {
 
         console.log(embed)
         this.discord.channels.get('403320283261304835').send(embed)
+*/
     }
 
     onMessage(message) {
@@ -153,6 +158,7 @@ class Game {
 
     async run() {
         this.discord.on('ready', ready => { this.onReady() })
+        this.discord.on('error', error => { this.onError(error) })
         this.discord.on('message', message => { this.onMessage(message) })
         this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
 

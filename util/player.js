@@ -24,31 +24,6 @@ class PlayerUtil extends UnitUtil {
         return stats
     }
 
-    async getEquipment(player) {
-        if (player)
-            return await player.get('equipment')
-
-        console.log('no player')
-        return null
-    }
-
-    async getInventory(player) {
-        if (player)
-            return await player.get('inventory')
-
-        console.log('no player')
-        return null
-    }
-
-
-    async getBaseStats(player) {
-        if (player)
-            return await player.get('stats')
-
-        console.log('no player')
-        return null
-    }
-
     async equipItem(player, items, item, slot) {
         let found = items.find((i) => i.id === item.id)
         if (found) {
