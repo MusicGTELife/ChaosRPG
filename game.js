@@ -1,3 +1,5 @@
+const Config = require('./config.json')
+
 const Discord = require('discord.js')
 
 const RNG = require('./rng')
@@ -272,6 +274,5 @@ class Game {
     }
 }
 
-const token = ''
-let game = new Game(token)
+const game = new Game(Config.token)
 game.syncinit()
