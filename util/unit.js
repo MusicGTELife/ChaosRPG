@@ -59,14 +59,6 @@ class UnitUtil {
         return null
     }
 
-    async getInventory(unit) {
-        if (unit)
-            return await unit.get('inventory')
-
-        console.log('no unit')
-        return null
-    }
-
     getAllItemStats(items) {
         let stats = []
         Object.values(items).map(v => { stats.push(...v.get('stats')) })
@@ -81,7 +73,7 @@ class UnitUtil {
             return false
         }
 
-        let equipment = player.get('equipment')
+        let equipment = unit.get('equipment')
         if (equipment[slot] !== 0) {
             console.log('cannot move item to occupied slot')
             return false
@@ -143,18 +135,6 @@ class UnitUtil {
         }
 
         return []
-    }
-
-    async getInventoryItems(unit) {
-        if (!unit)
-            return null
-
-        let items = await this.game.gameDb.getUnitItems(unit.get('id'))
-
-        //let items = await Item.where('id').in()
-        //    .where('owner', unit.get('id')).find()
-        //console.log(`getplayeritems found ${JSON.stringify(items)}`)
-        return items
     }
 
     // called when:

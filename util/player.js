@@ -32,6 +32,26 @@ class PlayerUtil extends UnitUtil {
         return stats
     }
 
+    async getInventory(player) {
+        if (unit)
+            return await player.get('descriptor.inventory')
+
+        console.log('no unit')
+        return null
+    }
+
+    async getInventoryItems(unit) {
+        if (!unit)
+            return null
+
+        let items = await this.game.gameDb.getUnitItems(unit.get('id'))
+
+        //let items = await Item.where('id').in()
+        //    .where('owner', unit.get('id')).find()
+        //console.log(`getplayeritems found ${JSON.stringify(items)}`)
+        return items
+    }
+
     async dropItem(player, items, itemId) {
 
     }
