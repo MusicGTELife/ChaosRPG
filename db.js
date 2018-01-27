@@ -75,6 +75,14 @@ class GameDb {
         return items
     }
 
+    async getUnitItems(id) {
+        //let items = await Item.where('id').in()
+        //    .where('owner', unit.get('id')).find()
+
+        let items = await Item.where('owner', id).find()
+        return items
+    }
+
     async updateItem(item) {
         return await item.save()
     }

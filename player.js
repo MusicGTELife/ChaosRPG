@@ -1,4 +1,4 @@
-const { UnitType } = require('./unit')
+const { UnitType, Unit } = require('./unit')
 
 const { StatTable } = require('./stattable')
 
@@ -12,10 +12,16 @@ PlayerType.CLERIC = { id:  0x05, name: "Cleric" }
 const basePoints = 20
 const pointsPerLevel = 4
 
-class Player { }
-Player.stats = [
-    { id: StatTable.UNIT_EXP.id, value: 0 }
-]
+class Player extends Unit { }
+
+Player.descriptor = {
+    type: 0,
+    inventory: [ 0, 0, 0, 0, 0, 0 ]
+}
+
+//Player.stats = [
+//    { id: StatTable.UNIT_EXP.id, value: 0 }
+//]
 
 class Mage extends Player { }
 Mage.stats = [
@@ -57,4 +63,4 @@ Cleric.stats = [
     { id: StatTable.VIT.id, value: 10 }
 ]
 
-module.exports = { Player, Mage, Warrior, Rogue, Ranger, Cleric }
+module.exports = { PlayerType, Player, Mage, Warrior, Rogue, Ranger, Cleric }

@@ -8,13 +8,13 @@ class StatUtil {
                 console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
                 base.value = stat.value
             } else {
-                stats.push(stat.id, stat.flag, stat.value)
+                stats.push(stat.id, stat.value)
             }
         })
     }
 
     static getReducedStats(stats) {
-        // reduce into a map with summed stat values
+        // reduce into a map with a single summed value per stat id
         let reducedMap = stats.reduce((prev, curr) => {
             prev.set(curr.id, curr.value + (prev.get(curr.id) || 0))
             return prev
@@ -47,9 +47,7 @@ class StatUtil {
             return
 
         stats.map((e) => {
-            console.log('setting', e, id, value);
             if (e.id === id) {
-                console.log('setting');
                 e.value = value
             }
         })

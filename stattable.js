@@ -2,7 +2,7 @@ const StatFlag = {}
 StatFlag.BASE =         0x01
 StatFlag.UNIT =         0x01 << 1
 StatFlag.PLAYER =       0x01 << 2
-StatFlag.MONSTER =      0x01 << 4
+StatFlag.MONSTER =      0x01 << 3
 
 function createStatTableEntry(id, flags, nameShort, nameLong, minValue, maxValue) {
     return {
@@ -42,7 +42,7 @@ StatTable.UNIT_HP_MAX = _(0x8003, StatFlag.UNIT, "UnitHPMax", "Unit Max hit poin
 StatTable.UNIT_MP_MAX = _(0x8004, StatFlag.UNIT, "UnitMPMax", "Unit Mana Points", 0, 65536)
 
 // Player specific stats
-StatTable.UNIT_EXP = _(0x8000, StatFlag.UNIT|StatFlag.PLAYER, "PlayerExp", "Player Experience", 0, Number.MAX_SAFE_INTEGER)
+StatTable.UNIT_EXP = _(0x8000, StatFlag.PLAYER, "PlayerExp", "Player Experience", 0, Number.MAX_SAFE_INTEGER)
 
 // Monster specific stats
 

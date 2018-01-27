@@ -43,22 +43,68 @@ class MarkdownHelper {
 class Game {
     constructor(token) {
         this.discord = new Discord.Client()
-        this.token = token
+        this.token = token || ''
         this.gameDb = new GameDb()
 
         this.item = new ItemUtil(this)
         this.unit = new UnitUtil(this)
         this.player = new PlayerUtil(this)
-        //this.monster = new Monster(this)
+        //this.monster = new MonsterUtil(this)
+
+        this.interrupt = false
+    }
+
+    onInterrupt() {
+        console.log('onInterrupt')
+        this.interrupt = true
+    }
+
+    destroy() {
+        this.discord.destroy()
+        process.exit(0)
     }
 
     async init() {
-        console.log('running game')
-        await this.run()
+        console.log('initializing game')
+
+        if (this.token === '') {
+            console.log('Discord API token required')
+            return false
+        }
+
+        // catch terminal interrupts to shutdown cleanly
+        process.on('SIGTERM', () => {
+            console.log('SIGTERM caught')
+            this.onInterrupt()
+        })
+
+        process.on('SIGINT', () => {
+            console.log('SIGINT caught')
+            this.onInterrupt()
+        })
+
+        this.discord.on('error', e => { this.onError(e) })
+        this.discord.on('warn', e => { this.onWarning(e) })
+        this.discord.on('debug', e => { this.onDebug(e) })
+
+        this.discord.on('ready', () => { this.onReady() })
+        this.discord.on('disconnect', reason => { this.onDisconnect(reason) })
+        this.discord.on('message', message => { this.onMessage(message) })
+        this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
+
+        console.log('logging in to discord')
+        let res = await this.discord.login(this.token)
+            .then((res) => this.run())
+            .catch((e) => {
+                console.log(e)
+                return false
+            })
+
+        return res
     }
 
     syncinit() {
-        this.init()
+        return this.init()
     }
 
     timeout(ms) {
@@ -81,12 +127,24 @@ class Game {
             return FightType.RARE
         else if (value >= FightType.MAGIC.id)
             return FightType.MAGIC
-        else
-            return FightType.NORMAL
+
+        return FightType.NORMAL
     }
 
-    onError(error) {
-        console.log(`error, ${error}`)
+    onError(m) {
+        console.error(`ERR: \`${m}\``)
+    }
+
+    onWarning(m) {
+        console.warn(`WARN: \`${m}\``)
+    }
+
+    onDebug(m) {
+        console.log(`DEBUG: \`${m}\``)
+    }
+
+    onDisconnect(reason) {
+        console.log(`DEBUG: disconnected ${reason.reason} (${reason.code})`)
     }
 
     onReady() {
@@ -138,7 +196,7 @@ class Game {
     async loop(obj) {
         let onlinePlayers = [ 1, 2, 4, 5, 6, 7, 8, 9, 10 ]
 
-        let player = await obj.gameDb.getPlayer(0xbeef)
+        let player = await obj.gameDb.getUnit(0xbeef)
         if (!player)
             console.log('unable to lookup player')
 
@@ -157,14 +215,7 @@ class Game {
     }
 
     async run() {
-        this.discord.on('ready', ready => { this.onReady() })
-        this.discord.on('error', error => { this.onError(error) })
-        this.discord.on('message', message => { this.onMessage(message) })
-        this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
-
-        this.discord.login(this.token)
-
-        let itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
+        let itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -173,7 +224,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+1
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -182,7 +233,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = ItemUtil.generateItem(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+2
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -193,7 +244,7 @@ class Game {
 
         // generate test player
         console.log('creating player')
-        let playerObj = UnitUtil.createBaseDescriptor(UnitType.PLAYER.id)
+        let playerObj = PlayerUtil.create(PlayerType.MAGE.id)
         playerObj.equipment[0] = 0x1337
         playerObj.equipment[1] = 0x1337+1
         playerObj.equipment[2] = 0x1337+2
@@ -209,9 +260,15 @@ class Game {
             await this.player.unequipItem(player, items, item, 2)
         }
 
-        while (1) {
+        while (!this.interrupt) {
             await this.sleep(10*1000, loop => { this.loop(this) })
         }
+
+        console.log('run loop terminating')
+
+        this.destroy()
+
+        return true
     }
 }
 

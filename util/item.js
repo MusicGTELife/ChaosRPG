@@ -77,7 +77,7 @@ class ItemUtil {
         return item
     }
 
-    static generateItem(itemClass, tier, rarity) {
+    static generate(itemClass, tier, rarity) {
         let item = ItemUtil.createDescriptor(itemClass)
         item.tier = tier
         item.rarity = rarity
