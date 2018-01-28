@@ -42,6 +42,7 @@ class MarkdownHelper {
     }
 }
 
+// TODO move base application parts to their own module
 class Game {
     constructor(token) {
         this.discord = new Discord.Client()
@@ -63,6 +64,8 @@ class Game {
 
     destroy() {
         this.discord.destroy()
+        this.gameDb.disconnect()
+
         process.exit(0)
     }
 

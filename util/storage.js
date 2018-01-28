@@ -2,10 +2,35 @@ const { Storage } = require('../storage')
 const { UnitType } = require('../unit')
 
 class StorageUtil {
+    static createStorage(unitType) {
+
+        let player = ({
+            [UnitType.PLAYER.id]: true,
+        })[unitType] || false
+
+        const storage = [
+            {
+                id: Storage.EQUIPMENT.id,
+                size: Storage.EQUIPMENT.size,
+                buffer: new Array(Storage.EQUIPMENT.size).fill(0)
+            }
+        ]
+
+        if (player) {
+            storage.push({
+                id: Storage.INVENTORY.id,
+                size: Storage.INVENTORY.size,
+                buffer: new Array(Storage.INVENTORY.size).fill(0)
+            })
+        }
+
+        return storage
+    }
+
     static isNodeValid(storage, node) {
         // check if the node id is valid
         let valid = ({
-            [Storage.EQUIPMENT.id]: true.
+            [Storage.EQUIPMENT.id]: true,
             [Storage.INVENTORY.id]: true
         })[node] || false
 
@@ -22,35 +47,40 @@ class StorageUtil {
     }
 
     static getNode(storage, node) {
-        if (!isNodeValid(storage. node))
+        if (!StorageUtil.isNodeValid(storage, node))
             return []
 
-        let node = storage.find(e => e.id === node)
-        return node
+        return storage.find(e => e.id === node)
     }
 
-    static isSlotValid(storage, node, slot) {
-        if (!StorageUtil.isNodeValid(storage, node))
+    static isSlotValid(storage, nodeId, slot) {
+        if (!StorageUtil.isNodeValid(storage, nodeId))
             return false
 
-        if (slot >= 0 && slot < storage.size)
+        let node = StorageUtil.getNode(storage, nodeId)
+        if (node != [] && slot >= 0 && slot < node.size)
             return true
 
         return false
     }
 
     static isSlotOccupied(storage, node, slot) {
-        if (!isSlotValid(storage, node, slot))
+        if (!StorageUtil.isSlotValid(storage, node, slot))
             return false
 
-        return true
+        const value = StorageUtil.getSlot(storage, node, slot)
+        return value !== 0
     }
 
     static getSlot(storage, node, slot) {
-        if (!isSlotValid)
+        if (!StorageUtil.isSlotValid(storage, node, slot))
             return 0
-        let node = getNode(storage, node)
-        if (node)
+
+        let buffer = StorageUtil.getNode(storage, node)
+        if (buffer)
+            return buffer[slot]
+
+        return 0
     }
 }
 

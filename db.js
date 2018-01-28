@@ -3,20 +3,33 @@ const { Database, Model } = require('mongorito');
 const { Item, Unit } = require('./models')
 
 class GameDb {
-    constructor() {
-        const db = new Database('localhost/game')
-        db.connect()
+    constructor(hosts, options) {
+        const db = new Database()
 
-        console.log('registering models')
-
-        db.register(Item)
-        db.register(Unit)
+        this.hosts = hosts
+        this.options = options
 
         this.db = db
     }
 
+    async connect() {
+        let t = await this.db.connect(this.hosts)
+        return await this.register().then(() => true)
+    }
+
+    async disconnect() {
+        return await this.db.disconnect().then(() => true)
+    }
+
+    async register() {
+        console.log('registering models')
+
+        await this.db.register(Item)
+        await this.db.register(Unit)
+    }
+
     async createUnit(unitObj) {
-        let existing = await this.getUnit(unitObj.id)
+        const existing = await this.getUnit(unitObj.id)
         if (existing) {
             console.log(`cannot create unit for ${unitObj.id} which already exists`)
             return null
@@ -24,6 +37,7 @@ class GameDb {
 
         let unit = new Unit(unitObj)
         await unit.save()
+
         return unit
     }
 

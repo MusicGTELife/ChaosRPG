@@ -11,7 +11,7 @@ class PlayerUtil extends UnitUtil {
 
     static create(type) {
         let player = UnitUtil.create(UnitType.PLAYER.id)
-        player.type = type
+        player.descriptor.type = type
         player.stats = PlayerUtil.createBaseStats(type)
 
         return player
