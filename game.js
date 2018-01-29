@@ -38,7 +38,7 @@ class Game {
     constructor(config) {
         this.discord = new Discord.Client()
         this.markdown = new Markdown()
-        this.gameDb = new GameDb(config.db.hosts, config.db.options)
+        this.gameDb = new GameDb(config.db.host, config.db.options)
 
         this.item = new ItemUtil(this)
         this.unit = new UnitUtil(this)

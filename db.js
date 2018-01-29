@@ -2,14 +2,14 @@ const mongoose = require('mongoose');
 const { Unit, Item } = require('./models')
 
 class GameDb {
-    constructor(hosts, options) {
-        this.hosts = hosts
+    constructor(host, options) {
+        this.host = host
         this.options = options
         this.db = mongoose
     }
 
     async connect() {
-        let res = await this.db.connect(this.hosts, this.options)
+        let res = await this.db.connect(this.host, this.options)
             .then(() => true)
             .catch(() => false)
         return res
