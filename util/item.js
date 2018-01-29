@@ -67,9 +67,9 @@ class ItemUtil {
         let item = ItemUtil.createBaseDescriptor()
 
         let descriptor = ({
-            [ItemClass.ARMOR.id]: Player.descriptor,
-            [ItemClass.WEAPON.id]: Monster.descriptor
-            [ItemClass.JEWEL.id]: Monster.descriptor
+            [ItemClass.ARMOR.id]: ItemUtil.createArmorDescriptor(),
+            [ItemClass.WEAPON.id]: ItemUtil.createWeaponDescriptor(),
+            [ItemClass.JEWEL.id]: ItemUtil.createJewelDescriptor()
         })[type] || null
 
         if (!descriptor)
