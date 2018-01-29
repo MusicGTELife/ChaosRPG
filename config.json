@@ -1,9 +1,7 @@
 {
     "token": "",
     "db": {
-       "hosts": [ 
-           "localhost/game" 
-       ],
+       "host": "mongodb://localhost/game",
        "options": {
        }
     }

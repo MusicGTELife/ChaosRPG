@@ -50,13 +50,12 @@ class Game {
     }
 
     onInterrupt() {
-        console.log('onInterrupt')
         this.interrupt = true
     }
 
-    destroy() {
-        this.discord.destroy()
-        this.gameDb.disconnect()
+    async destroy() {
+        let res = await this.discord.destroy()
+            .then(async () => await this.gameDb.disconnect())
 
         process.exit(0)
     }
@@ -70,17 +69,10 @@ class Game {
         }
 
         // catch terminal interrupts to shutdown cleanly
-        process.on('SIGTERM', () => {
-            console.log('SIGTERM caught')
-            this.onInterrupt()
-        })
-
         process.on('SIGINT', () => {
             console.log('SIGINT caught')
             this.onInterrupt()
         })
-
-        this.gameDb.connect()
 
         this.discord.on('error', e => { this.onError(e) })
         this.discord.on('warn', e => { this.onWarning(e) })
@@ -93,9 +85,10 @@ class Game {
 
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
-            .then((res) => this.run())
-            .catch((e) => {
-                console.log(e)
+            .then(async () => await this.gameDb.connect())
+            .then(async () => await this.run())
+            .catch(e => {
+                console.log('caught', e)
                 return false
             })
 
@@ -165,7 +158,7 @@ class Game {
 
         let slot = 0
         items.map(e => {
-            let item = e.get()
+            let item = e
             let name = ItemUtil.getName(item.code)
             let desc = this.markdown.code("Foo: 15\nBar: 15\nBaz: some text", "prolog")
 
@@ -256,7 +249,9 @@ class Game {
 
         console.log('run loop terminating')
 
-        this.destroy()
+        await this.destroy()
+
+        console.log('shutdown complete')
 
         return true
     }

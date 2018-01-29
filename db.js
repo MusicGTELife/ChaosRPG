@@ -1,35 +1,22 @@
-const { Database, Model } = require('mongorito');
-
-const { Item, Unit } = require('./models')
+const mongoose = require('mongoose');
+const { Unit, Item } = require('./models')
 
 class GameDb {
     constructor(hosts, options) {
-        const db = new Database(hosts, options)
-
         this.hosts = hosts
         this.options = options
-
-        this.db = db
+        this.db = mongoose
     }
 
     async connect() {
-        return await this.db.connect()
-            .then(await this.register())
+        let res = await this.db.connect(this.hosts, this.options)
             .then(() => true)
             .catch(() => false)
+        return res
     }
 
     async disconnect() {
-        return await this.db.disconnect()
-            .then(() => true)
-            .catch(() => false)
-    }
-
-    async register() {
-        console.log('registering models')
-
-        await this.db.register(Item)
-        await this.db.register(Unit)
+        await this.db.connection.close().then(await this.db.disconnect())
     }
 
     async createUnit(unitObj) {
@@ -95,7 +82,7 @@ class GameDb {
 
     async getUnitItems(id) {
         //let items = await Item.where('id').in()
-        //    .where('owner', unit.get('id')).find()
+        //    .where('owner', unit.id).find()
 
         let items = await Item.where('owner', id).find()
         return items
