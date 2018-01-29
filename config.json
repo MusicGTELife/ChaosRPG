@@ -1,4 +1,11 @@
 {
-    "token": ""
+    "token": "",
+    "db": {
+       "hosts": [ 
+           "localhost/game" 
+       ],
+       "options": {
+       }
+    }
 }
 

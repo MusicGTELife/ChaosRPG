@@ -4,7 +4,7 @@ const { Item, Unit } = require('./models')
 
 class GameDb {
     constructor(hosts, options) {
-        const db = new Database()
+        const db = new Database(hosts, options)
 
         this.hosts = hosts
         this.options = options
@@ -13,12 +13,16 @@ class GameDb {
     }
 
     async connect() {
-        let t = await this.db.connect(this.hosts)
-        return await this.register().then(() => true)
+        return await this.db.connect()
+            .then(await this.register()
+            .then(() => true)
+            .catch(() => false)
     }
 
     async disconnect() {
-        return await this.db.disconnect().then(() => true)
+        return await this.db.disconnect()
+            .then(() => true)
+            .catch(() => false)
     }
 
     async register() {

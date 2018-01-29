@@ -189,8 +189,6 @@ class UnitUtil {
         console.log(`baseStatCalc ${JSON.stringify(baseStatCalc)} }`)
         console.log(`itemStatCalc ${JSON.stringify(itemStatCalc)} }`)
         console.log(`unitStatCalc ${JSON.stringify(unitStatCalc)} }`)
-
-        console.log(`stats ${JSON.stringify(stats)} }`)
     }
 }
 

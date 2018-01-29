@@ -18,6 +18,7 @@ const { PlayerType, Player, Mage, Warrior, Rogue } = require('./player')
 const { Monster, MonsterType } = require('./monster')
 
 // utility classes
+const { Markdown } = require('./util/discord')
 const { ItemUtil } = require('./util/item')
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
@@ -32,28 +33,19 @@ FightType.RARE = { id: 9000, name: "Rare" }
 FightType.MAGIC = { id: 7500, name: "Magic" }
 FightType.NORMAL = { id: 0, name: "Common" }
 
-class MarkdownHelper {
-    static addBoldSeq(str) {
-        return `**${str}**`
-    }
-
-    static addCodeSeq(str, lang) {
-        return `\`\`\`${lang}\n${str}\`\`\``
-    }
-}
-
 // TODO move base application parts to their own module
 class Game {
-    constructor(token) {
+    constructor(config) {
         this.discord = new Discord.Client()
-        this.token = token || ''
-        this.gameDb = new GameDb()
+        this.markdown = new Markdown()
+        this.gameDb = new GameDb(config.db.hosts, config.db.options)
 
         this.item = new ItemUtil(this)
         this.unit = new UnitUtil(this)
         this.player = new PlayerUtil(this)
         //this.monster = new MonsterUtil(this)
 
+        this.token = config.token || ''
         this.interrupt = false
     }
 
@@ -88,6 +80,8 @@ class Game {
             this.onInterrupt()
         })
 
+        this.gameDb.connect()
+
         this.discord.on('error', e => { this.onError(e) })
         this.discord.on('warn', e => { this.onWarning(e) })
         this.discord.on('debug', e => { this.onDebug(e) })
@@ -113,7 +107,7 @@ class Game {
     }
 
     timeout(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms))
+        return new Promise(resolve => this.discord.setTimeout(resolve, ms))
     }
 
     async sleep(ms, fn, ...args) {
@@ -155,39 +149,6 @@ class Game {
     onReady() {
         console.log('I am ready!')
         this.discord.user.setActivity('ChaosRPG', { type: 'PLAYING' })
-
-/*
-        let embed = new Discord.RichEmbed().setColor(3447003)
-            .setDescription('**Character Inventory**')
-            //.addBlankField()
-            //.addField("**Equipment**", `*${MarkdownHelper.addCodeSeq("Currently equipped items", "json")}*`)
-            .addField('*Amulet* **`Reavers Amulet of Sorrow`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Helmet* **`Dunce Cap of Indecision`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Armor* **`Apprentice\'s Robe of Rain`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Gloves* **`Danny Glover\'s Dandy Gloves`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Boots* **`Peter Pan\'s Getaway Boots`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-
-            //.addBlankField()
-            //.addField("**Inventory**", `*${MarkdownHelper.addCodeSeq("Items in your bag", "json")}*`)
-            .addField('*Slot 1* **`Reavers Amulet of Sorrow`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Slot 2* **`Dunce Cap of Indecision`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Slot 3* **`Apprentice\'s Robe of Rain`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Slot 4* **`Danny Glover\'s Dandy Gloves`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-            .addField('*Slot 5* **`Peter Pan\'s Getaway Boots`**',
-                `**${MarkdownHelper.addCodeSeq("Foo: 15\nBar: 15\nBaz: some text", "prolog")}**`, true)
-
-        console.log(embed)
-        this.discord.channels.get('403320283261304835').send(embed)
-*/
     }
 
     onMessage(message) {
@@ -196,6 +157,26 @@ class Game {
 
     onTypingStart(channel, user) {
         console.log(`${user.id} typing on ${channel.id}`)
+    }
+
+    async createPlayerInventoryEmbed(unit, items, color) {
+        let embed = new Discord.RichEmbed()
+            .setColor(3447003).setDescription('**Character Inventory**')
+
+        let slot = 0
+        items.map(e => {
+            let item = e.get()
+            let name = ItemUtil.getName(item.code)
+            let desc = this.markdown.code("Foo: 15\nBar: 15\nBaz: some text", "prolog")
+
+            embed.addField(
+                `*Slot ${++slot}* **\`${name}\`**`,
+                `**${desc}**`
+            , true)
+        })
+
+        console.log(embed)
+        //this.discord.channels.get('405592756908589056').send(embed)
     }
 
     async loop(obj) {
@@ -220,7 +201,9 @@ class Game {
     }
 
     async run() {
-        let itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
+        let code = ItemTable.GREAT_HELM.code
+
+        let itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -229,7 +212,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+1
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -238,7 +221,7 @@ class Game {
             console.log(`failed creating test item id ${itemObj.id}`)
         }
 
-        itemObj = ItemUtil.generate(ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+2
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
@@ -260,6 +243,8 @@ class Game {
         let player = await this.gameDb.createUnit(playerObj)
         if (player) {
             let items = await this.player.getEquippedItems(player)
+            this.createPlayerInventoryEmbed(playerObj, items)
+
             item = await this.gameDb.getItem(itemObj.id)
 
             await this.player.unequipItem(player, items, item, 2)
@@ -277,5 +262,5 @@ class Game {
     }
 }
 
-const game = new Game(Config.token)
+const game = new Game(Config)
 game.syncinit()

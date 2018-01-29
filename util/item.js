@@ -10,6 +10,18 @@ const { ItemClass } = require('../itemclass')
 const { ItemTable } = require('../itemtable')
 
 class ItemUtil {
+    static getName(code) {
+        let name = 'unknown'
+        Object.values(ItemTable).map((e) => {
+            if (e.code === code) {
+                console.log(code, e.name)
+                name = e.name
+            }
+        })
+
+        return name
+    }
+
     static createWeaponDescriptor() {
         let weapon = {
             weapon_class: 0,
@@ -42,8 +54,8 @@ class ItemUtil {
             id: 0,
             ilvl: 0,
             is_equipped: false,
-            storage_location: 0, // FIXME
             owner: 0,
+            code: 0,
             item_class: 0,
             tier: 0,
             descriptor: { },
@@ -54,31 +66,23 @@ class ItemUtil {
     static createDescriptor(itemClass) {
         let item = ItemUtil.createBaseDescriptor()
 
-        switch(itemClass) {
-            case ItemClass.ARMOR: {
-                item.descriptor = ItemUtil.createArmorDescriptor()
-                break
-            }
+        let descriptor = ({
+            [ItemClass.ARMOR.id]: Player.descriptor,
+            [ItemClass.WEAPON.id]: Monster.descriptor
+            [ItemClass.JEWEL.id]: Monster.descriptor
+        })[type] || null
 
-            case ItemClass.WEAPON: {
-                item.descriptor = ItemUtil.createWeaponDescriptor()
-                break
-            }
+        if (!descriptor)
+            return null
 
-            case ItemClass.JEWEL: {
-                item.descriptor = ItemUtil.createJewelDescriptor()
-                break
-            }
-
-            default:
-                console.log('invalid item class')
-        }
+        item.descriptor = descriptor
 
         return item
     }
 
-    static generate(itemClass, tier, rarity) {
+    static generate(code, itemClass, tier, rarity) {
         let item = ItemUtil.createDescriptor(itemClass)
+        item.code = code
         item.tier = tier
         item.rarity = rarity
 
