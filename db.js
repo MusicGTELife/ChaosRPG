@@ -14,7 +14,7 @@ class GameDb {
 
     async connect() {
         return await this.db.connect()
-            .then(await this.register()
+            .then(await this.register())
             .then(() => true)
             .catch(() => false)
     }
