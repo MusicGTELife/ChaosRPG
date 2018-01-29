@@ -1,0 +1,39 @@
+{
+  "name": "chaos-rpg",
+  "description": "A (currently) discord based IdleRPG inspired chat RPG",
+  "version": "0.0.1",
+  "main": "game.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://git@github.com/bsdunx/ChaosRPG.git"
+  },
+  "keywords": [
+    "discord",
+    "mud",
+    "game",
+    "javascript",
+    "node.js"
+  ],
+  "author": "bsdunx",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/bsdunx/ChaosRPG/issues"
+  },
+  "homepage": "https://github.com/bsdunx/ChaosRPG#readme",
+  "scripts": {
+    "test": "ava"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm test"
+    }
+  },
+  "dependencies": {
+    "discord.js": "^11.3.0",
+    "mongorito": "^3.0.4"
+  },
+  "devDependencies": {
+    "ava": "^0.25.0",
+    "husky": "^0.14.3"
+  }
+}
