@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/bsdunx/ChaosRPG#readme",
   "scripts": {
-    "test": "ava"
+    "test": "nyc ava"
   },
   "husky": {
     "hooks": {
@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "ava": "^0.25.0",
-    "husky": "^0.14.3"
+    "husky": "^0.14.3",
+    "nyc": "^11.4.1"
   }
 }
