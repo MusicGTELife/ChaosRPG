@@ -49,15 +49,9 @@ class Game {
         this.interrupt = false
     }
 
-    onInterrupt() {
-        this.interrupt = true
-    }
-
     async destroy() {
         let res = await this.discord.destroy()
             .then(async () => await this.gameDb.disconnect())
-
-        process.exit(0)
     }
 
     async init() {
@@ -71,7 +65,7 @@ class Game {
         // catch terminal interrupts to shutdown cleanly
         process.on('SIGINT', () => {
             console.log('SIGINT caught')
-            this.onInterrupt()
+            this.interrupt = true
         })
 
         this.discord.on('error', e => { this.onError(e) })
@@ -85,8 +79,9 @@ class Game {
 
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
-            .then(async () => await this.gameDb.connect())
-            .then(async () => await this.run())
+            .then(this.gameDb.connect())
+            .then(await this.run())
+            .then(process.exit(0))
             .catch(e => {
                 console.log('caught', e)
                 return false
@@ -96,7 +91,7 @@ class Game {
     }
 
     syncinit() {
-        return this.init()
+        this.init()
     }
 
     timeout(ms) {
@@ -158,37 +153,30 @@ class Game {
 
         let slot = 0
         items.map(e => {
-            let item = e
-            let name = ItemUtil.getName(item.code)
+            let name = ItemUtil.getName(e.code)
             let desc = this.markdown.code("Foo: 15\nBar: 15\nBaz: some text", "prolog")
 
-            embed.addField(
-                `*Slot ${++slot}* **\`${name}\`**`,
-                `**${desc}**`
-            , true)
+            embed.addField(`*Slot ${++slot}* **\`${name}\`**`, `**${desc}**`, true)
         })
 
         console.log(embed)
         //this.discord.channels.get('405592756908589056').send(embed)
     }
 
-    async loop(obj) {
+    async loop() {
         let onlinePlayers = [ 1, 2, 4, 5, 6, 7, 8, 9, 10 ]
 
-        let player = await obj.gameDb.getUnit(0xbeef)
-        if (!player)
+        let player = await this.gameDb.getUnit(0xbeef)
+        if (!player) {
             console.log('unable to lookup player')
+            return
+        }
 
-        //let weapon = Item.createDescriptor(ItemClass.WEAPON)
-        //let armor = Item.createDescriptor(ItemClass.ARMOR)
-        //let jewel = Item.createDescriptor(ItemClass.JEWEL)
+        let items = await this.player.getEquippedItems(player)
+        await this.player.computeBaseStats(player, items)
 
         let magic = RNG.getRandomInt(0, FightType.SUPERBOSS.id)
-        let fightType = obj.getFightType(magic)
-
-        let items = await obj.player.getEquippedItems(player)
-
-        await obj.player.computeBaseStats(player)
+        let fightType = this.getFightType(magic)
 
         //this.discord.channels.get('403320283261304835').send(`\`\`\`json\n[\n\{ 'player': ${JSON.stringify(player)},\n'playerItems': ${JSON.stringify(items)} }\n]\n\`\`\``)
     }
@@ -196,55 +184,47 @@ class Game {
     async run() {
         let code = ItemTable.GREAT_HELM.code
 
-        let itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER2.id, ItemRarity.COMMON.id)
+        let itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER5.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
         let item = await this.gameDb.createItem(itemObj)
-        if (!item) {
-            console.log(`failed creating test item id ${itemObj.id}`)
-        }
+        await this.gameDb.removeItems([0x1337])
+        item = await this.gameDb.createItem(itemObj)
 
         itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+1
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
         item = await this.gameDb.createItem(itemObj)
-        if (!item) {
-            console.log(`failed creating test item id ${itemObj.id}`)
-        }
 
-        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER6.id, ItemRarity.COMMON.id)
         itemObj.id = 0x1337+2
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
         item = await this.gameDb.createItem(itemObj)
-        if (!item) {
-            console.log(`failed creating test item id ${itemObj.id}`)
-        }
 
         // generate test player
         console.log('creating player')
-        let playerObj = PlayerUtil.create(PlayerType.MAGE.id)
-        playerObj.equipment[0] = 0x1337
-        playerObj.equipment[1] = 0x1337+1
-        playerObj.equipment[2] = 0x1337+2
+        let playerObj = PlayerUtil.create(PlayerType.CLERIC.id)
+        playerObj.storage[0].buffer[0] = 0x1337
+        playerObj.storage[0].buffer[1] = 0x1337+1
+        playerObj.storage[0].buffer[2] = 0x1337+2
         playerObj.id = 0xbeef
-
-        console.log(`${JSON.stringify(playerObj)}`)
 
         let player = await this.gameDb.createUnit(playerObj)
         if (player) {
-            let items = await this.player.getEquippedItems(player)
-            this.createPlayerInventoryEmbed(playerObj, items)
+            console.log(`${JSON.stringify(player)}`)
 
-            item = await this.gameDb.getItem(itemObj.id)
 
-            await this.player.unequipItem(player, items, item, 2)
+            item = await this.gameDb.getItem(0x1337)
+
+            let items = await this.unit.getEquippedItems(player)
+            this.createPlayerInventoryEmbed(player, items)
         }
 
         while (!this.interrupt) {
-            await this.sleep(10*1000, loop => { this.loop(this) })
+            await this.sleep(5*1000, loop => { this.loop() })
         }
 
         console.log('run loop terminating')

@@ -7,7 +7,7 @@ PlayerType.MAGE = { id: 0x01, name: "Mage" }
 PlayerType.WARRIOR = { id: 0x02, name: "Warrior" }
 PlayerType.ROGUE = { id: 0x03, name: "Rogue" }
 PlayerType.RANGER = { id: 0x04, name: "Ranger" }
-PlayerType.CLERIC = { id:  0x05, name: "Cleric" }
+PlayerType.CLERIC = { id: 0x05, name: "Cleric" }
 
 const basePoints = 20
 const pointsPerLevel = 4
@@ -15,13 +15,8 @@ const pointsPerLevel = 4
 class Player extends Unit { }
 
 Player.descriptor = {
-    type: 0,
-    inventory: [ 0, 0, 0, 0, 0, 0 ]
+    type: 0
 }
-
-//Player.stats = [
-//    { id: StatTable.UNIT_EXP.id, value: 0 }
-//]
 
 class Mage extends Player { }
 Mage.stats = [

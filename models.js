@@ -4,8 +4,8 @@ const Schema = mongoose.Schema
 const UnitSchema = {
     id: Number,
     type: Number,
-    stats: [ { id: Number, value: Number } ],
-    equipment: [ Number ],
+    stats: [ { _id: false, id: Number, value: Number} ],
+    storage: [ Schema.Types.Mixed ],
     descriptor: Schema.Types.Mixed
 }
 

@@ -31,31 +31,6 @@ class PlayerUtil extends UnitUtil {
 
         return stats
     }
-
-    async getInventory(player) {
-        if (unit)
-            return await player.descriptor.inventory
-
-        console.log('no unit')
-        return null
-    }
-
-    async getInventoryItems(unit) {
-        if (!unit)
-            return null
-
-        let items = await this.game.gameDb.getUnitItems(unit.id)
-
-        return items
-    }
-
-    async dropItem(player, items, itemId) {
-
-    }
-
-    async pickupItem(player, itemId) {
-
-    }
 }
 
 module.exports = { PlayerUtil }

@@ -46,16 +46,16 @@ class GameDb {
         return await unit.save()
     }
 
-    async updateUnits(units) {
-
+    async updateUnits(ids) {
+        return await Unit.where('id').in(ids).update()
     }
 
-    async deleteUnit(unit) {
+    async removeUnit(unit) {
         return await unit.remove()
     }
 
-    async deleteUnits(units) {
-        //return await unit.remove()
+    async removeUnits(units) {
+        return await Unit.where('id').in(ids).remove()
     }
 
     async createItem(itemObj) {
@@ -93,15 +93,15 @@ class GameDb {
     }
 
     async updateItems(items) {
-        //return await item.save()
+        return await Item.where('id').in(ids).update()
     }
 
-    async deleteItem(item) {
+    async removeItem(item) {
         return await item.remove()
     }
 
-    async deleteItems(items) {
-        //return await item.remove()
+    async removeItems(ids) {
+        return await Item.where('id').in(ids).remove()
     }
 }
 

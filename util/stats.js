@@ -1,16 +1,20 @@
-const { StatResolver, StatModifier } = require('../statmodifier')
+const { StatTable } = require('../stattable')
 
 class StatUtil {
     static applyOverrides(stats, overrides) {
         overrides.map(stat => {
             let base = stats.find(base => base.id === stat.id)
             if (base) {
-                console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
+                //console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
                 base.value = stat.value
             } else {
                 stats.push(stat.id, stat.value)
             }
         })
+    }
+
+    static getStatTableEntry(id) {
+        return Object.values(StatTable).find(e => e.id === id)
     }
 
     static getReducedStats(stats) {
@@ -20,9 +24,7 @@ class StatUtil {
             return prev
         }, new Map())
 
-        let reduced = Array.from(reducedMap, ([id, value]) => ({ id, value }))
-        //console.log('reduced', JSON.stringify(reduced))
-        return reduced
+        return Array.from(reducedMap, ([id, value]) => ({ id, value }))
     }
 
     static getSortedStats(stats) {
@@ -31,41 +33,28 @@ class StatUtil {
 
     static getStat(stats, id) {
         if (!stats)
-            return 0;
+            return 0
 
-        const sum = stats.reduce((value, stat) => {
-            if (stat.id === id)
-                return value + stat.value
-            return value
-        }, 0);
-
-        return sum
+        return stats.reduce((v, stat) => stat.id === id ? v+stat.value : v, 0)
     }
 
     static setStat(stats, id, value) {
         if (!stats)
-            return
+            return false
 
+        let isModified = false
         stats.map((e) => {
             if (e.id === id) {
                 e.value = value
+                isModified = true
             }
         })
+
+        return isModified
     }
 
     static createDescriptor(id, value) {
         return { id, value }
-    }
-
-    static resolveStat(id, value) {
-        let modifier = Object.values(StatModifier).find((mod) => mod.id === id)
-        if (modifier) {
-            let result = StatResolver.resolve(modifier, value)
-            console.log(`resolving ${modifier.name_long} ${value} => ${result}`)
-            return result
-        }
-
-        return 0
     }
 }
 

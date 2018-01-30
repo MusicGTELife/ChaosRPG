@@ -1,20 +1,12 @@
-const StatResolver = { }
+const { StatResolver } = require('./util/statresolver')
+const { StatTable } = require('./stattable')
 
-StatResolver.add = (a, b) => a+b
-StatResolver.sub = (a, b) => a-b
-StatResolver.mult = (a, b) => a*b
-StatResolver.addPercent = (a, b) => a+a*b
-StatResolver.subPercent = (a, b) => a-a*b
-
-StatResolver.resolve = (mod, ...args) => {
-    return mod.resolver(mod.value, ...args)
-}
-
-function createEntry(id, nameShort, nameLong, resolver, value) {
+function createEntry(id, inputs, outputs, name, resolver, value) {
     return {
         id,
-        name_short: nameShort,
-        name_long: nameLong,
+        inputs,
+        outputs,
+        name,
         resolver,
         value
     }
@@ -23,13 +15,38 @@ function createEntry(id, nameShort, nameLong, resolver, value) {
 const StatModifier = { }
 const _ = createEntry
 
-StatModifier.ATK_PER_STR =
-    _(0x0110, "AtkPerStr", "Attack rating per strength", StatResolver.mult, 2)
-StatModifier.DEF_PER_DEX =
-    _(0x0111, "DefPerDex", "Defense per dexterity", StatResolver.mult, 2)
-StatModifier.HP_PER_VIT =
-    _(0x0112, "HPPerVit", "Hit points per vitality ", StatResolver.mult, 2)
-StatModifier.MP_PER_INT =
-    _(0x0113, "MPPerInt", "Mana points per intelligence", StatResolver.mult, 2)
+StatModifier.ALL_ATTR =
+    _(0x0001,
+    [ StatTable.ALL_ATTR.id ],
+    [ StatTable.STR.id, StatTable.DEX.id, StatTable.INT.id, StatTable.VIT.id ],
+    "All attributes", StatResolver.add, 1)
 
-module.exports = { StatResolver, StatModifier }
+StatModifier.HP_PER_VIT =
+    _(0x0010, [ StatTable.VIT.id ], [ StatTable.HP.id ],
+    "Hit points per", StatResolver.add, 2)
+StatModifier.MP_PER_INT =
+    _(0x0011, [ StatTable.INT.id ], [ StatTable.MP.id ],
+    "Mana points per", StatResolver.add, 2)
+
+StatModifier.ACCURACY_PER_DEX =
+    _(0x0020, [ StatTable.DEX.id ], [ StatTable.ACCURACY.id],
+    "Accuracy rating per", StatResolver.add, 2)
+StatModifier.EVASION_PER_STR =
+    _(0x0021, [ StatTable.STR.id ], [ StatTable.EVASION.id],
+    "Evasion rating per", StatResolver.add, 2)
+
+StatModifier.ATK_PER_STR =
+    _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],
+    "Attack rating per", StatResolver.add, 2)
+StatModifier.DEF_PER_DEX =
+    _(0x0031, [ StatTable.DEX.id ], [ StatTable.DEF.id ],
+    "Defense per", StatResolver.add, 2)
+
+StatModifier.MATK_PER_INT =
+    _(0x0040, [ StatTable.INT.id ], [ StatTable.MATK.id ],
+    "Magic attack per", StatResolver.add, 2)
+StatModifier.MDEF_PER_VIT =
+    _(0x0041, [ StatTable.VIT.id ], [ StatTable.MDEF.id ],
+    "Magic defence per", StatResolver.add, 2)
+
+module.exports = { StatModifier }

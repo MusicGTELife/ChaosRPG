@@ -28,7 +28,7 @@ test('storage', t => {
         {
             id: Storage.INVENTORY.id,
             size: Storage.INVENTORY.size,
-        buffer: [ 0, 0, 0, 0, 0, 0, 0, 0 ]
+            buffer: [ 0, 0, 0, 0, 0, 0, 0, 0 ]
         }
     ]
 
