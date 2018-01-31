@@ -17,6 +17,17 @@ class PlayerUtil extends UnitUtil {
         return player
     }
 
+    static isValidType(type) {
+        let valid = ({
+            [PlayerType.MAGE.id]: true,
+            [PlayerType.WARRIOR.id]: true,
+            [PlayerType.ROGUE.id]: true,
+            [PlayerType.RANGER.id]: true,
+            [PlayerType.CLERIC.id]: true
+        })[type] || false
+        return valid
+    }
+
     static createBaseStats(type) {
         let overrides = ({
             [PlayerType.MAGE.id]: Mage.stats,

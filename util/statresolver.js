@@ -21,9 +21,11 @@ StatResolver.add = (id, inputs, outputs, baseStats, itemStats, value) => {
     //console.log('each id', id, 'stats', stats, 'inputs', inputs, 'outputs', outputs)
 
     let list = []
-
     inputs.map(i => {
-        list.push(StatUtil.getStat(baseStats, i) + StatUtil.getStat(itemStats, i))
+        list.push({
+            id: i,
+            value: (StatUtil.getStat(baseStats, i) + StatUtil.getStat(itemStats, i)) * value
+        })
     })
 
     let out = []
@@ -32,20 +34,15 @@ StatResolver.add = (id, inputs, outputs, baseStats, itemStats, value) => {
             out.push({
                 id: o,
                 value: StatUtil.getStat(baseStats, o) +
-                       StatUtil.getStat(itemStats, o) + l*value
+                    StatUtil.getStat(itemStats, o)+l.value
             })
         })
-    })
-
-    out.map(i => {
-        let entry = StatUtil.getStatTableEntry(i.id)
-        console.log(i.id, entry.name_long, i.value)
     })
 
     return out
 }
 
-StatResolver.resolve = (mod, baseStats, itemStats, v) => {
+StatResolver.resolve = function (mod, baseStats, itemStats, v) {
     return mod.resolver(mod.id, mod.inputs, mod.outputs, baseStats, itemStats, v)
 }
 

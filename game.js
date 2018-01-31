@@ -18,7 +18,7 @@ const { PlayerType, Player, Mage, Warrior, Rogue } = require('./player')
 const { Monster, MonsterType } = require('./monster')
 
 // utility classes
-const { Markdown } = require('./util/discord')
+const { Markdown, DiscordUtil } = require('./util/discord')
 const { ItemUtil } = require('./util/item')
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
@@ -37,8 +37,9 @@ FightType.NORMAL = { id: 0, name: "Common" }
 class Game {
     constructor(config) {
         this.discord = new Discord.Client()
-        this.markdown = new Markdown()
         this.gameDb = new GameDb(config.db.host, config.db.options)
+
+        this.md = new Markdown()
 
         this.item = new ItemUtil(this)
         this.unit = new UnitUtil(this)
@@ -47,11 +48,13 @@ class Game {
 
         this.token = config.token || ''
         this.interrupt = false
+
+        this.syncinit()
     }
 
     async destroy() {
         let res = await this.discord.destroy()
-            .then(async () => await this.gameDb.disconnect())
+            .then(await this.gameDb.disconnect())
     }
 
     async init() {
@@ -77,17 +80,18 @@ class Game {
         this.discord.on('message', message => { this.onMessage(message) })
         this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
 
+        DiscordUtil.setCommandHandler('create', this, this.createPlayer)
+
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
-            .then(this.gameDb.connect())
+            .then(await this.gameDb.connect())
             .then(await this.run())
-            .then(process.exit(0))
             .catch(e => {
                 console.log('caught', e)
                 return false
             })
 
-        return res
+        process.exit(0)
     }
 
     syncinit() {
@@ -135,16 +139,50 @@ class Game {
     }
 
     onReady() {
-        console.log('I am ready!')
+        console.log('connected to discord')
+
         this.discord.user.setActivity('ChaosRPG', { type: 'PLAYING' })
     }
 
     onMessage(message) {
         console.log(message.content)
+        let command = DiscordUtil.parseCommand(message)
+        if (command) {
+            console.log(`processing command ${command.command.name}`)
+            DiscordUtil.processCommand(command)
+        }
     }
 
     onTypingStart(channel, user) {
         console.log(`${user.id} typing on ${channel.id}`)
+    }
+
+    // discord command handlers
+    async createPlayer(command) {
+        let ctx = command.command.ctx
+        console.log('createPlayer', ctx)
+
+        let typeString = command.args[0].toLowerCase()
+
+        let type = ({
+            ['mage']: PlayerType.MAGE.id,
+            ['warrior']: PlayerType.MAGE.id,
+            ['rogue']: PlayerType.MAGE.id,
+            ['ranger']: PlayerType.MAGE.id,
+            ['cleric']: PlayerType.MAGE.id
+        })[typeString] || 0
+
+        if (!type) {
+            console.log(`invalid player type ${type}`)
+            ctx.discord.channels.get(command.channel)
+                .send(`<@${command.user}> Invalid player class ${typeString}, valid types are: \`Mage, Warrior, Rogue, Ranger, Cleric\``)
+            return
+        }
+
+        if (await ctx.gameDb.getUnit(command.user)) {
+            ctx.discord.channels.get(command.channel)
+                .send(`<@${command.user}> You already have a player, use the delete command if you which to create a new player`)
+        }
     }
 
     async createPlayerInventoryEmbed(unit, items, color) {
@@ -154,7 +192,7 @@ class Game {
         let slot = 0
         items.map(e => {
             let name = ItemUtil.getName(e.code)
-            let desc = this.markdown.code("Foo: 15\nBar: 15\nBaz: some text", "prolog")
+            let desc = Markdown.c("Foo: 15\nBar: 15\nBaz: some text", "prolog")
 
             embed.addField(`*Slot ${++slot}* **\`${name}\`**`, `**${desc}**`, true)
         })
@@ -189,7 +227,6 @@ class Game {
         itemObj.owner = 0xbeef
         itemObj.is_equipped = true
         let item = await this.gameDb.createItem(itemObj)
-        await this.gameDb.removeItems([0x1337])
         item = await this.gameDb.createItem(itemObj)
 
         itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
@@ -216,7 +253,6 @@ class Game {
         if (player) {
             console.log(`${JSON.stringify(player)}`)
 
-
             item = await this.gameDb.getItem(0x1337)
 
             let items = await this.unit.getEquippedItems(player)
@@ -224,7 +260,7 @@ class Game {
         }
 
         while (!this.interrupt) {
-            await this.sleep(5*1000, loop => { this.loop() })
+            await this.sleep(5*1000, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')
@@ -238,4 +274,3 @@ class Game {
 }
 
 const game = new Game(Config)
-game.syncinit()

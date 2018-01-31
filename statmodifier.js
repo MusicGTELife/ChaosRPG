@@ -30,23 +30,23 @@ StatModifier.MP_PER_INT =
 
 StatModifier.ACCURACY_PER_DEX =
     _(0x0020, [ StatTable.DEX.id ], [ StatTable.ACCURACY.id],
-    "Accuracy rating per", StatResolver.add, 2)
+    "Accuracy rating per", StatResolver.add, 3)
 StatModifier.EVASION_PER_STR =
     _(0x0021, [ StatTable.STR.id ], [ StatTable.EVASION.id],
-    "Evasion rating per", StatResolver.add, 2)
+    "Evasion rating per", StatResolver.add, 3)
 
 StatModifier.ATK_PER_STR =
     _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],
-    "Attack rating per", StatResolver.add, 2)
+    "Attack rating per", StatResolver.add, 3)
 StatModifier.DEF_PER_DEX =
     _(0x0031, [ StatTable.DEX.id ], [ StatTable.DEF.id ],
-    "Defense per", StatResolver.add, 2)
+    "Defense per", StatResolver.add, 3)
 
 StatModifier.MATK_PER_INT =
     _(0x0040, [ StatTable.INT.id ], [ StatTable.MATK.id ],
-    "Magic attack per", StatResolver.add, 2)
+    "Magic attack per", StatResolver.add, 3)
 StatModifier.MDEF_PER_VIT =
     _(0x0041, [ StatTable.VIT.id ], [ StatTable.MDEF.id ],
-    "Magic defence per", StatResolver.add, 2)
+    "Magic defence per", StatResolver.add, 3)
 
 module.exports = { StatModifier }

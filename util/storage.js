@@ -4,19 +4,21 @@ const { UnitType } = require('../unit')
 class StorageUtil {
     static createStorage(unitType) {
 
-        let player = ({
+        let valid = ({
             [UnitType.PLAYER.id]: true,
+            [UnitType.MONSTER.id]: true,
         })[unitType] || false
 
-        const storage = [
-            {
-                id: Storage.EQUIPMENT.id,
-                size: Storage.EQUIPMENT.size,
-                buffer: new Array(Storage.EQUIPMENT.size).fill(0)
-            }
-        ]
+        if (!valid)
+            return null
 
-        if (player) {
+        let storage = [ {
+            id: Storage.EQUIPMENT.id,
+            size: Storage.EQUIPMENT.size,
+            buffer: new Array(Storage.EQUIPMENT.size).fill(0)
+        } ]
+
+        if (UnitType.PLAYER.id === unitType) {
             storage.push({
                 id: Storage.INVENTORY.id,
                 size: Storage.INVENTORY.size,
@@ -38,20 +40,14 @@ class StorageUtil {
             return false
 
         // check if the storage contains a buffer of the requested node id
-        storage.map(e => {
-            if (e.id === nodeId)
-                valid = true
-        })
-
-        return valid
+        return !!storage.find(e => e.id === nodeId)
     }
 
     static getNode(storage, nodeId) {
         if (!StorageUtil.isNodeValid(storage, nodeId))
             return null
 
-        let node = storage.find(e => e.id === nodeId)
-        return node
+        return storage.find(e => e.id === nodeId)
     }
 
     static isSlotValid(storage, nodeId, slot) {
@@ -69,8 +65,7 @@ class StorageUtil {
         if (!StorageUtil.isSlotValid(storage, nodeId, slot))
             return false
 
-        const value = StorageUtil.getSlot(storage, nodeId, slot)
-        return value !== null
+        return StorageUtil.getSlot(storage, nodeId, slot) !== 0
     }
 
     static canEquipInSlot(storage, nodeId, slot) {
@@ -85,19 +80,26 @@ class StorageUtil {
 
     static getSlot(storage, nodeId, slot) {
         if (!StorageUtil.isSlotValid(storage, nodeId, slot))
-            return null
+            return 0
 
-        let buffer = StorageUtil.getNode(storage, nodeId)
-        console.log('buffer', buffer)
-        if (buffer)
-            return buffer[slot]
+        let node = StorageUtil.getNode(storage, nodeId)
+        if (node && node.buffer)
+            return node.buffer[slot]
 
-        return null
+        return 0
     }
 
     static setSlot(storage, nodeId, slot, itemId) {
-        storage.find(e => e.id === node)
-        let b = StorageUtil.getNode(storage, nodeId)
+        if (!StorageUtil.isSlotValid(storage, nodeId, slot))
+            return false
+
+        let node = StorageUtil.getNode(storage, nodeId)
+        if (node && node.buffer) {
+            node.buffer[slot] = itemId
+            return true
+        }
+
+        return false
     }
 }
 

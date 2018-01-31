@@ -12,17 +12,28 @@ class UnitUtil {
         this.game = game
     }
 
+    static isValidType(type) {
+        let valid = ({
+            [UnitType.PLAYER.id]: true,
+            [UnitType.MONSTER.id]: true
+        })[type] || false
+        return valid
+    }
+
     static create(type) {
+        if (!UnitUtil.isValidType(type))
+            return null
+
         let descriptor = ({
             [UnitType.PLAYER.id]: Player.descriptor,
             [UnitType.MONSTER.id]: Monster.descriptor
-        })[type] || { }
+        })[type]
 
         console.log(`create ${JSON.stringify(descriptor)}`)
 
         return {
             id: 0,
-            type: type,
+            type,
             stats: UnitUtil.createBaseStats(type),
             storage: StorageUtil.createStorage(type),
             descriptor
@@ -30,6 +41,9 @@ class UnitUtil {
     }
 
     static createBaseStats(type) {
+        if (!UnitUtil.isValidType(type))
+            return null
+
         let stats = Object.values(StatTable).map((e) => {
             if (type == UnitType.PLAYER.id && (e.flags & StatFlag.PLAYER))
                 return { id: e.id, value: 0 }
@@ -44,8 +58,8 @@ class UnitUtil {
 
     getAllItemStats(items) {
         let stats = []
-        if (items !== [])
-            Object.values(items).map(v => { stats.push(...v.stats) })
+        if (items)
+            items.map(v => { stats.push(...v.stats) })
         return stats
     }
 
@@ -63,10 +77,6 @@ class UnitUtil {
         unit.storage[slot] = item.id
         inventory[item.id] = 0
         item.is_equipped = true
-        await item.save()
-
-        await this.computeBaseStats(player)
-        await player.save()
 
         return true
     }
@@ -78,20 +88,12 @@ class UnitUtil {
             return false
         }
 
-        let idx = player.storage.findIndex(i => i === item.id)
-        if (idx === -1)
-            return false
-
         console.log(`unequiping idx ${idx}`)
 
         //player.equipment[idx] = 0
         item.is_equipped = false
 
         console.log(`unequip eq ${JSON.stringify(player.storage)} inv ${JSON.stringify(player.inventory)}`)
-
-        //await item.save()
-        //    .then(async () => await player.save())
-        //    .then(async () => await this.computeBaseStats(player))
 
         return true
     }
@@ -120,53 +122,44 @@ class UnitUtil {
         let itemStats = await this.getAllItemStats(items)
         itemStats = StatUtil.getReducedStats(itemStats)
 
+        // filter stat types in seperate lists
         let baseStats = unit.stats.filter(e => {
             let entry = StatUtil.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.BASE
         })
+
         let unitStats = unit.stats.filter(e => {
             let entry = StatUtil.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.UNIT
         })
+
         let playerStats = unit.stats.filter(e => {
             let entry = StatUtil.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.PLAYER
         })
 
-
-        let allAttr = null
+        // process each base stat which needs to be resolved by a formula
+        let resolvedStats = []
         Object.values(StatModifier).map(e => {
-            //console.log(e)
-            e.resolver(e.id, e.inputs, e.outputs, baseStats, itemStats, e.value)
+            let resolved = e.resolver(e.id, e.inputs, e.outputs, baseStats, itemStats, e.value)
+            resolvedStats = resolvedStats.concat(resolved)
         })
 
-/*
-        allAttr = StatUtil.resolveStat(
-            StatModifier.ALL_ATTR.id, StatModifier.ALL_ATTR.stat_id,
-            StatUtil.getStat(baseStats, StatTable.STR.id),
-            StatUtil.getStat(baseStats, StatTable.DEX.id),
-            StatUtil.getStat(baseStats, StatTable.INT.id),
-            StatUtil.getStat(baseStats, StatTable.VIT.id),
-            StatUtil.getStat(baseStats, StatTable.ALL_ATTR.id) +
-                StatUtil.getStat(itemStats, StatTable.ALL_ATTR.id)
-        )
-
-        let hpMax = StatUtil.resolveStat(
-            StatModifier.HP_PER_VIT.id, StatModifier.HP_PER_VIT.stat_id,
-            StatUtil.getStat(baseStats, StatTable.VIT.id) +
-                StatUtil.getStat(itemStats, StatTable.VIT.id)
-        )
-*/
+        // recalculate unit special stats based on resolved base stats
         let currHp = StatUtil.getStat(unitStats, StatTable.UNIT_HP.id)
         let currHpMax = StatUtil.getStat(unitStats, StatTable.UNIT_HP_MAX.id)
         let currHpPercent = currHpMax === 0 ? 0 : currHp/currHpMax
 
-       //if (!StatUtil.setStat(unit.stats, StatTable.UNIT_HP_MAX.id, hpMax))
-       //     return false
+        let resolvedHp = StatUtil.getStat(resolvedStats, StatTable.HP.id)
+        console.log(`rHP: ${resolvedHp} currHp: ${currHp} currHpMax: ${currHpMax} all_attr: ${JSON.stringify(resolvedStats)}`)
 
-        console.log(`hp: ${currHp} hp_max: ${currHpMax} all_attr: ${JSON.stringify(allAttr)}`)
+        if (resolvedHp > currHpMax) {
+            console.log(`rHP ${resolvedHp} currHpMax ${currHpMax}`)
+            if (!StatUtil.setStat(unit.stats, StatTable.UNIT_HP_MAX.id, resolvedHp))
+                throw 'Unable to set stat'
+        }
 
-        //unit.markModified('stats')
+        // save else where once things settle a bit
         await unit.save()
 
         return unit.stats

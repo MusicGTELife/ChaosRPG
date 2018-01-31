@@ -3,12 +3,13 @@ const { StatTable } = require('../stattable')
 class StatUtil {
     static applyOverrides(stats, overrides) {
         overrides.map(stat => {
-            let base = stats.find(base => base.id === stat.id)
+            let base = stats.find(s => s.id === stat.id)
             if (base) {
-                //console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
+                console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
                 base.value = stat.value
             } else {
-                stats.push(stat.id, stat.value)
+                console.log('adding new stat in apply')
+                stats.push({ id: stat.id, value: stat.value })
             }
         })
     }
