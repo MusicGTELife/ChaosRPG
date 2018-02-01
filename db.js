@@ -35,7 +35,6 @@ class GameDb {
 
     async getSettings() {
         console.log('getSettings')
-        // .where('next_unit_id').gt(0)
         let settings = await Settings.findOne()
         return settings
     }

@@ -2,7 +2,6 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
 const SettingsSchema = {
-    id: Number,
     next_unit_id: Number,
     next_item_id: Number
 }
@@ -10,8 +9,8 @@ const SettingsSchema = {
 const UnitSchema = {
     id: Number,
     type: Number,
-    stats: [ { _id: false, id: Number, value: Number} ],
     storage: [ Schema.Types.Mixed ],
+    stats: [ { _id: false, id: Number, value: Number} ],
     descriptor: Schema.Types.Mixed
 }
 
@@ -23,8 +22,8 @@ const ItemSchema = {
     code: Number,
     item_class: Number,
     tier: Number,
-    descriptor: Schema.Types.Mixed,
-    stats: [ Schema.Types.Mixed ]
+    stats: [ { _id: false, id: Number, value: Number} ],
+    descriptor: Schema.Types.Mixed
 }
 
 // Game models
