@@ -35,6 +35,7 @@
   "devDependencies": {
     "ava": "^0.25.0",
     "husky": "^0.14.3",
-    "nyc": "^11.4.1"
+    "nyc": "^11.4.1",
+    "semantic-release": "^12.4.1"
   }
 }
