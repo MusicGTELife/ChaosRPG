@@ -1,4 +1,4 @@
-## General
+# General
 
 ## Mechanics
 - implement a resolver like StatResolver to neatly handle all combats
@@ -10,10 +10,10 @@
 - implement check if an item can be placed in an equipment mode based on the 
   items type (gloves, boots)
 
-# Players
+### Players
 
 
-# Monsters
+### Monsters
 - implement basic monster tables
 - implement basic generation of monsters
 
