@@ -9,9 +9,10 @@ class PlayerUtil extends UnitUtil {
         return Object.keys(PlayerType).map((k) => k.id === id ? type.name : 'unknown')
     }
 
-    static create(type) {
-        let player = UnitUtil.create(UnitType.PLAYER.id)
+    static create(type, name) {
+        let player = UnitUtil.create(UnitType.PLAYER.id, name)
         player.descriptor.type = type
+        player.descriptor.name = name
         player.stats = PlayerUtil.createBaseStats(type)
 
         return player

@@ -15,7 +15,8 @@ const pointsPerLevel = 4
 class Player extends Unit { }
 
 Player.descriptor = {
-    type: 0
+    type: 0,
+    name: ''
 }
 
 class Mage extends Player { }

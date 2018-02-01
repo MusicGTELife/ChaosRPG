@@ -81,6 +81,7 @@ class Game {
         this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
 
         DiscordUtil.setCommandHandler('create', this, this.createPlayer)
+        DiscordUtil.setCommandHandler('delete', this, this.deletePlayer)
 
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
@@ -148,7 +149,7 @@ class Game {
         console.log(message.content)
         let command = DiscordUtil.parseCommand(message)
         if (command) {
-            console.log(`processing command ${command.command.name}`)
+            console.log(`processing command ${command.name}`)
             DiscordUtil.processCommand(command)
         }
     }
@@ -158,11 +159,12 @@ class Game {
     }
 
     // discord command handlers
-    async createPlayer(command) {
-        let ctx = command.command.ctx
-        console.log('createPlayer', ctx)
 
-        let typeString = command.args[0].toLowerCase()
+    // lexical this is in the context of CommandHandler
+    async createPlayer() {
+        console.log('createPlayer')
+
+        let typeString = this.args[0].toLowerCase()
 
         let type = ({
             ['mage']: PlayerType.MAGE.id,
@@ -174,14 +176,44 @@ class Game {
 
         if (!type) {
             console.log(`invalid player type ${type}`)
-            ctx.discord.channels.get(command.channel)
-                .send(`<@${command.user}> Invalid player class ${typeString}, valid types are: \`Mage, Warrior, Rogue, Ranger, Cleric\``)
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Invalid player class ${typeString}, valid types are: \`Mage, Warrior, Rogue, Ranger, Cleric\``)
             return
         }
 
-        if (await ctx.gameDb.getUnit(command.user)) {
-            ctx.discord.channels.get(command.channel)
-                .send(`<@${command.user}> You already have a player, use the delete command if you which to create a new player`)
+        if (await this.ctx.gameDb.getUnitByName(this.user)) {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> You already have a player, use the delete command if you wish to create a new player`)
+            return
+        }
+
+        let settings = await this.ctx.gameDb.getSettings()
+        let player = PlayerUtil.create(type, this.user)
+        player.id = settings.next_unit_id++
+
+        player = await this.ctx.gameDb.createUnit(player)
+        if (player) {
+            settings.save()
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Your ${typeString} character has been created`)
+        } else {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Failed to create your ${typeString} character`)
+        }
+    }
+
+    // lexical this is in the context of CommandHandler
+    async deletePlayer() {
+        console.log('deletePlayer')
+
+        let existing = await this.ctx.gameDb.getUnitByName(this.user)
+        if (existing) {
+            await this.ctx.gameDb.removeUnit(existing)
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Your character has been deleted`)
+        } else {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Unable to delete, no character found`)
         }
     }
 
@@ -220,40 +252,53 @@ class Game {
     }
 
     async run() {
-        let code = ItemTable.GREAT_HELM.code
-
-        let itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER5.id, ItemRarity.COMMON.id)
-        itemObj.id = 0x1337
-        itemObj.owner = 0xbeef
-        itemObj.is_equipped = true
-        let item = await this.gameDb.createItem(itemObj)
-        item = await this.gameDb.createItem(itemObj)
-
-        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
-        itemObj.id = 0x1337+1
-        itemObj.owner = 0xbeef
-        itemObj.is_equipped = true
-        item = await this.gameDb.createItem(itemObj)
-
-        itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER6.id, ItemRarity.COMMON.id)
-        itemObj.id = 0x1337+2
-        itemObj.owner = 0xbeef
-        itemObj.is_equipped = true
-        item = await this.gameDb.createItem(itemObj)
+        console.log('loading settings')
+        let settings = await this.gameDb.getSettings()
+        if (!settings) {
+            console.log('game settings don\'t exist, creating')
+            settings = await this.gameDb.createSettings({ next_unit_id: 1, next_item_id: 1 })
+            if (!settings) {
+                console.log('unable to create game settings')
+                return false
+            }
+        }
 
         // generate test player
         console.log('creating player')
-        let playerObj = PlayerUtil.create(PlayerType.CLERIC.id)
-        playerObj.storage[0].buffer[0] = 0x1337
-        playerObj.storage[0].buffer[1] = 0x1337+1
-        playerObj.storage[0].buffer[2] = 0x1337+2
+
+        let playerObj = PlayerUtil.create(PlayerType.CLERIC.id, "ᛖᛒᛟᛚᚨ")
         playerObj.id = 0xbeef
 
         let player = await this.gameDb.createUnit(playerObj)
         if (player) {
-            console.log(`${JSON.stringify(player)}`)
+            // generate test items
+            let code = ItemTable.GREAT_HELM.code
 
-            item = await this.gameDb.getItem(0x1337)
+            let itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER5.id, ItemRarity.COMMON.id)
+            itemObj.id = settings.next_item_id++
+            itemObj.owner = 0xbeef
+            itemObj.is_equipped = true
+            let item = await this.gameDb.createItem(itemObj)
+            playerObj.storage[0].buffer[0] = item.id
+
+            itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER4.id, ItemRarity.COMMON.id)
+            itemObj.id = settings.next_item_id++
+            itemObj.owner = 0xbeef
+            itemObj.is_equipped = true
+            item = await this.gameDb.createItem(itemObj)
+            playerObj.storage[0].buffer[1] = item.id
+
+            itemObj = ItemUtil.generate(code, ItemClass.ARMOR, Tier.TIER6.id, ItemRarity.COMMON.id)
+            itemObj.id = settings.next_item_id++
+            itemObj.owner = 0xbeef
+            itemObj.is_equipped = true
+            item = await this.gameDb.createItem(itemObj)
+            playerObj.storage[0].buffer[2] = item.id
+
+            console.log('updating settings')
+            await this.gameDb.updateSettings(settings)
+
+            console.log(`${JSON.stringify(player)}`)
 
             let items = await this.unit.getEquippedItems(player)
             this.createPlayerInventoryEmbed(player, items)

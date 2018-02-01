@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Unit, Item } = require('./models')
+const { Settings, Unit, Item } = require('./models')
 
 class GameDb {
     constructor(host, options) {
@@ -19,6 +19,32 @@ class GameDb {
         await this.db.connection.close().then(await this.db.disconnect())
     }
 
+    async createSettings(settingsObj) {
+        console.log('createSettings')
+        const existing = await this.getSettings()
+        if (existing) {
+            console.log(`game settings already exist`)
+            return null
+        }
+
+        let settings = new Settings(settingsObj)
+        await settings.save()
+
+        return settings
+    }
+
+    async getSettings() {
+        console.log('getSettings')
+        // .where('next_unit_id').gt(0)
+        let settings = await Settings.findOne()
+        return settings
+    }
+
+    async updateSettings(settings) {
+        console.log('updateSettings')
+        return await settings.save()
+    }
+
     async createUnit(unitObj) {
         const existing = await this.getUnit(unitObj.id)
         if (existing) {
@@ -34,6 +60,11 @@ class GameDb {
 
     async getUnit(id) {
         let unit = await Unit.where('id', id).findOne()
+        return unit
+    }
+
+    async getUnitByName(name) {
+        let unit = await Unit.where('descriptor.name', name).findOne()
         return unit
     }
 

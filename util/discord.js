@@ -14,12 +14,35 @@ const Command = { }
 Command.trigger = '!'
 
 const Commands = { }
-Commands.CREATE = {
+Commands.CREATE_PLAYER = {
     name: "create",
-    args_min: 0,
-    args_max: 0,
-    ctx: null,
-    handler: null
+    args_min: 1,
+    args_max: 1,
+    confirm: false,
+    func: null,
+    ctx: null
+}
+Commands.DELETE_PLAYER = {
+    name: "delete",
+    args_min: 1,
+    args_max: 1,
+    func: null,
+    ctx: null
+}
+
+class CommandHandler {
+    constructor(name, ctx, func, args, channel, user) {
+        this.name = name
+        this.ctx = ctx
+        this.func = func
+        this.args = args
+        this.channel = channel
+        this.user = user
+    }
+
+    async run() {
+        return await this.func()
+    }
 }
 
 class DiscordUtil {
@@ -27,12 +50,10 @@ class DiscordUtil {
         return Object.values(Commands).find(c => c.name === name.toLowerCase())
     }
 
-    static setCommandHandler(name, ctx, handler) {
+    static setCommandHandler(name, ctx, func) {
         let command = DiscordUtil.getCommandEntry(name)
-        if (command) {
-            command.ctx = ctx
-            command.handler = handler
-        }
+        command.ctx = ctx
+        command.func = func
     }
 
     static parseCommand(message) {
@@ -50,15 +71,17 @@ class DiscordUtil {
         if (args.length)
             args.shift()
 
-        return {
-            command, args, user: message.author.id, channel: message.channel.id
-        }
+        let handler = new CommandHandler(
+            command.name, command.ctx, command.func, args, message.channel.id, message.author.id
+        )
+
+        return handler
     }
 
     static processCommand(command) {
         console.log('processCommand', command)
-        if (command && command.command.handler)
-            command.command.handler(command)
+        if (command && command.func)
+            command.func()
     }
 }
 

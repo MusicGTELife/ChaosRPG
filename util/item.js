@@ -86,7 +86,9 @@ class ItemUtil {
         item.tier = tier
         item.rarity = rarity
 
-        let count = TierStatCount[tier]+4
+        let tierEntry = Object.values(Tier).find(t => t.id === tier)
+
+        let count = tierEntry.stat_count
         if (count > 0) {
             let shuffled = RNG.getRandomShuffle(Object.keys(ItemModTable))
 

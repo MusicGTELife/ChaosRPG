@@ -1,6 +1,12 @@
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
+const SettingsSchema = {
+    id: Number,
+    next_unit_id: Number,
+    next_item_id: Number
+}
+
 const UnitSchema = {
     id: Number,
     type: Number,
@@ -22,7 +28,8 @@ const ItemSchema = {
 }
 
 // Game models
+const Settings = mongoose.model('Settings', SettingsSchema)
 const Unit = mongoose.model('Unit', UnitSchema)
 const Item = mongoose.model('Item', ItemSchema)
 
-module.exports = { Unit, Item }
+module.exports = { Settings, Unit, Item }

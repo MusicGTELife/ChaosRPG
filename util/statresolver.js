@@ -18,8 +18,6 @@ StatResolver.subPercent = (id, inputs, outputs, stats, value) => {
 }
 
 StatResolver.add = (id, inputs, outputs, baseStats, itemStats, value) => {
-    //console.log('each id', id, 'stats', stats, 'inputs', inputs, 'outputs', outputs)
-
     let list = []
     inputs.map(i => {
         list.push({
@@ -33,8 +31,7 @@ StatResolver.add = (id, inputs, outputs, baseStats, itemStats, value) => {
         list.map(l => {
             out.push({
                 id: o,
-                value: StatUtil.getStat(baseStats, o) +
-                    StatUtil.getStat(itemStats, o)+l.value
+                value: StatUtil.getStat(baseStats, o) + StatUtil.getStat(itemStats, o)+l.value
             })
         })
     })
