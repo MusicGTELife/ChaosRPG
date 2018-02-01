@@ -6,10 +6,16 @@ const SettingsSchema = {
     next_item_id: Number
 }
 
+const StorageSchema = new Schema({
+    id: Number,
+    size: Number,
+    buffer: [ Number ]
+}, { _id: false })
+
 const UnitSchema = {
     id: Number,
     type: Number,
-    storage: [ Schema.Types.Mixed ],
+    storage: [ StorageSchema ],
     stats: [ { _id: false, id: Number, value: Number} ],
     descriptor: Schema.Types.Mixed
 }
