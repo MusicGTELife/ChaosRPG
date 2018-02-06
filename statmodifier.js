@@ -1,13 +1,13 @@
-const { StatResolver } = require('./util/statresolver')
+const { StatResolver } = require('./statresolver')
 const { StatTable } = require('./stattable')
 
-function createEntry(id, inputs, outputs, name, resolver, value) {
+function createEntry(id, inputs, outputs, name, operation, value) {
     return {
         id,
         inputs,
         outputs,
         name,
-        resolver,
+        operation,
         value
     }
 }
@@ -24,16 +24,6 @@ StatModifier.ALL_ATTR =
 StatModifier.HP_PER_VIT =
     _(0x0010, [ StatTable.VIT.id ], [ StatTable.HP.id ],
     "Hit points per", StatResolver.add, 2)
-StatModifier.MP_PER_INT =
-    _(0x0011, [ StatTable.INT.id ], [ StatTable.MP.id ],
-    "Mana points per", StatResolver.add, 2)
-
-StatModifier.ACCURACY_PER_DEX =
-    _(0x0020, [ StatTable.DEX.id ], [ StatTable.ACCURACY.id],
-    "Accuracy rating per", StatResolver.add, 3)
-StatModifier.EVASION_PER_STR =
-    _(0x0021, [ StatTable.STR.id ], [ StatTable.EVASION.id],
-    "Evasion rating per", StatResolver.add, 3)
 
 StatModifier.ATK_PER_STR =
     _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],

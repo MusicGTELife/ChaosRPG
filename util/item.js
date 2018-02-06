@@ -1,52 +1,80 @@
-const RNG = require('../rng')
+const { SecureRNG, SecureRNGContext, getRandomShuffle } = require('../rng') // FIXME getrandomshuffle
 const { StatUtil } = require('./stats')
 
 const { StatTable } = require('../stattable')
 
-const { Tier, TierStatCount } = require('../tier')
+const { Tier } = require('../tier')
 
-const { ItemMod, ItemModTable } = require('../itemmod')
 const { ItemClass } = require('../itemclass')
+const { ItemMod, ItemModTable } = require('../itemmod')
 const { ItemTable } = require('../itemtable')
 
 class ItemUtil {
-    static getName(code) {
-        let name = 'unknown'
-        Object.values(ItemTable).map((e) => {
-            if (e.code === code) {
-                console.log(code, e.name)
-                name = e.name
-            }
-        })
+    constructor(game) {
+        this.game = game
+    }
 
-        return name
+    // TODO FIXME move item table helpers to their own module
+    static getItemTableEntry(code) {
+        return Object.values(ItemTable).find(e => e.code === code)
+    }
+
+    // itemClasses an array of allowed item class ids
+    static getItemClassEntries(itemClasses) {
+        return Object.values(ItemTable).filter(i =>
+            itemClasses.find(ic => ic === i.item_class) !== undefined
+        )
+    }
+
+    // itemClass an item class id
+    // itemSubClasses an array of allowed sub class ids
+    static getItemSubClassEntries(itemClass, itemSubClasses) {
+        return Object.values(ItemTable).filter(i =>
+            i.item_class === itemClass &&
+                itemSubClasses.find(isc => i.item_sub_class === isc) !== undefined
+        )
+    }
+
+    // entries an array of item table entries already read from the item tables
+    getRandomItemTableEntry(entries) {
+        if (entries.length === 0)
+            return null
+
+        if (entries.length === 1)
+            return entries[0]
+
+        let itemRngCtx = this.game.secureRng.getContext('item')
+        let magic = SecureRNG.getRandomInt(itemRngCtx, 0, entries.length-1)
+        let choice = entries[magic]
+
+        return choice
+    }
+
+    static getName(code) {
+        let entry = ItemUtil.getItemTableEntry(code)
+        if (!entry)
+            return 'invalid'
+
+        return entry.name
     }
 
     static createWeaponDescriptor() {
-        let weapon = {
-            weapon_class: 0,
+        return {
             can_duel_wield: false,
             is_2h: false,
             is_ranged: false,
         }
-
-        return weapon
     }
 
     static createArmorDescriptor() {
-        let armor = {
-            armor_class: 0,
+        return {
         }
-
-        return armor
     }
 
     static createJewelDescriptor() {
-        let jewel = {
-            jewel_class: 0
+        return {
+            is_charm: false
         }
-
-        return jewel
     }
 
     static createBaseDescriptor() {
@@ -56,7 +84,9 @@ class ItemUtil {
             is_equipped: false,
             owner: 0,
             code: 0,
+            type: 0,
             item_class: 0,
+            item_sub_class: 0,
             tier: 0,
             descriptor: { },
             stats: [ ]
@@ -80,26 +110,47 @@ class ItemUtil {
         return item
     }
 
-    static generate(code, itemClass, tier, rarity) {
-        let item = ItemUtil.createDescriptor(itemClass)
+    static generate(itemRngCtx, code, itemClass, itemSubClass, tier, rarity) {
+        if (!(itemRngCtx instanceof SecureRNGContext))
+            throw new TypeError('invalid RNG context')
+
+        const item = ItemUtil.createDescriptor(itemClass)
+        if (!item) {
+            console.log(`unable to create item descriptor for item_class ${itemClass}`)
+            process.exit(1)
+            return null
+        }
+
+        const tableEntry = ItemUtil.getItemTableEntry(code)
+        if (!tableEntry)
+            return null
+
+        const tierEntry = Object.values(Tier).find(t => t.id === tier)
+        if (!tierEntry)
+            return null
+
         item.code = code
+
+        // TODO remove these and just lookup the info in the ItemTable
+        item.item_class = itemClass
+        item.item_sub_class = itemSubClass
+        item.storage_flag = tableEntry.storage_flag
+
         item.tier = tier
         item.rarity = rarity
 
-        let tierEntry = Object.values(Tier).find(t => t.id === tier)
-
-        let count = tierEntry.stat_count
+        const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
-            let shuffled = RNG.getRandomShuffle(Object.keys(ItemModTable))
+            const shuffled = getRandomShuffle(Object.keys(ItemModTable))
 
             let stats = [...Array(count)]
             stats.map((_,i) => {
                 let mod = ItemModTable[shuffled[i]]
-                //console.log(`mod ${JSON.stringify(entry)}`)
+                //console.log(`mod ${JSON.stringify(mod)}`)
 
-                Object.values(mod.stat_descriptor).map((desc) => {
-                    //console.log(`stat desc ${JSON.stringify(desc)}`)
-                    let value = RNG.getRandomInt(desc.min_value, desc.max_value)
+                Object.values(mod.stat_descriptor).map(desc => {
+                    console.log(`stat desc ${JSON.stringify(desc)}`)
+                    let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
                     let stat = StatUtil.createDescriptor(desc.id, value)
                     //console.log(`${JSON.stringify(stat)}`)
                     item.stats.push(stat)
@@ -110,8 +161,8 @@ class ItemUtil {
         return item
     }
 
-    static generateStats() {
-
+    static setOwner(item, ownerId) {
+        item.owner = ownerId
     }
 }
 

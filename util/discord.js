@@ -7,6 +7,7 @@ class Markdown {
         return `\`\`\`${lang || ''}\n${str}\`\`\``
     }
 }
+
 Markdown.b = Markdown.bold
 Markdown.c = Markdown.code
 
@@ -26,6 +27,7 @@ Commands.DELETE_PLAYER = {
     name: "delete",
     args_min: 1,
     args_max: 1,
+    confirm: true,
     func: null,
     ctx: null
 }
@@ -68,6 +70,7 @@ class DiscordUtil {
         if (!command)
             return null
 
+        // get rid of the command name leaving only arguments
         if (args.length)
             args.shift()
 

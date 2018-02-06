@@ -9,14 +9,16 @@ PlayerType.ROGUE = { id: 0x03, name: "Rogue" }
 PlayerType.RANGER = { id: 0x04, name: "Ranger" }
 PlayerType.CLERIC = { id: 0x05, name: "Cleric" }
 
-const basePoints = 20
-const pointsPerLevel = 4
+const baseStatPoints = 20
+const statPointsPerLevel = 4
 
 class Player extends Unit { }
 
 Player.descriptor = {
     type: 0,
-    name: ''
+    account: '',
+    last_online_period: 0,
+    last_chat_ts: 0
 }
 
 class Mage extends Player { }

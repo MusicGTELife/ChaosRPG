@@ -1,9 +1,11 @@
+const { ItemUtil } = require('./item')
+
 const { Storage } = require('../storage')
+const { StorageFlag } = require('../storageflags')
 const { UnitType } = require('../unit')
 
 class StorageUtil {
     static createStorage(unitType) {
-
         let valid = ({
             [UnitType.PLAYER.id]: true,
             [UnitType.MONSTER.id]: true,
@@ -30,6 +32,9 @@ class StorageUtil {
     }
 
     static isNodeValid(storage, nodeId) {
+        if (!storage)
+            return false
+
         // check if the node id is valid
         let valid = ({
             [Storage.EQUIPMENT.id]: true,
@@ -68,6 +73,25 @@ class StorageUtil {
         return StorageUtil.getSlot(storage, nodeId, slot) !== 0
     }
 
+    static canEquipItemTypeInSlot(storage, nodeId, slot, itemCode) {
+        if (!StorageUtil.isSlotValid(storage, nodeId, slot))
+            return false
+
+        let itemTableEntry = ItemUtil.getItemTableEntry(itemCode)
+        if (!itemTableEntry)
+            return false
+
+        if (nodeId === Storage.EQUIPMENT.id) {
+            let flags = Storage.EQUIPMENT.descriptor[slot]
+            return (flags & itemTableEntry.storage_flag) !== 0
+        } else if (nodeId == Storage.INVENTORY.id) {
+            let flags = Storage.INVENTORY.descriptor[slot]
+            return (flags & itemTableEntry.storage_flag) !== 0
+        }
+
+        return false
+    }
+
     static canEquipInSlot(storage, nodeId, slot) {
         if (!StorageUtil.isSlotValid(storage, nodeId, slot))
             return false
@@ -93,8 +117,14 @@ class StorageUtil {
         if (!StorageUtil.isSlotValid(storage, nodeId, slot))
             return false
 
+        if (itemId < 0)
+            return false
+
         let node = StorageUtil.getNode(storage, nodeId)
         if (node && node.buffer) {
+            if (node.buffer[slot] !== 0)
+                return false
+
             node.buffer[slot] = itemId
             return true
         }

@@ -1,6 +1,8 @@
 const { StatUtil } = require('./stats')
 const { StorageUtil } = require('./storage')
+const { ItemUtil } = require('./item')
 
+const { Storage } = require('../storage')
 const { StatModifier } = require('../statmodifier')
 const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
@@ -34,6 +36,7 @@ class UnitUtil {
         return {
             id: 0,
             type,
+            name: '',
             stats: UnitUtil.createBaseStats(type),
             storage: StorageUtil.createStorage(type),
             descriptor
@@ -44,56 +47,148 @@ class UnitUtil {
         if (!UnitUtil.isValidType(type))
             return null
 
-        let stats = Object.values(StatTable).map((e) => {
-            if (type == UnitType.PLAYER.id && (e.flags & StatFlag.PLAYER))
+        let stats = Object.values(StatTable).filter(e => {
+            if (type === UnitType.PLAYER.id && (e.flags & StatFlag.PLAYER) !== 0)
                 return { id: e.id, value: 0 }
-            else if (type == UnitType.MONSTER.id && (e.flags & StatFlag.MONSTER))
+            else if (type === UnitType.MONSTER.id && (e.flags & StatFlag.MONSTER) !== 0)
                 return { id: e.id, value: 0 }
-            else if ((e.flags & StatFlag.BASE) || (e.flags & StatFlag.UNIT))
+            else if ((e.flags & StatFlag.BASE) !== 0 || (e.flags & StatFlag.UNIT) !== 0)
                 return { id: e.id, value: 0 }
-        })
+        }).map(e => ({ id: e.id, value: 0}))
 
         return stats
     }
 
     getAllItemStats(items) {
+        if (!items)
+            return []
+
         let stats = []
-        if (items)
-            items.map(v => { stats.push(...v.stats) })
+        items.map(v => { stats.push(...v.stats) })
+
         return stats
     }
 
-    // FIXME decide
-    async equipItem(unit, items, item, node, slot) {
-        let found = items.find((i) => i.id === item.id)
-        if (found) {
-            console.log(`item ${item.id} is already equipped`);
+    verifyUnitStorage(unit, equippedItems) {
+        const valid = unit.storage.every(n => {
+            let invalidStorage = n.buffer.every(s => {
+                if (s === 0)
+                    return true
+
+                if (s < 0)
+                    return false
+
+                if (n.id === Storage.EQUIPMENT.id && equippedItems &&
+                        !equippedItems.find(i => i.id === s))
+                    return false
+
+                return true
+            }) !== true
+
+            let invalidEquipment = false
+            if (n.id === Storage.EQUIPMENT.id && equippedItems) {
+                invalidEquipment = equippedItems.every(i => {
+                    let found = n.buffer.find(s => s === i.id)
+                    return found !== undefined
+                }) !== true
+            }
+
+            console.log('storage invalid', invalidStorage, 'equipment invalid', invalidEquipment)
+            return !invalidStorage && !invalidEquipment
+        })
+
+        //console.log(unit.storage)
+        return valid
+    }
+
+    static itemRequirementsAreMet(unit, item) {
+        if (!unit || !item)
             return false
+
+        const entry = ItemUtil.getItemTableEntry(item.code)
+        if (!entry)
+            return false
+
+        console.log(entry.requirements)
+
+        const met = entry.requirements.every(i => {
+            const unitStat = StatUtil.getStat(unit.stats, i.id)
+            if (unitStat >= i.value)
+                return true
+
+            return false
+        })
+
+        console.log('met', met)
+        return met
+    }
+
+    async equipItem(unit, item, node, slot) {
+        if (!unit || !item)
+            return false
+
+        const items = await this.game.unit.getEquippedItems(unit)
+        if (items) {
+            let found = items.find(i => i.id === item.id)
+            if (found) {
+                console.log(`item ${item.id} is already equipped`);
+                return false
+            }
         }
+
+        if (!StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code))
+            return false
 
         if (!StorageUtil.canEquipInSlot(unit.storage, node, slot))
             return false
 
-        unit.storage[slot] = item.id
-        inventory[item.id] = 0
+        // Special case to allow monsters to equip items regardless of the items
+        // stat requirements
+        if (unit.type === UnitType.PLAYER.id && !UnitUtil.itemRequirementsAreMet(unit, item))
+            return false
+
+        console.log('can equip item')
+
+        if (!StorageUtil.setSlot(unit.storage, node, slot, item.id)) {
+            console.log('failed setting item slot')
+            return false
+        }
+
         item.is_equipped = true
+
+        await item.save()
+
+        unit.markModified('storage') // due to mongoose bug
+        await unit.save()
 
         return true
     }
 
-    async unequipItem(player, items, item, node, slot) {
-        let found = items.find((i) => i.id === item.id)
+    async unequipItem(player, item, node, slot) {
+        if (!unit || !items || !item)
+            return false
+
+        const items = await this.game.player.getEquippedItems(unit)
+        if (!items)
+            return false
+
+        const found = items.find(i => i.id === item.id)
         if (!found) {
             console.log(`item ${item.id} is not equipped`)
             return false
         }
 
-        console.log(`unequiping idx ${idx}`)
+        console.log('can unequip item')
+
+        if (!StorageUtil.setSlot(storage, node, slot, 0)) {
+            console.log('failed setting item slot')
+            return false
+        }
 
         //player.equipment[idx] = 0
         item.is_equipped = false
 
-        console.log(`unequip eq ${JSON.stringify(player.storage)} inv ${JSON.stringify(player.inventory)}`)
+        console.log(`unequip eq ${JSON.stringify(player.storage)}`)
 
         return true
     }
@@ -101,23 +196,26 @@ class UnitUtil {
     async getEquippedItems(unit) {
         if (unit) {
             let items = await this.game.gameDb.getUnitItems(unit.id)
-            items = Object.values(items).filter(v => v.is_equipped === true)
+            if (items)
+                items = items.filter(v => v.is_equipped === true)
             //console.log(`getEquippedItems ${JSON.stringify(items)}`)
+
             return items
         }
 
-        return []
+        return null
     }
 
     // called when:
     // - a unit is generated
     // - item placed or on removed from a units equipment slot
     // - a player unit levels
-    //
-    // FIXME make as generic as possible
     async computeBaseStats(unit, items) {
-        if (!unit || !items)
+        if (!unit)
             return
+
+        let valid = this.verifyUnitStorage(unit, items)
+        console.log(`unit storage is ${valid}`)
 
         let itemStats = await this.getAllItemStats(items)
         itemStats = StatUtil.getReducedStats(itemStats)
@@ -139,19 +237,16 @@ class UnitUtil {
         })
 
         // process each base stat which needs to be resolved by a formula
-        let resolvedStats = []
-        Object.values(StatModifier).map(e => {
-            let resolved = e.resolver(e.id, e.inputs, e.outputs, baseStats, itemStats, e.value)
-            resolvedStats = resolvedStats.concat(resolved)
-        })
+        let resolvedStats = StatUtil.resolve(baseStats.concat(unitStats), StatUtil.getModifiers())
 
         // recalculate unit special stats based on resolved base stats
         let currHp = StatUtil.getStat(unitStats, StatTable.UNIT_HP.id)
         let currHpMax = StatUtil.getStat(unitStats, StatTable.UNIT_HP_MAX.id)
+
         let currHpPercent = currHpMax === 0 ? 0 : currHp/currHpMax
 
         let resolvedHp = StatUtil.getStat(resolvedStats, StatTable.HP.id)
-        console.log(`rHP: ${resolvedHp} currHp: ${currHp} currHpMax: ${currHpMax} all_attr: ${JSON.stringify(resolvedStats)}`)
+        console.log(`${unit.name} rHP: ${resolvedHp} currHp: ${currHp} currHpMax: ${currHpMax} all_attr: ${JSON.stringify(resolvedStats)}`)
 
         if (resolvedHp > currHpMax) {
             console.log(`rHP ${resolvedHp} currHpMax ${currHpMax}`)
@@ -160,7 +255,7 @@ class UnitUtil {
         }
 
         // save else where once things settle a bit
-        await unit.save()
+        //await unit.save()
 
         return unit.stats
     }

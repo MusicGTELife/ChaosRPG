@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { Settings, Unit, Item } = require('./models')
+const { UnitType } = require('./unit')
 
 class GameDb {
     constructor(host, options) {
@@ -34,7 +35,6 @@ class GameDb {
     }
 
     async getSettings() {
-        console.log('getSettings')
         let settings = await Settings.findOne()
         return settings
     }
@@ -44,17 +44,50 @@ class GameDb {
         return await settings.save()
     }
 
-    async createUnit(unitObj) {
-        const existing = await this.getUnit(unitObj.id)
+    async createActiveUsers() {
+        console.log('createActiveUsers')
+        const existing = await this.getActiveUsers()
         if (existing) {
-            console.log(`cannot create unit for ${unitObj.id} which already exists`)
+            console.log(`active users record already exists`)
             return null
         }
 
-        let unit = new Unit(unitObj)
-        await unit.save()
+        let activeUsers = new ActiveUsers(activeUsersObj)
+        await activeUsers.save()
 
-        return unit
+        return activeUsers
+    }
+
+    async getActiveUsers() {
+        let activeUsers = await ActiveUsers.findOne()
+        return activeUsers
+    }
+
+    async updateActiveUsers(activeUsers) {
+        console.log('updateActiveUsers')
+        return await activeUsers.save()
+    }
+
+    async createUnit(unitObj) {
+        if (unitObj.type === UnitType.PLAYER.id) {
+            const existing = await this.getUnitByAccount(unitObj.descriptor.account)
+            if (existing) {
+                console.log(`cannot create unit for ${unitObj.descriptor.account} which already exists`)
+                return null
+            }
+        }
+
+        let settings = await this.getSettings()
+        if (settings) {
+            let unit = new Unit(unitObj)
+            unit.id = settings.next_unit_id++;
+
+            await settings.save()
+            await unit.save()
+
+            return unit
+        }
+        return null
     }
 
     async getUnit(id) {
@@ -62,8 +95,8 @@ class GameDb {
         return unit
     }
 
-    async getUnitByName(name) {
-        let unit = await Unit.where('descriptor.name', name).findOne()
+    async getUnitByAccount(account) {
+        let unit = await Unit.where('descriptor.account', account).findOne()
         return unit
     }
 
@@ -95,9 +128,18 @@ class GameDb {
             return null;
         }
 
-        let item = new Item(itemObj)
-        await item.save()
-        return item
+        let settings = await this.getSettings()
+        if (settings) {
+            let item = new Item(itemObj)
+            item.id = settings.next_item_id++;
+
+            await settings.save()
+            await item.save()
+
+            return item
+        }
+
+        return null
     }
 
     async getItem(id) {
