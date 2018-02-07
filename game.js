@@ -328,7 +328,7 @@ class Game {
         // generate a monster
         console.log('creating monster')
         const code = MonsterTable.SKELETON_WARRIOR.code
-        let monsterObj = this.monster.generate(monsterRngCtx, code, 1, monsterRarity.id)
+        let monsterObj = this.monster.generate(monsterRngCtx, code, 2, monsterRarity.id)
         if (!monsterObj) {
             console.log('failed creating a monster')
             return false

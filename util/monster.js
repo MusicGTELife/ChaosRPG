@@ -136,7 +136,8 @@ class MonsterUtil extends UnitUtil {
             (choice.item_class === ItemClass.WEAPON && choice.item_sub_class === WeaponClass.MELEE_2H) ||
             (choice.item_class === ItemClass.WEAPON && choice.item_sub_class === WeaponClass.CASTING_2H)
 
-        console.log('primary two handed', isPrimaryTwoHanded)
+        if (isPrimaryTwoHanded)
+            console.log('primary two handed')
 
         let item = ItemUtil.generate(itemRngCtx,
             choice.code, choice.item_class, choice.item_sub_class, tier, rarity
@@ -198,13 +199,12 @@ class MonsterUtil extends UnitUtil {
             if (item)
                 items.push(item)
 
-            console.log('additional', i, choice)
+            //console.log('additional', i, choice)
         }
 
         // okay all items for the monster are now generated, equip them
         items.map(i => {
-            // FIXME
-            this.game.unit.equipItem(monster, );
+            this.game.unit.equipItem(monster, i);
         })
 
         await this.game.unit.computeBaseStats(monster)

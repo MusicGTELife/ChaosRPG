@@ -141,7 +141,8 @@ class ItemUtil {
 
         const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
-            const shuffled = getRandomShuffle(Object.keys(ItemModTable))
+            const shuffled = SecureRNG.shuffleSequence(itemRngCtx, Object.keys(ItemModTable))
+            //console.log('shuffled', shuffled)
 
             let stats = [...Array(count)]
             stats.map((_,i) => {
@@ -149,7 +150,7 @@ class ItemUtil {
                 //console.log(`mod ${JSON.stringify(mod)}`)
 
                 Object.values(mod.stat_descriptor).map(desc => {
-                    console.log(`stat desc ${JSON.stringify(desc)}`)
+                    //console.log(`stat desc ${JSON.stringify(desc)}`)
                     let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
                     let stat = StatUtil.createDescriptor(desc.id, value)
                     //console.log(`${JSON.stringify(stat)}`)

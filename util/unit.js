@@ -93,7 +93,9 @@ class UnitUtil {
                 }) !== true
             }
 
-            console.log('storage invalid', invalidStorage, 'equipment invalid', invalidEquipment)
+            if (invalidStorage || invalidEquipment)
+                console.log('storage invalid', invalidStorage, 'equipment invalid', invalidEquipment)
+
             return !invalidStorage && !invalidEquipment
         })
 
@@ -189,6 +191,20 @@ class UnitUtil {
         item.is_equipped = false
 
         console.log(`unequip eq ${JSON.stringify(player.storage)}`)
+
+        return true
+    }
+
+    async equipItem(unit, item) {
+        if (!unit)
+            return false
+
+        if (!item)
+            return false
+
+        let slotTypes = StorageUtil.getValidEquipmentSlotsForItem(unit.storage, item)
+
+        //console.log('equipItem out', slotTypes)
 
         return true
     }

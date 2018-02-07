@@ -80,7 +80,7 @@ ItemTable.NECKLACE = _(0x2100, "Necklace", SF.NECK, IC.JEWEL, JC.NECKLACE,
 ItemTable.BRACELET = _(0x2200, "Bracelet", SF.WRIST, IC.JEWEL, JC.BRACELET,
     [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ]
 )
-ItemTable.CHARM = _(0x2300, "Small Charm", SF.CHARM, IC.JEWEL, JC.CHARM,
+ItemTable.CHARM = _(0x2300, "Small Charm", SF.INVENTORY, IC.JEWEL, JC.CHARM,
     [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ]
 )
 

@@ -72,6 +72,17 @@ class SecureRNG {
         return true
     }
 
+    // TODO
+    static getIntSequence(ctx, count, range, unique = false) {
+
+    }
+
+    static shuffleSequence(ctx, sequence) {
+        return sequence.map(a => [SecureRNG.getRandomInt(ctx, -1, 1), a])
+            .sort((a, b) => a[0] - b[0])
+            .map((a) => a[1])
+    }
+
     static getRandomInt(ctx, min, max) {
         if (!SecureRNG.validateContext(ctx))
             throw new Error('invalid context')
@@ -140,10 +151,4 @@ class SecureRNG {
     }
 }
 
-function getRandomShuffle(seq) {
-    return seq.map(a => [Math.random(), a])
-        .sort((a, b) => a[0] - b[0])
-        .map((a) => a[1])
-}
-
-module.exports = { getRandomShuffle, SecureRNGContext, SecureRNG }
+module.exports = { SecureRNGContext, SecureRNG }
