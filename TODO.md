@@ -45,8 +45,6 @@
 - implement basic generation of monsters
 
 ## Items
-- consider removal of Item.is_equipped field and check against the units
-  storage
 
 ## Chat Interface
 
