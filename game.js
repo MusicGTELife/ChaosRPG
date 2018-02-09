@@ -420,12 +420,13 @@ class Game {
             return entry && entry.flags & StatFlag.UNIT
         })
 
+        if ()
         console.log(`Unit1 ${UnitUtil.getName(this.combatUnits[0])}` +
             ` HP ${SU.getStat(unit1Stats, ST.UNIT_HP.id).value}` +
             ` HPMax ${SU.getStat(unit1Stats, ST.UNIT_HP_MAX.id).value}` +
-            ` MAtk ${SU.getStat(unit2Stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(unit2Stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(unit2Stats, ST.UNIT_MDEF.id).value}`
+            ` MAtk ${SU.getStat(unit1Stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unit1Stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unit1Stats, ST.UNIT_MDEF.id).value}`
         )
 
         console.log(`Unit2 ${UnitUtil.getName(this.combatUnits[1])}` +
@@ -439,10 +440,10 @@ class Game {
 
         let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
         if (magic > 63) {
-            // unit1 has first turn
+            // unit1 is attacker
 
         } else {
-            // unit2 has first turn
+            // unit2 is attacker
 
         }
 
