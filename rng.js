@@ -77,8 +77,23 @@ class SecureRNG {
 
     }
 
-    static shuffleSequence(ctx, sequence) {
-        return sequence.map(a => [SecureRNG.getRandomInt(ctx, -1, 1), a])
+    static shuffleSequence(ctx, sequence, shuffles) {
+        if (!SecureRNG.validateContext(ctx))
+            throw new Error('invalid context')
+
+        if (sequence.length < 2)
+            throw new RangeError('sequence length must be greater than 1')
+
+        if (sequence.length === 2) {
+            let magic = SecureRNG.getRandomInt(ctx, 0, 1)
+            console.log('magic', magic)
+            if (magic === 0)
+                return [ sequence[1], sequence[0] ]
+            else
+                return sequence
+        }
+
+        return sequence.map(a => [SecureRNG.getRandomInt(ctx, 0, 1), a])
             .sort((a, b) => a[0] - b[0])
             .map((a) => a[1])
     }
@@ -145,7 +160,7 @@ class SecureRNG {
         if (!SecureRNG.validateContext(ctx))
             throw new Error('invalid context')
 
-        //console.log(`${ctx.hmac}-${ctx.counter}`)
+        //console.log(`${ctx.hmac.toString()}-${ctx.counter}`)
 
         return ctx.hmac
     }

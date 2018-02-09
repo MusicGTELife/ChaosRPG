@@ -60,6 +60,13 @@ class UnitUtil {
         return stats
     }
 
+    static getName(unit) {
+        if (unit.type === UnitType.PLAYER.id)
+            return unit.descriptor.account
+
+        return unit.name
+    }
+
     getAllItemStats(items) {
         if (!items)
             return []
@@ -187,7 +194,6 @@ class UnitUtil {
         // node will be selected. In either case the first available slot will
         // be selected
 
-
         let entry = slotTypes.find(st => st.id === Storage.EQUIPMENT.id)
         if (!entry) {
             entry = slotTypes.find(st => st.id === Storage.INVENTORY.id)
@@ -233,58 +239,70 @@ class UnitUtil {
             return null
         }
 
+        const ST = StatTable
+        const SU = StatUtil
+
         let itemStats = await this.getAllItemStats(items)
-        itemStats = StatUtil.getReducedStats(itemStats)
+        itemStats = SU.getReducedStats(itemStats)
 
         // filter stat types in seperate lists
         let baseStats = unit.stats.filter(e => {
-            let entry = StatUtil.getStatTableEntry(e.id)
+            let entry = SU.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.BASE
         })
 
         let unitStats = unit.stats.filter(e => {
-            let entry = StatUtil.getStatTableEntry(e.id)
+            let entry = SU.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.UNIT
         })
 
         let playerStats = unit.stats.filter(e => {
-            let entry = StatUtil.getStatTableEntry(e.id)
+            let entry = SU.getStatTableEntry(e.id)
             return entry && entry.flags & StatFlag.PLAYER
         })
 
         let stats = itemStats.concat(baseStats)
-        stats = StatUtil.getReducedStats(stats)
-        console.log(StatUtil.getStat(stats, StatTable.DEX.id))
+        stats = SU.getReducedStats(stats)
+        console.log(SU.getStat(stats, ST.DEX.id))
 
         // process each base stat which needs to be resolved by a formula
-        let resolvedStats = StatUtil.resolve(stats, StatUtil.getModifiers())
+        let resolvedStats = SU.resolve(stats, SU.getModifiers())
 
         // recalculate unit special stats based on resolved base stats
-        let currHp = StatUtil.getStat(unitStats, StatTable.UNIT_HP.id)
-        let currHpMax = StatUtil.getStat(unitStats, StatTable.UNIT_HP_MAX.id)
+        let currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
+        let currHpMax = SU.getStat(unitStats, ST.UNIT_HP_MAX.id)
 
         let currHpPercent = currHpMax === 0 ? 0 : currHp/currHpMax
 
-        let resolvedHp = StatUtil.getStat(resolvedStats, StatTable.HP.id)
+        let resolvedHp = SU.getStat(resolvedStats, ST.HP.id)
 
         // the unit has died or is newly created, set full life
         if (currHp.value === 0) {
-            if (!StatUtil.setStat(unit.stats, StatTable.UNIT_HP_MAX.id, resolvedHp.value))
+            if (!SU.setStat(unit.stats, ST.UNIT_HP_MAX.id, resolvedHp.value))
                 throw new Error('Unable to set stat')
-            if (!StatUtil.setStat(unit.stats, StatTable.UNIT_HP.id, resolvedHp.value))
+            if (!SU.setStat(unit.stats, ST.UNIT_HP.id, resolvedHp.value))
                 throw new Error('Unable to set stat')
         }
 
         if (currHpMax.value < resolvedHp.value) {
-            if (!StatUtil.setStat(unit.stats, StatTable.UNIT_HP_MAX.id, resolvedHp.value))
+            if (!SU.setStat(unit.stats, ST.UNIT_HP_MAX.id, resolvedHp.value))
                 throw new Error('Unable to set stat')
         }
 
-        currHp = StatUtil.getStat(unitStats, StatTable.UNIT_HP.id)
-        currHpMax = StatUtil.getStat(unitStats, StatTable.UNIT_HP_MAX.id)
+        SU.setStat(unit.stats, ST.UNIT_ATK.id,
+            SU.getStat(resolvedStats, ST.ATK.id).value)
+        SU.setStat(unit.stats, ST.UNIT_MATK.id,
+            SU.getStat(resolvedStats, ST.MATK.id).value)
 
-        console.log(`${unit.name}currHp:` +
-            `${currHp.value} currHpMax: ${currHpMax.value}`)
+        SU.setStat(unit.stats, ST.UNIT_DEF.id,
+            SU.getStat(resolvedStats, ST.DEF.id).value)
+        SU.setStat(unit.stats, ST.UNIT_MDEF.id,
+            SU.getStat(resolvedStats, ST.MDEF.id).value)
+
+        currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
+        currHpMax = SU.getStat(unitStats, ST.UNIT_HP_MAX.id)
+
+        console.log(`${UnitUtil.getName(unit)} currHp: ${currHp.value} currHpMax: ${currHpMax.value}`)
 
         // save else where once things settle a bit
         await unit.save()

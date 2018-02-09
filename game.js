@@ -7,7 +7,7 @@ const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameState } = require('./gamestate')
 
 const { Storage } = require('./storage')
-const { StatTable } = require('./stattable')
+const { StatTable, StatFlag } = require('./stattable')
 
 const { Tier, TierStatCount } = require('./tier')
 
@@ -59,6 +59,7 @@ class Game {
 
         this.syncinit()
         this.gameState = GameState.OFFLINE
+        this.combatUnits = null
     }
 
     async destroy() {
@@ -283,7 +284,6 @@ class Game {
             return null
         }
 
-
         return players
     }
 
@@ -291,16 +291,8 @@ class Game {
         let rngCtx = this.secureRng.getContext('combat')
         if (!rngCtx) {
             console.log('unable to get combat RNG context')
-            return false
+            return null
         }
-
-        let monsterRngCtx = this.secureRng.getContext('monster')
-        if (!monsterRngCtx) {
-            console.log('unable to get monster RNG context')
-            return false
-        }
-
-        let settings = await this.gameDb.getSettings()
 
         // TODO select alternative run loop implementation based on config mode
         let players = null
@@ -311,19 +303,16 @@ class Game {
 
         if (!players) {
             console.log('unable to find a recently active player, skipping combat')
-            return false
+            return null
         }
 
         players = SecureRNG.shuffleSequence(rngCtx, players)
-
-        //await this.unit.computeBaseStats(player)
 
         let pvp = false
         if (players.length > 1 && SecureRNG.getRandomInt(rngCtx, 0, 127) === 127)
             pvp = true
 
-        let magic = 0
-        let units = [ ]
+        let units = []
 
         units.push(players.pop())
 
@@ -335,16 +324,26 @@ class Game {
         } else {
             console.log('monster combat selected')
 
-            magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
+            let settings = await this.gameDb.getSettings()
+            let monsterRngCtx = this.secureRng.getContext('monster')
+            if (!monsterRngCtx) {
+                console.log('unable to get monster RNG context')
+                return null
+            }
+
+            let magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
             let monsterRarity = Game.getFightMonsterRarity(magic)
+
+            let shuffledTable = SecureRNG.shuffleSequence(monsterRngCtx, Object.values(MonsterTable))
 
             // generate a monster
             console.log('creating monster for combat')
-            const code = MonsterTable.SKELETON_WARRIOR.code
-            let monsterData = this.monster.generate(monsterRngCtx, code, 2, monsterRarity.id)
+            const code = shuffledTable[0].code
+
+            let monsterData = this.monster.generate(monsterRngCtx, code, 0, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
-                return false
+                return null
             }
             monsterData.monster.id = settings.next_unit_id
             settings.next_unit_id++
@@ -352,7 +351,7 @@ class Game {
             let monster = await this.gameDb.createUnit(monsterData.monster)
             if (!monster) {
                 console.log('failed to create monster in db')
-                return false
+                return null
             }
 
             monsterData.items.forEach(async i => {
@@ -367,19 +366,19 @@ class Game {
                     process.exit(1)
                 }
 
-                    let items = await this.unit.getEquippedItems(monster)
+                let items = await this.unit.getEquippedItems(monster)
 
-                    // and equip the items on the monster
-                    if (!this.unit.equipItemByType(monster, items, item)) {
-                        console.log('unable to equip monster item', item)
-                        process.exit(1)
-                    }
+                // and equip the items on the monster
+                if (!this.unit.equipItemByType(monster, items, item)) {
+                    console.log('unable to equip monster item', item)
+                    process.exit(1)
+                }
             })
-
-            await settings.save()
 
             await monster.markModified('storage')
             await monster.save()
+
+            await settings.save()
 
             let items = await this.unit.getEquippedItems(monster)
             await this.unit.computeBaseStats(monster, items)
@@ -396,14 +395,55 @@ class Game {
         return true
     }
 
-    // FIXME|TODO need game states
     async doCombat() {
         console.log('doCombat')
+
+        if (!this.combatUnits)
+            return false
 
         let rngCtx = this.secureRng.getContext('combat')
         if (!rngCtx) {
             console.log('unable to get combat RNG context');
             return false
+        }
+
+        const ST = StatTable
+        const SU = StatUtil
+
+        let unit1Stats = this.combatUnits[0].stats.filter(e => {
+            let entry = SU.getStatTableEntry(e.id)
+            return entry && entry.flags & StatFlag.UNIT
+        })
+
+        let unit2Stats = this.combatUnits[1].stats.filter(e => {
+            let entry = SU.getStatTableEntry(e.id)
+            return entry && entry.flags & StatFlag.UNIT
+        })
+
+        console.log(`Unit1 ${UnitUtil.getName(this.combatUnits[0])}` +
+            ` HP ${SU.getStat(unit1Stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(unit1Stats, ST.UNIT_HP_MAX.id).value}` +
+            ` MAtk ${SU.getStat(unit2Stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unit2Stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unit2Stats, ST.UNIT_MDEF.id).value}`
+        )
+
+        console.log(`Unit2 ${UnitUtil.getName(this.combatUnits[1])}` +
+            ` HP ${SU.getStat(unit2Stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(unit2Stats, ST.UNIT_HP_MAX.id).value}` +
+            ` Atk ${SU.getStat(unit2Stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(unit2Stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unit2Stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unit2Stats, ST.UNIT_MDEF.id).value}`
+        )
+
+        let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
+        if (magic > 63) {
+            // unit1 has first turn
+
+        } else {
+            // unit2 has first turn
+
         }
 
         return true
@@ -417,8 +457,9 @@ class Game {
         let units = await this.getUnitsForCombat()
         if (!units || units.length !== 2)
             return false
+        this.combatUnits = units
 
-        console.log(`selected ${units[0].name} and ${units[1].name} for combat`)
+        console.log(`selected ${UnitUtil.getName(units[0])} and ${UnitUtil.getName(units[1])} for combat`)
 
         //this.discord.channels.get('403320283261304835').send(`\`\`\`json\n[\n\{ 'player': ${JSON.stringify(player)},\n'playerItems': ${JSON.stringify(items)} }\n]\n\`\`\``)
 
