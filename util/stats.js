@@ -62,14 +62,34 @@ class StatUtil {
     }
 
     static getModifiers() {
-        let mods = Object.values(StatModifier)//.map(e => e)
-        //console.log(mods)
+        let mods = Object.values(StatModifier)
         return mods
     }
 
     static getModifier(id) {
         const mods = StatUtil.getModifiers()
         return mods.find(m => m.id === id)
+    }
+
+    static resolveModifier(stats, mod) {
+        let inputs = mod.inputs.map(i => ({
+            id: i,
+            value: StatUtil.getStat(stats, i).value*mod.value
+        }))
+
+        let outputs = mod.outputs.map(i => StatUtil.getStat(stats, i))
+
+        //console.log(`inputs ${JSON.stringify(inputs)} inputs end`)
+        //console.log(`outputs ${JSON.stringify(outputs)} outputs end`)
+
+        let resolved = []
+        inputs.map(i => {
+            outputs.map(o => {
+                resolved.push(mod.operation(o, i.value))
+            })
+        })
+
+        return resolved
     }
 
     // TODO support either a single stat list or an array of stat lists
@@ -79,23 +99,7 @@ class StatUtil {
 
         let resolvedStats = []
         mods.map(e => {
-            let inputs = e.inputs.map(i => ({
-                id: i,
-                value: StatUtil.getStat(stats, i).value*e.value
-            }))
-
-            let outputs = e.outputs.map(i => StatUtil.getStat(stats, i))
-
-            //console.log(`inputs ${JSON.stringify(inputs)} inputs end`)
-            //console.log(`outputs ${JSON.stringify(outputs)} outputs end`)
-
-            let resolved = []
-            inputs.map(i => {
-                outputs.map(o => {
-                    resolved.push(e.operation(o, i.value))
-                })
-            })
-
+            let resolved = StatUtil.resolveModifier(stats, e)
             resolvedStats = resolvedStats.concat(resolved)
         })
 
