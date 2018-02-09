@@ -420,7 +420,6 @@ class Game {
             return entry && entry.flags & StatFlag.UNIT
         })
 
-        if ()
         console.log(`Unit1 ${UnitUtil.getName(this.combatUnits[0])}` +
             ` HP ${SU.getStat(unit1Stats, ST.UNIT_HP.id).value}` +
             ` HPMax ${SU.getStat(unit1Stats, ST.UNIT_HP_MAX.id).value}` +
