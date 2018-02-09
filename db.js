@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const { Settings, Unit, Item } = require('./models')
 const { UnitType } = require('./unit')
 
+mongoose.Promise = global.Promise
+
 class GameDb {
     constructor(host, options) {
         this.host = host
@@ -77,17 +79,10 @@ class GameDb {
             }
         }
 
-        let settings = await this.getSettings()
-        if (settings) {
-            let unit = new Unit(unitObj)
-            unit.id = settings.next_unit_id++;
+        let unit = new Unit(unitObj)
+        await unit.save()
 
-            await settings.save()
-            await unit.save()
-
-            return unit
-        }
-        return null
+        return unit
     }
 
     async getUnit(id) {
@@ -125,21 +120,13 @@ class GameDb {
         let existing = await this.getItem(itemObj.id)
         if (existing) {
             console.log(`cannot create item for ${itemObj.id} which already exists`)
-            return null;
+            return null
         }
 
-        let settings = await this.getSettings()
-        if (settings) {
-            let item = new Item(itemObj)
-            item.id = settings.next_item_id++;
+        let item = new Item(itemObj)
+        await item.save()
 
-            await settings.save()
-            await item.save()
-
-            return item
-        }
-
-        return null
+        return item
     }
 
     async getItem(id) {
@@ -153,9 +140,6 @@ class GameDb {
     }
 
     async getUnitItems(id) {
-        //let items = await Item.where('id').in()
-        //    .where('owner', unit.id).find()
-
         let items = await Item.where('owner', id).find()
         return items
     }

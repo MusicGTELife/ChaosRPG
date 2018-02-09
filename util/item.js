@@ -81,7 +81,6 @@ class ItemUtil {
         return {
             id: 0,
             ilvl: 0,
-            is_equipped: false,
             owner: 0,
             code: 0,
             type: 0,
@@ -153,7 +152,7 @@ class ItemUtil {
                     //console.log(`stat desc ${JSON.stringify(desc)}`)
                     let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
                     let stat = StatUtil.createDescriptor(desc.id, value)
-                    //console.log(`${JSON.stringify(stat)}`)
+                    //console.log(`adding stat ${JSON.stringify(stat)}`)
                     item.stats.push(stat)
                 })
             })

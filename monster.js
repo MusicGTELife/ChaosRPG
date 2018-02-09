@@ -1,4 +1,4 @@
-const { UnitType, Unit } = require('./unit')
+const { Unit } = require('./unit')
 
 class Monster extends Unit { }
 Monster.descriptor = {

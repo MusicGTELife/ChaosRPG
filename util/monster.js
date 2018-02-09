@@ -40,7 +40,6 @@ class MonsterUtil extends UnitUtil {
 
     static createBaseStats(code) {
         let entry = MonsterUtil.getMonsterTableEntry(code)
-        console.log('entry', entry)
         let stats = UnitUtil.createBaseStats(UnitType.MONSTER.id)
         StatUtil.applyOverrides(stats, entry.stats)
 
@@ -87,7 +86,7 @@ class MonsterUtil extends UnitUtil {
 
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
-    async generate(monsterRngCtx, code, tier, rarity) {
+    generate(monsterRngCtx, code, tier, rarity) {
         let monster = MonsterUtil.create(code, tier, rarity)
         if (!monster) {
             console.log(`failed to create monster ${code}`)
@@ -202,14 +201,8 @@ class MonsterUtil extends UnitUtil {
             //console.log('additional', i, choice)
         }
 
-        // okay all items for the monster are now generated, equip them
-        items.map(i => {
-            this.game.unit.equipItem(monster, i);
-        })
-
-        await this.game.unit.computeBaseStats(monster)
-
-        return monster
+        // okay the monster and items are generated, pass them back to the call
+        return { monster, items }
     }
 }
 

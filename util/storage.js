@@ -70,8 +70,7 @@ class StorageUtil {
         if (!entry)
             return -1
 
-        let slot = entry.descriptor.findIndex(sd => sd.id === slotId)
-
+        const slot = entry.descriptor.findIndex(sd => sd.id === slotId)
         return slot
     }
 
@@ -79,17 +78,12 @@ class StorageUtil {
         if (!StorageUtil.isNodeValid(storage, nodeId))
             return false
 
-        let slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
-        if (slot < 0)
+        const node = StorageUtil.getNode(storage, nodeId)
+        const slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
+        if (slot < 0 || slot > node.size-1)
             return false
 
-        console.log('storage slot', slot)
-
-        let node = StorageUtil.getNode(storage, nodeId)
-        if (node && slot >= 0 && slot < node.size)
-            return true
-
-        return false
+        return true
     }
 
     static isSlotOccupied(storage, nodeId, slotId) {
@@ -138,10 +132,7 @@ class StorageUtil {
         return false
     }
 
-    static getEquipmentSlotTypeForItem(storage, item) {
-        if ((item.storage_flag & StorageFlag.INVENTORY) !== 0)
-            return StorageFlag.INVENTORY
-
+    static getSlotTypeForItem(storage, item) {
         if ((item.storage_flag & StorageFlag.HEAD) !== 0)
             return StorageFlag.HEAD
 
@@ -155,10 +146,10 @@ class StorageUtil {
             return StorageFlag.FEET
 
         if ((item.storage_flag & StorageFlag.ARM_R) !== 0)
-            return StorageFlag.ARM
+            return StorageFlag.ARM_R
 
         if ((item.storage_flag & StorageFlag.ARM_L) !== 0)
-            return StorageFlag.ARM
+            return StorageFlag.ARM_L
 
         if ((item.storage_flag & StorageFlag.NECK) !== 0)
             return StorageFlag.NECK
@@ -169,25 +160,33 @@ class StorageUtil {
         if ((item.storage_flag & StorageFlag.FINGER) !== 0)
             return StorageFlag.FINGER
 
+        if ((item.storage_flag & StorageFlag.INVENTORY) !== 0)
+            return StorageFlag.INVENTORY
+
         console.log('unable to match flag', ItemUtil.getName(item.code))
         process.exit(1)
 
         return StorageFlag.INVALID
     }
 
-    static getValidEquipmentSlotsForItem(storage, item) {
+    static getValidSlotsForItem(storage, item) {
         if (!storage)
             return []
 
         if (!item)
-            return false
+            return []
 
-        const slotType = StorageUtil.getEquipmentSlotTypeForItem(storage, item)
+        let out = []
 
-        let out = Object.values(Storage).map(e => {
-            if (StorageUtil.getNode(storage, e.id) !== null)
-                return e.descriptor.filter(d => (d.flags & slotType) !== 0)
+        Object.values(Storage).map(e => {
+            let slots = e.descriptor
+                .filter(d => (d.flags & item.storage_flag) !== 0)
+                .map(d => ({ id: e.id, slot: d.id}))
+
+            out = out.concat(slots)
         })
+
+        //console.log('slots', out)
 
         return out
     }
@@ -200,26 +199,18 @@ class StorageUtil {
         if (!itemTableEntry)
             return false
 
-        if (nodeId === Storage.EQUIPMENT.id) {
-            const slotDesc = Storage.EQUIPMENT.descriptor
-                .find(s => s.id === slotId)
-            if (slotDesc)
-                return (slotDesc.flags & itemTableEntry.storage_flag) !== 0
-        } else if (nodeId == Storage.INVENTORY.id) {
-            const slotDesc = Storage.INVENTORY.descriptor
-                .find(s => s.id === slotId)
-            if (slotDesc)
-                return (slotDesc.flags & itemTableEntry.storage_flag) !== 0
-        }
-
-        return false
-    }
-
-    static canEquipInSlot(storage, nodeId, slot) {
-        if (!StorageUtil.isSlotValid(storage, nodeId, slot))
+        let slotDesc = StorageUtil.getStorageSlotDescriptor(nodeId, slotId)
+        if (!slotDesc)
             return false
 
-        if (StorageUtil.isSlotOccupied(storage, nodeId, slot))
+        return (slotDesc.flags & itemTableEntry.storage_flag) !== 0
+    }
+
+    static canEquipInSlot(storage, nodeId, slotId) {
+        if (!StorageUtil.isSlotValid(storage, nodeId, slotId))
+            return false
+
+        if (StorageUtil.isSlotOccupied(storage, nodeId, slotId))
             return false
 
         return true

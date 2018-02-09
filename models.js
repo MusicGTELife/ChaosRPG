@@ -34,6 +34,7 @@ const StorageSchema = new Schema({
 const UnitSchema = {
     id: Number,
     type: Number,
+    name: String,
     storage: [ StorageSchema ],
     stats: [ { _id: false, id: Number, value: Number } ],
     descriptor: Schema.Types.Mixed
@@ -42,14 +43,12 @@ const UnitSchema = {
 const ItemSchema = {
     id: Number,
     ilvl: Number,
-    is_equipped: Boolean,
     owner: Number,
     code: Number,
     storage_flag: Number,
     item_class: Number,
     tier: Number,
     stats: [ { _id: false, id: Number, value: Number } ],
-    //requirements: [ { _id: false, id: Number, value: Number } ],
     descriptor: Schema.Types.Mixed
 }
 

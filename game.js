@@ -2,8 +2,9 @@ const Config = require('./config.json')
 
 const Discord = require('discord.js')
 
-const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameDb } = require('./db')
+const { SecureRNG, SecureRNGContext } = require('./rng')
+const { GameState } = require('./gamestate')
 
 const { Storage } = require('./storage')
 const { StatTable } = require('./stattable')
@@ -57,6 +58,7 @@ class Game {
         this.interrupt = false
 
         this.syncinit()
+        this.gameState = GameState.OFFLINE
     }
 
     async destroy() {
@@ -219,8 +221,6 @@ class Game {
 
         let settings = await this.ctx.gameDb.getSettings()
         let player = PlayerUtil.create(type, this.user)
-        player.id = settings.next_unit_id++
-
         player = await this.ctx.gameDb.createUnit(player)
         if (player) {
             settings.save()
@@ -263,81 +263,197 @@ class Game {
         //this.discord.channels.get('405592756908589056').send(embed)
     }
 
-    async getRecentlyActivePlayer() {
-        let activeUsers = await getActiveUsers()
+    async getRecentlyActivePlayers() {
+        let activeUsers = await this.gameDb.getActiveUsers()
         if (!activeUsers) {
             console.log('unable to get active users')
             return null
         }
 
-        let player = null
-        return player
+        return activeUsers
     }
 
-    async getLocalTestPlayer() {
-        let onlinePlayers = [ 1, 2, 4, 5, 6, 7, 8, 9, 10 ]
+    async getLocalTestPlayers() {
+        let players = []
+        players.push(await this.gameDb.getUnitByAccount('ᛖᛒᛟᛚᚨ'))
+        players.push(await this.gameDb.getUnitByAccount('ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ'))
 
-        let player = await this.gameDb.getUnitByAccount('ᛖᛒᛟᛚᚨ')
-        if (!player) {
-            console.log('unable to lookup player')
-            return
+        if (players.length !== 2) {
+            console.log('unable to lookup players')
+            return null
         }
 
-        return player
+
+        return players
     }
 
-    async loop() {
-        if (!this.dbConnected) {
-            console.log('not connected to the database, skipping combat');
-            return
-        }
-
-        if (!this.discordConnected && !this.isLocalTest) {
-            console.log('discord is not connected, skipping combat')
-            return
-        }
-
+    async getUnitsForCombat() {
         let rngCtx = this.secureRng.getContext('combat')
         if (!rngCtx) {
-            console.log('unable to get combat RNG context');
-            return
+            console.log('unable to get combat RNG context')
+            return false
         }
 
         let monsterRngCtx = this.secureRng.getContext('monster')
         if (!monsterRngCtx) {
             console.log('unable to get monster RNG context')
-            return
-        }
-
-        // TODO select alternative run loop implementation based on config mode
-        let player = null
-        if (this.isLocalTest)
-            player = await this.getLocalTestPlayer()
-        else
-            player = await this.getRecentlyActivePlayer()
-
-        if (!player) {
-            console.log('unable to find a recently active player, skipping combat')
-            return
-        }
-        //await this.unit.computeBaseStats(player)
-
-        let magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
-        let monsterRarity = Game.getFightMonsterRarity(magic)
-
-        // generate a monster
-        console.log('creating monster')
-        const code = MonsterTable.SKELETON_WARRIOR.code
-        let monsterObj = this.monster.generate(monsterRngCtx, code, 2, monsterRarity.id)
-        if (!monsterObj) {
-            console.log('failed creating a monster')
             return false
         }
-        //const monster = await this.gameDb.createUnit(monsterObj)
 
-        console.log(`selected ${player.descriptor.account} for combat with monster rarity ${monsterRarity.name} magic ${magic}`)
+        let settings = await this.gameDb.getSettings()
+
+        // TODO select alternative run loop implementation based on config mode
+        let players = null
+        if (this.isLocalTest)
+            players = await this.getLocalTestPlayers()
+        else
+            players = await this.getActivePlayers()
+
+        if (!players) {
+            console.log('unable to find a recently active player, skipping combat')
+            return false
+        }
+
+        players = SecureRNG.shuffleSequence(rngCtx, players)
+
+        //await this.unit.computeBaseStats(player)
+
+        let pvp = false
+        if (players.length > 1 && SecureRNG.getRandomInt(rngCtx, 0, 127) === 127)
+            pvp = true
+
+        let magic = 0
+        let units = [ ]
+
+        units.push(players.pop())
+
+        if (pvp) {
+            console.log('pvp combat selected')
+
+            units.push(players.shift())
+
+        } else {
+            console.log('monster combat selected')
+
+            magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
+            let monsterRarity = Game.getFightMonsterRarity(magic)
+
+            // generate a monster
+            console.log('creating monster for combat')
+            const code = MonsterTable.SKELETON_WARRIOR.code
+            let monsterData = this.monster.generate(monsterRngCtx, code, 2, monsterRarity.id)
+            if (!monsterData) {
+                console.log('failed creating a monster')
+                return false
+            }
+            monsterData.monster.id = settings.next_unit_id
+            settings.next_unit_id++
+
+            let monster = await this.gameDb.createUnit(monsterData.monster)
+            if (!monster) {
+                console.log('failed to create monster in db')
+                return false
+            }
+
+            monsterData.items.forEach(async i => {
+                // first create entries in the database
+                i.owner = monster.id
+                i.id = settings.next_item_id
+                settings.next_item_id++
+
+                let item = await this.gameDb.createItem(i)
+                if (!item) {
+                    console.log('failed creating item', i)
+                    process.exit(1)
+                }
+
+                    let items = await this.unit.getEquippedItems(monster)
+
+                    // and equip the items on the monster
+                    if (!this.unit.equipItemByType(monster, items, item)) {
+                        console.log('unable to equip monster item', item)
+                        process.exit(1)
+                    }
+            })
+
+            await settings.save()
+
+            await monster.markModified('storage')
+            await monster.save()
+
+            let items = await this.unit.getEquippedItems(monster)
+            await this.unit.computeBaseStats(monster, items)
+
+            units.push(monster)
+        }
+
+        return units
+    }
+
+    async doOffline() {
+        console.log('doOffline')
+
+        return true
+    }
+
+    // FIXME|TODO need game states
+    async doCombat() {
+        console.log('doCombat')
+
+        let rngCtx = this.secureRng.getContext('combat')
+        if (!rngCtx) {
+            console.log('unable to get combat RNG context');
+            return false
+        }
+
+        return true
+    }
+
+    async doOnline() {
+        console.log('doOnline')
+
+        let foundPlayer = false
+
+        let units = await this.getUnitsForCombat()
+        if (!units || units.length !== 2)
+            return false
+
+        console.log(`selected ${units[0].name} and ${units[1].name} for combat`)
 
         //this.discord.channels.get('403320283261304835').send(`\`\`\`json\n[\n\{ 'player': ${JSON.stringify(player)},\n'playerItems': ${JSON.stringify(items)} }\n]\n\`\`\``)
+
+        this.gameState = GameState.COMBAT
+
+        return true
+    }
+
+    async loop() {
+        if (!this.dbConnected) {
+            this.gameState = GameState.OFFLINE
+            console.log('not connected to the database, skipping combat');
+        }
+
+        if (!this.discordConnected && !this.isLocalTest) {
+            this.gameState = GameState.OFFLINE
+            console.log('discord is not connected, skipping combat')
+        }
+
+        if (this.gameState === GameState.OFFLINE && this.dbConnected &&
+                (this.isLocalTest || (!this.isLocalTest && this.discordConnected)))
+            this.gameState = GameState.ONLINE
+
+        switch (this.gameState) {
+            case GameState.ONLINE:
+                return await this.doOnline()
+
+            case GameState.OFFLINE:
+                return await this.doOffline()
+
+            case GameState.COMBAT:
+                return await this.doCombat()
+        }
+
+        return false
     }
 
     async run() {
@@ -374,35 +490,22 @@ class Game {
         console.log('creating player')
 
         let playerObj = PlayerUtil.create(PlayerType.CLERIC.id, "ᛖᛒᛟᛚᚨ")
+        playerObj.id = settings.next_unit_id
+        settings.next_unit_id++
         let player = await this.gameDb.createUnit(playerObj)
         if (player) {
-            // generate test items
-            let code = ItemTable.GREAT_HELM.code
-
-            let itemObj = ItemUtil.generate(itemRngCtx, code, ItemClass.ARMOR, ArmorClass.GLOVES, Tier.TIER5.id, ItemRarity.COMMON.id)
-            itemObj.owner = player.id
-            let item = await this.gameDb.createItem(itemObj)
-            await this.player.equipItem(player, item, Storage.EQUIPMENT.id, 1)
-
-            itemObj = ItemUtil.generate(itemRngCtx, code, ItemClass.ARMOR, ArmorClass.BOOTS, Tier.TIER4.id, ItemRarity.COMMON.id)
-            itemObj.owner = player.id
-            item = await this.gameDb.createItem(itemObj)
-            await this.player.equipItem(player, item, Storage.EQUIPMENT.id, 2)
-
-            itemObj = ItemUtil.generate(itemRngCtx, code, ItemClass.ARMOR, Tier.TIER6.id, ItemRarity.COMMON.id)
-            itemObj.owner = player.id
-            item = await this.gameDb.createItem(itemObj)
-            await this.player.equipItem(player, item, Storage.EQUIPMENT.id, 3)
-
-            console.log('updating settings')
-            await this.gameDb.updateSettings(settings)
-
-            console.log(`${JSON.stringify(player)}`)
-
-            let items = await this.unit.getEquippedItems(player)
-
-            this.createPlayerInventoryEmbed(player, items)
+            await this.unit.computeBaseStats(player)
         }
+
+        playerObj = PlayerUtil.create(PlayerType.RANGER.id, "ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ")
+        playerObj.id = settings.next_unit_id
+        settings.next_unit_id++
+        player = await this.gameDb.createUnit(playerObj)
+        if (player) {
+            await this.unit.computeBaseStats(player)
+        }
+
+        await settings.save()
 
         while (!this.interrupt) {
             await this.sleep(1*1000, async loop => { await this.loop() })
