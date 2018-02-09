@@ -98,10 +98,7 @@ class MonsterUtil extends UnitUtil {
         monster.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                let origStat = StatUtil.getStat(monster.stats, e.id)
                 StatUtil.setStat(monster.stats, e.id, e.value*(tier+rarity))
-                let newStat = StatUtil.getStat(monster.stats, e.id)
-                //console.log('scaling monster stat', origStat, newStat)
             }
         })
 
@@ -141,8 +138,15 @@ class MonsterUtil extends UnitUtil {
         let item = ItemUtil.generate(itemRngCtx,
             choice.code, choice.item_class, choice.item_sub_class, tier, rarity
         )
-        if (item)
-            items.push(item)
+
+        if (!item) {
+            console.log('unable to generate item for monster')
+            process.exit(1)
+            return null
+        }
+
+        items.push(item)
+
         count--
 
         // Second, generate a shield, quiver or spellbook for casters, or a
@@ -200,6 +204,8 @@ class MonsterUtil extends UnitUtil {
 
             //console.log('additional', i, choice)
         }
+
+        //console.log('items', items)
 
         // okay the monster and items are generated, pass them back to the call
         return { monster, items }

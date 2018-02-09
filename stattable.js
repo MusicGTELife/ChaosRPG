@@ -40,6 +40,7 @@ StatTable.UNIT_ATK = _(0x8010, StatFlag.UNIT, "UnitAtk", "Unit attack rating", 0
 StatTable.UNIT_MATK = _(0x8011, StatFlag.UNIT, "UnitMAtk", "Unit magic attack rating", 0, 65536)
 StatTable.UNIT_DEF = _(0x8012, StatFlag.UNIT, "UnitDef", "Unit defense", 0, 65536)
 StatTable.UNIT_MDEF = _(0x8013, StatFlag.UNIT, "UnitMDef", "Unit magic defense", 0, 65536)
+
 StatTable.UNIT_BLOCK = _(0x8014, StatFlag.UNIT, "UnitBlock", "Unit chance to block", 0, 65536)
 
 // Player specific stats

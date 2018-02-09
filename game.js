@@ -6,7 +6,8 @@ const { GameDb } = require('./db')
 const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameState } = require('./gamestate')
 
-const { Storage } = require('./storage')
+const { CombatType, CombatContext } = require('./combat')
+const { Storage, Slots } = require('./storage')
 const { StatTable, StatFlag } = require('./stattable')
 
 const { Tier, TierStatCount } = require('./tier')
@@ -23,8 +24,9 @@ const { MonsterRarity } = require('./monsterrarity.js')
 
 // utility classes
 const { Markdown, DiscordUtil } = require('./util/discord')
-const { ItemUtil } = require('./util/item')
+const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
+const { ItemUtil } = require('./util/item')
 const { UnitUtil } = require('./util/unit')
 const { PlayerUtil } = require('./util/player')
 const { MonsterUtil } = require('./util/monster')
@@ -59,7 +61,7 @@ class Game {
 
         this.syncinit()
         this.gameState = GameState.OFFLINE
-        this.combatUnits = null
+        this.combatContext = null
     }
 
     async destroy() {
@@ -201,10 +203,10 @@ class Game {
 
         let type = ({
             ['mage']: PlayerType.MAGE.id,
-            ['warrior']: PlayerType.MAGE.id,
-            ['rogue']: PlayerType.MAGE.id,
-            ['ranger']: PlayerType.MAGE.id,
-            ['cleric']: PlayerType.MAGE.id
+            ['warrior']: PlayerType.WARRIOR.id,
+            ['rogue']: PlayerType.ROGUE.id,
+            ['ranger']: PlayerType.RANGER.id,
+            ['cleric']: PlayerType.CLERIC.id
         })[typeString] || 0
 
         if (!type) {
@@ -340,7 +342,7 @@ class Game {
             console.log('creating monster for combat')
             const code = shuffledTable[0].code
 
-            let monsterData = this.monster.generate(monsterRngCtx, code, 0, monsterRarity.id)
+            let monsterData = this.monster.generate(monsterRngCtx, code, Tier.TIER1.id, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
                 return null
@@ -398,7 +400,7 @@ class Game {
     async doCombat() {
         console.log('doCombat')
 
-        if (!this.combatUnits)
+        if (!this.combatContext)
             return false
 
         let rngCtx = this.secureRng.getContext('combat')
@@ -410,41 +412,84 @@ class Game {
         const ST = StatTable
         const SU = StatUtil
 
-        let unit1Stats = this.combatUnits[0].stats.filter(e => {
-            let entry = SU.getStatTableEntry(e.id)
-            return entry && entry.flags & StatFlag.UNIT
-        })
+        const unitA = this.combatContext.unitA
+        const unitB = this.combatContext.unitB
 
-        let unit2Stats = this.combatUnits[1].stats.filter(e => {
-            let entry = SU.getStatTableEntry(e.id)
-            return entry && entry.flags & StatFlag.UNIT
-        })
+        if (SU.getStat(unitA.stats, ST.UNIT_HP.id).value <= 0) {
+            console.log('unit is dead, but was expected to be alive')
+            return false
+        }
 
-        console.log(`Unit1 ${UnitUtil.getName(this.combatUnits[0])}` +
-            ` HP ${SU.getStat(unit1Stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(unit1Stats, ST.UNIT_HP_MAX.id).value}` +
-            ` MAtk ${SU.getStat(unit1Stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(unit1Stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(unit1Stats, ST.UNIT_MDEF.id).value}`
+        if (SU.getStat(unitB.stats, ST.UNIT_HP.id).value <= 0) {
+            console.log('unit is dead, but was expected to be alive')
+            return false
+        }
+
+        console.log(`UnitA ${UnitUtil.getName(unitA)}` +
+            ` HP ${SU.getStat(unitA.stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(unitA.stats, ST.UNIT_HP_MAX.id).value}` +
+            ` Atk ${SU.getStat(unitA.stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(unitA.stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unitA.stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unitA.stats, ST.UNIT_MDEF.id).value}`
         )
 
-        console.log(`Unit2 ${UnitUtil.getName(this.combatUnits[1])}` +
-            ` HP ${SU.getStat(unit2Stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(unit2Stats, ST.UNIT_HP_MAX.id).value}` +
-            ` Atk ${SU.getStat(unit2Stats, ST.UNIT_ATK.id).value}` +
-            ` MAtk ${SU.getStat(unit2Stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(unit2Stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(unit2Stats, ST.UNIT_MDEF.id).value}`
+        console.log(`UnitB ${UnitUtil.getName(unitB)}` +
+            ` HP ${SU.getStat(unitB.stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(unitB.stats, ST.UNIT_HP_MAX.id).value}` +
+            ` Atk ${SU.getStat(unitB.stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(unitB.stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unitB.stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unitB.stats, ST.UNIT_MDEF.id).value}`
         )
+
+        if (!this.combatContext.isAttackerSet()) {
+            this.combatContext.setAttacker(this.combatContext.unitA.id)
+        }
 
         let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
         if (magic > 63) {
-            // unit1 is attacker
-
-        } else {
-            // unit2 is attacker
-
+            // unitB attacks first
+            this.combatContext.swapAttacker()
         }
+
+        if (!await this.combatContext.resolveAttack()) {
+            console.log('failed to resolve attack')
+        }
+
+        let unitADied = SU.getStat(unitA.stats, ST.UNIT_HP.id).value <= 0
+        if (unitADied) {
+            console.log('unitA has died')
+            this.gameState = GameState.ONLINE
+
+            console.log('resurrecting unitA')
+            SU.setStat(unitA.stats, ST.UNIT_HP.id,
+                    SU.getStat(unitA.stats, ST.UNIT_HP_MAX.id).value)
+            await unitA.save()
+
+            return true
+        }
+
+        let unitBDied = SU.getStat(unitB.stats, ST.UNIT_HP.id).value <= 0
+        if (unitBDied) {
+            console.log('unitB has died')
+            this.gameState = GameState.ONLINE
+
+            if (unitB.type === UnitType.MONSTER.id) {
+                await this.gameDb.removeUnit(unitB)
+                return true
+            }
+
+            console.log('resurrecting unitB')
+            SU.setStat(unitB.stats, ST.UNIT_HP.id,
+                    SU.getStat(unitB.stats, ST.UNIT_HP_MAX.id).value)
+            await unitB.save()
+
+            return true
+        }
+
+        // swap who attacker and defender are for next round
+        this.combatContext.swapAttacker()
 
         return true
     }
@@ -457,7 +502,8 @@ class Game {
         let units = await this.getUnitsForCombat()
         if (!units || units.length !== 2)
             return false
-        this.combatUnits = units
+
+        this.combatContext = new CombatContext(this, ...units)
 
         console.log(`selected ${UnitUtil.getName(units[0])} and ${UnitUtil.getName(units[1])} for combat`)
 

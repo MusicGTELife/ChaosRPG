@@ -27,16 +27,16 @@ StatModifier.HP_PER_VIT =
 
 StatModifier.ATK_PER_STR =
     _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],
-    "Attack rating per", StatResolver.add, 3)
+    "Attack rating per", StatResolver.add, 2)
 StatModifier.DEF_PER_DEX =
     _(0x0031, [ StatTable.DEX.id ], [ StatTable.DEF.id ],
-    "Defense per", StatResolver.add, 3)
+    "Defense per", StatResolver.add, 2)
 
 StatModifier.MATK_PER_INT =
     _(0x0040, [ StatTable.INT.id ], [ StatTable.MATK.id ],
-    "Magic attack per", StatResolver.add, 3)
+    "Magic attack per", StatResolver.add, 2)
 StatModifier.MDEF_PER_VIT =
     _(0x0041, [ StatTable.VIT.id ], [ StatTable.MDEF.id ],
-    "Magic defence per", StatResolver.add, 3)
+    "Magic defence per", StatResolver.add, 2)
 
 module.exports = { StatModifier }

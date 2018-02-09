@@ -138,9 +138,11 @@ class ItemUtil {
         item.tier = tier
         item.rarity = rarity
 
+
         const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
-            const shuffled = SecureRNG.shuffleSequence(itemRngCtx, Object.keys(ItemModTable))
+            let itemMods = Object.keys(ItemModTable)
+            const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
             //console.log('shuffled', shuffled)
 
             let stats = [...Array(count)]

@@ -49,6 +49,9 @@ ItemTable.SMALL_SHIELD = _(0x0800, "Small Shield", SF.INVENTORY|SF.ARM, IC.ARMOR
 ItemTable.APPRENTICE_BOOK = _(0x0900, "Apprentice's Spell Book", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.SPELLBOOK,
     [ CR(ST.INT.id, 4), CR(ST.VIT.id, 3) ]
 )
+ItemTable.QUIVER = _(0x0a00, "Quiver", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.QUIVER,
+    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 3) ]
+)
 
 // Weapons
 ItemTable.DAGGER = _(0x1000, "Dagger", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.MELEE_1H,
@@ -61,6 +64,9 @@ ItemTable.POLEARM = _(0x1100, "Polearm", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.MELE
     [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ]
 )
 ItemTable.BOW = _(0x1200, "Bow", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.RANGED,
+    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ]
+)
+ItemTable.CROSSBOW = _(0x1280, "Crossbow", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.RANGED,
     [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ]
 )
 ItemTable.WAND = _(0x1300, "Wand", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.CASTING_1H,

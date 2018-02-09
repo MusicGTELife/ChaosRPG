@@ -263,10 +263,9 @@ class UnitUtil {
 
         let stats = itemStats.concat(baseStats)
         stats = SU.getReducedStats(stats)
-        console.log(SU.getStat(stats, ST.DEX.id))
 
         // process each base stat which needs to be resolved by a formula
-        let resolvedStats = SU.resolve(stats, SU.getModifiers())
+        let resolved = SU.resolve(stats, SU.getModifiers())
 
         // recalculate unit special stats based on resolved base stats
         let currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
@@ -274,7 +273,7 @@ class UnitUtil {
 
         let currHpPercent = currHpMax === 0 ? 0 : currHp/currHpMax
 
-        let resolvedHp = SU.getStat(resolvedStats, ST.HP.id)
+        let resolvedHp = SU.getStat(resolved, ST.HP.id)
 
         // the unit has died or is newly created, set full life
         if (currHp.value === 0) {
@@ -290,19 +289,18 @@ class UnitUtil {
         }
 
         SU.setStat(unit.stats, ST.UNIT_ATK.id,
-            SU.getStat(resolvedStats, ST.ATK.id).value)
+                SU.getStat(resolved, ST.ATK.id).value)
         SU.setStat(unit.stats, ST.UNIT_MATK.id,
-            SU.getStat(resolvedStats, ST.MATK.id).value)
+                SU.getStat(resolved, ST.MATK.id).value)
 
         SU.setStat(unit.stats, ST.UNIT_DEF.id,
-            SU.getStat(resolvedStats, ST.DEF.id).value)
+                SU.getStat(resolved, ST.DEF.id).value)
         SU.setStat(unit.stats, ST.UNIT_MDEF.id,
-            SU.getStat(resolvedStats, ST.MDEF.id).value)
+                SU.getStat(resolved, ST.MDEF.id).value)
 
-        currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
-        currHpMax = SU.getStat(unitStats, ST.UNIT_HP_MAX.id)
-
-        console.log(`${UnitUtil.getName(unit)} currHp: ${currHp.value} currHpMax: ${currHpMax.value}`)
+        //currHp = SU.getStat(unit.stats, ST.UNIT_HP.id)
+        //currHpMax = SU.getStat(unit.stats, ST.UNIT_HP_MAX.id)
+        //console.log(`${UnitUtil.getName(unit)} currHp: ${currHp.value} currHpMax: ${currHpMax.value}`)
 
         // save else where once things settle a bit
         await unit.save()
