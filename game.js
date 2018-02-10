@@ -469,10 +469,10 @@ class Game {
         let output = ''
 
         results.map(async r => {
-            output += `${UnitUtil.getName(r.attacker)} did ${r.damage.amount} damage to ${UnitUtil.getName(r.defender)}`
+            output += `\`${UnitUtil.getName(r.attacker)}\` did ${r.damage.amount} damage to \`${UnitUtil.getName(r.defender)}\``
 
             if (r.fatal) {
-                output += ` killing ${UnitUtil.getName(r.defender)}.`
+                output += ` killing them.`
 
                 this.gameState = GameState.ONLINE
 
