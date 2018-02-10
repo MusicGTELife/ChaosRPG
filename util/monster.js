@@ -5,8 +5,11 @@ const { StatUtil } = require('./stats')
 const { SecureRNG } = require('../rng')
 const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
+
+const { MonsterClass } = require('../monsterclass')
 const { MonsterRarity } = require('../monsterrarity')
 const { MonsterTable } = require('../monstertable')
+
 const { ItemTable } = require('../itemtable')
 const { ItemClass, ArmorClass, WeaponClass, JewelClass, WeaponFlags } = require('../itemclass')
 
@@ -102,6 +105,7 @@ class MonsterUtil extends UnitUtil {
             }
         })
 
+        // FIXME move to datatable
         let monsterItems = ({
             [MonsterRarity.COMMON.id]: { min: 1, max: 2},
             [MonsterRarity.MAGIC.id]: { min: 2, max: 3},
@@ -124,6 +128,9 @@ class MonsterUtil extends UnitUtil {
 
         let itemRngCtx = this.game.secureRng.getContext('item')
         let items = []
+
+        // TODO|FIXME account for newly added monster types ie. check against
+        // WeaponFlags.*_UNARMED
 
         // First, generate a primary weapon
         let choices = MonsterUtil.getMonsterWeaponChoices(code, true)
@@ -207,7 +214,8 @@ class MonsterUtil extends UnitUtil {
 
         //console.log('items', items)
 
-        // okay the monster and items are generated, pass them back to the call
+        // okay the monster and items are generated, pass them back back
+        // to the caller for saving in the database
         return { monster, items }
     }
 }
