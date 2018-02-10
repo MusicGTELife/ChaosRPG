@@ -388,6 +388,30 @@ class Game {
             units.push(monster)
         }
 
+        const SU = StatUtil
+        const ST = StatTable
+
+        let unitAStr = `${UnitUtil.getName(units[0])}` +
+            ` HP ${SU.getStat(units[0].stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(units[0].stats, ST.UNIT_HP_MAX.id).value}` +
+            ` Atk ${SU.getStat(units[0].stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(units[0].stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(units[0].stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(units[0].stats, ST.UNIT_MDEF.id).value}`
+
+        let unitBStr = `${UnitUtil.getName(units[1])}` +
+            ` HP ${SU.getStat(units[1].stats, ST.UNIT_HP.id).value}` +
+            ` HPMax ${SU.getStat(units[1].stats, ST.UNIT_HP_MAX.id).value}` +
+            ` Atk ${SU.getStat(units[1].stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(units[1].stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(units[1].stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(units[1].stats, ST.UNIT_MDEF.id).value}`
+
+        let output = `\`${unitAStr}\`\n*VS.*\n\`${unitBStr}\``
+
+        this.discord.channels.get('406164903708327938')
+                .send(`combat selected\n${output}`)
+
         return units
     }
 
@@ -425,68 +449,48 @@ class Game {
             return false
         }
 
-        console.log(`UnitA ${UnitUtil.getName(unitA)}` +
-            ` HP ${SU.getStat(unitA.stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(unitA.stats, ST.UNIT_HP_MAX.id).value}` +
-            ` Atk ${SU.getStat(unitA.stats, ST.UNIT_ATK.id).value}` +
-            ` MAtk ${SU.getStat(unitA.stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(unitA.stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(unitA.stats, ST.UNIT_MDEF.id).value}`
-        )
-
-        console.log(`UnitB ${UnitUtil.getName(unitB)}` +
-            ` HP ${SU.getStat(unitB.stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(unitB.stats, ST.UNIT_HP_MAX.id).value}` +
-            ` Atk ${SU.getStat(unitB.stats, ST.UNIT_ATK.id).value}` +
-            ` MAtk ${SU.getStat(unitB.stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(unitB.stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(unitB.stats, ST.UNIT_MDEF.id).value}`
-        )
-
         if (!this.combatContext.isAttackerSet()) {
             this.combatContext.setAttacker(this.combatContext.unitA.id)
-        }
 
-        let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
-        if (magic > 63) {
-            // unitB attacks first
-            this.combatContext.swapAttacker()
-        }
-
-        if (!await this.combatContext.resolveAttack()) {
-            console.log('failed to resolve attack')
-        }
-
-        let unitADied = SU.getStat(unitA.stats, ST.UNIT_HP.id).value <= 0
-        if (unitADied) {
-            console.log('unitA has died')
-            this.gameState = GameState.ONLINE
-
-            console.log('resurrecting unitA')
-            SU.setStat(unitA.stats, ST.UNIT_HP.id,
-                    SU.getStat(unitA.stats, ST.UNIT_HP_MAX.id).value)
-            await unitA.save()
-
-            return true
-        }
-
-        let unitBDied = SU.getStat(unitB.stats, ST.UNIT_HP.id).value <= 0
-        if (unitBDied) {
-            console.log('unitB has died')
-            this.gameState = GameState.ONLINE
-
-            if (unitB.type === UnitType.MONSTER.id) {
-                await this.gameDb.removeUnit(unitB)
-                return true
+            let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
+            if (magic > 63) {
+                // unitB attacks first
+                this.combatContext.swapAttacker()
             }
-
-            console.log('resurrecting unitB')
-            SU.setStat(unitB.stats, ST.UNIT_HP.id,
-                    SU.getStat(unitB.stats, ST.UNIT_HP_MAX.id).value)
-            await unitB.save()
-
-            return true
         }
+
+        // resolve attack
+        let results = await this.combatContext.resolveRound()
+        if (!results) {
+            console.log('failed to resolve attack')
+            return false
+        }
+
+        let output = ''
+
+        results.map(async r => {
+            output += `${UnitUtil.getName(r.attacker)} did ${r.damage.amount} damage to ${UnitUtil.getName(r.defender)}`
+
+            if (r.fatal) {
+                output += ` killing ${UnitUtil.getName(r.defender)}.`
+
+                this.gameState = GameState.ONLINE
+
+                if (r.defender.type === UnitType.MONSTER.id) {
+                    // TODO item drops
+                    console.log('removing monster')
+                    await this.gameDb.removeUnit(r.defender)
+                } else {
+                    console.log('resurrecting player unit')
+                    SU.setStat(r.defender.stats, ST.UNIT_HP.id,
+                            SU.getStat(r.defender.stats, ST.UNIT_HP_MAX.id).value)
+                    await r.defender.save()
+                }
+            }
+            output += '\n'
+        })
+
+        this.discord.channels.get('406164903708327938').send(output)
 
         // swap who attacker and defender are for next round
         this.combatContext.swapAttacker()
@@ -595,7 +599,7 @@ class Game {
         await settings.save()
 
         while (!this.interrupt) {
-            await this.sleep(1*1000, async loop => { await this.loop() })
+            await this.sleep(1*10000, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')
