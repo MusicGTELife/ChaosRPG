@@ -26,15 +26,16 @@ JewelClass.BRACELET =           0x03
 JewelClass.CHARM =              0x04
 
 const WeaponFlags = { }
-WeaponFlags.UNARMED =           0x01
+WeaponFlags.MELEE_UNARMED =     0x01
 WeaponFlags.MELEE_1H =          0x01 << 1
 WeaponFlags.MELEE_2H =          0x01 << 2
-WeaponFlags.CASTING_1H =        0x01 << 3
-WeaponFlags.CASTING_2H =        0x01 << 4
-WeaponFlags.RANGED =            0x01 << 5
-WeaponFlags.CAN_DUAL_WIELD =    0x01 << 6
-WeaponFlags.MELEE_ANY =         0x01 << 7
-WeaponFlags.CASTING_ANY =       0x01 << 8
+WeaponFlags.CASTING_UNARMED =   0x01 << 3
+WeaponFlags.CASTING_1H =        0x01 << 4
+WeaponFlags.CASTING_2H =        0x01 << 5
+WeaponFlags.RANGED =            0x01 << 6
+WeaponFlags.CAN_DUAL_WIELD =    0x01 << 7
+WeaponFlags.MELEE_ANY =         0x01 << 8
+WeaponFlags.CASTING_ANY =       0x01 << 9
 WeaponFlags.ANY_2H =            WeaponFlags.MELEE_2H | WeaponFlags.CASTING_2H
 
 const JewelFlags = { }
