@@ -1,7 +1,7 @@
 {
   "name": "chaos-rpg",
   "description": "A (currently) discord based IdleRPG inspired chat RPG",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "main": "game.js",
   "repository": {
     "type": "git",
@@ -21,16 +21,19 @@
   },
   "homepage": "https://github.com/bsdunx/ChaosRPG#readme",
   "scripts": {
-    "test": "nyc ava"
+    "test": "nyc -a ava"
   },
   "husky": {
     "hooks": {
       "pre-commit": "npm test"
     }
   },
+  "release": {
+    "branch": "master"
+  },
   "dependencies": {
     "discord.js": "^11.3.0",
-    "mongoose": "^5.0.2"
+    "mongoose": "^5.0.3"
   },
   "devDependencies": {
     "ava": "^0.25.0",
