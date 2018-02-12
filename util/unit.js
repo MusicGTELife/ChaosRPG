@@ -63,6 +63,41 @@ class UnitUtil {
         return stats
     }
 
+    async prepareGeneratedUnit(unitData, settings) {
+        unitData.unit.id = settings.next_unit_id++
+
+        let unit = await this.game.gameDb.createUnit(unitData.unit)
+        await this.computeBaseStats(unit)
+
+        await unitData.items.map(async i => {
+            i.owner = unit.id
+            i.id = settings.next_item_id++
+
+            let item = await this.game.gameDb.createItem(i)
+            if (!item) {
+                console.log('failed creating item', i)
+                process.exit(1)
+            }
+
+            // equip the item on the unit
+            let items = await this.getEquippedItems(unit)
+            if (!this.equipItemByType(unit, items, item)) {
+                console.log('unable to equip item', item)
+                process.exit(1)
+            }
+        })
+
+        await unit.markModified('storage')
+
+        let items = await this.getEquippedItems(unit)
+        await this.computeBaseStats(unit, items)
+        //await unit.save()
+
+        await settings.save()
+
+        return unit
+    }
+
     static getName(unit) {
         if (unit.type === UnitType.PLAYER.id)
             return unit.descriptor.account

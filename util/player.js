@@ -18,10 +18,10 @@ class PlayerUtil extends UnitUtil {
         if (!PlayerUtil.isValidType(type))
             return null
 
-        let player = UnitUtil.create(UnitType.PLAYER.id, '')
-        player.descriptor.type = type
-        player.descriptor.account = account
-        player.stats = PlayerUtil.createBaseStats(type)
+        let unit = UnitUtil.create(UnitType.PLAYER.id, '')
+        unit.descriptor.type = type
+        unit.descriptor.account = account
+        unit.stats = PlayerUtil.createBaseStats(type)
 
         let weaponEntry = ({
             [PlayerType.MAGE.id]: ItemTable.CRACKED_WAND,
@@ -31,10 +31,15 @@ class PlayerUtil extends UnitUtil {
             [PlayerType.CLERIC.id]: ItemTable.CRACKED_STAFF
         })[type]
 
-        let weapon = ItemUtil.generate(null, weaponEntry.code, ItemClass.WEAPON, Tier.TIER0.id, ItemRarity.COMMON.id)
-        console.log(weapon)
+        let items = []
+        let item = ItemUtil.generate(null, weaponEntry.code, ItemClass.WEAPON, Tier.TIER0.id, ItemRarity.COMMON.id)
+        if (!item)
+            return null
 
-        return { player, weapon }
+        items.push(item)
+        //console.log(items)
+
+        return { unit, items }
     }
 
     static isValidType(type) {

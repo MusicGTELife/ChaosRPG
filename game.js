@@ -235,7 +235,7 @@ class Game {
             return
         }
 
-        if (await this.ctx.gameDb.getUnitByName(this.user)) {
+        if (await this.ctx.gameDb.getUnitByAccount(this.user)) {
             this.ctx.discord.channels.get(this.channel)
                 .send(`<@${this.user}> You already have a player, use the delete command if you wish to create a new player`)
             return
@@ -243,9 +243,8 @@ class Game {
 
         let settings = await this.ctx.gameDb.getSettings()
         let playerData = PlayerUtil.create(type, this.user)
-        playerData = await this.ctx.gameDb.createUnit(playerData.player)
-        if (playerData) {
-            settings.save()
+        let player = this.ctx.unit.prepareGenerated(playerData, settings)
+        if (player) {
             this.ctx.discord.channels.get(this.channel)
                 .send(`<@${this.user}> Your ${typeString} character has been created`)
         } else {
@@ -258,7 +257,7 @@ class Game {
     async deletePlayer() {
         console.log('deletePlayer')
 
-        let existing = await this.ctx.gameDb.getUnitByName(this.user)
+        let existing = await this.ctx.gameDb.getUnitByAccount(this.user)
         if (existing) {
             await this.ctx.gameDb.removeUnit(existing)
             this.ctx.discord.channels.get(this.channel)
@@ -378,44 +377,7 @@ class Game {
                 console.log('failed creating a monster')
                 return null
             }
-            monsterData.monster.id = settings.next_unit_id
-            settings.next_unit_id++
-
-            let monster = await this.gameDb.createUnit(monsterData.monster)
-            if (!monster) {
-                console.log('failed to create monster in db')
-                return null
-            }
-
-            monsterData.items.forEach(async i => {
-                // first create entries in the database
-                i.owner = monster.id
-                i.id = settings.next_item_id
-                settings.next_item_id++
-
-                let item = await this.gameDb.createItem(i)
-                if (!item) {
-                    console.log('failed creating item', i)
-                    process.exit(1)
-                }
-
-                let items = await this.unit.getEquippedItems(monster)
-
-                // and equip the items on the monster
-                if (!this.unit.equipItemByType(monster, items, item)) {
-                    console.log('unable to equip monster item', item)
-                    process.exit(1)
-                }
-            })
-
-            await monster.markModified('storage')
-            await monster.save()
-
-            await settings.save()
-
-            let items = await this.unit.getEquippedItems(monster)
-            await this.unit.computeBaseStats(monster, items)
-
+            let monster = await this.unit.prepareGeneratedUnit(monsterData, settings)
             units.push(monster)
         }
 
@@ -610,69 +572,13 @@ class Game {
         console.log('creating player 1')
 
         let playerData = PlayerUtil.create(PlayerType.MAGE.id, "ᛖᛒᛟᛚᚨ")
-        playerData.player.id = settings.next_unit_id
-        settings.next_unit_id++
-
-        let player = await this.gameDb.createUnit(playerData.player)
-        await this.unit.computeBaseStats(player)
-
-        playerData.weapon.owner = player.id
-        playerData.weapon.id = settings.next_item_id
-        settings.next_item_id++
-
-        let item = await this.gameDb.createItem(playerData.weapon)
-        if (!item) {
-            console.log('failed creating item', playerData.weapon)
-            process.exit(1)
-        }
-
-        let items = await this.unit.getEquippedItems(player)
-
-        // and equip the starter item on the player
-        if (!this.unit.equipItemByType(player, items, item)) {
-            console.log('unable to equip item', item)
-            process.exit(1)
-        }
-
-        await player.markModified('storage')
-        await player.save()
-
-        items = await this.unit.getEquippedItems(player)
-        await this.unit.computeBaseStats(player, items)
+        let player = await this.unit.prepareGeneratedUnit(playerData, settings)
 
         // Create test player 2
         console.log('creating player 2')
 
         playerData = PlayerUtil.create(PlayerType.RANGER.id, "ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ")
-        playerData.player.id = settings.next_unit_id
-        settings.next_unit_id++
-
-        player = await this.gameDb.createUnit(playerData.player)
-        await this.unit.computeBaseStats(player)
-
-        playerData.weapon.owner = player.id
-        playerData.weapon.id = settings.next_item_id
-        settings.next_item_id++
-
-        item = await this.gameDb.createItem(playerData.weapon)
-        if (!item) {
-            console.log('failed creating item', playerData.weapon)
-            process.exit(1)
-        }
-
-        items = await this.unit.getEquippedItems(player)
-
-        // and equip the items on the monster
-        if (!this.unit.equipItemByType(player, items, item)) {
-            console.log('unable to equip monster item', item)
-            process.exit(1)
-        }
-
-        await player.markModified('storage')
-        await player.save()
-
-        items = await this.unit.getEquippedItems(player)
-        await this.unit.computeBaseStats(player, items)
+        player = await this.unit.prepareGeneratedUnit(playerData, settings)
 
         // and last, save the game settings
         await settings.save()

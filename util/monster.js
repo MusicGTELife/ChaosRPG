@@ -90,8 +90,8 @@ class MonsterUtil extends UnitUtil {
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
     generate(monsterRngCtx, code, tier, rarity) {
-        let monster = MonsterUtil.create(code, tier, rarity)
-        if (!monster) {
+        let unit = MonsterUtil.create(code, tier, rarity)
+        if (!unit) {
             console.log(`failed to create monster ${code}`)
             return null
         }
@@ -102,10 +102,10 @@ class MonsterUtil extends UnitUtil {
 
         // Update monster stats based on tier and rarity, for now just scale
         // the values
-        monster.stats.map(e => {
+        unit.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                StatUtil.setStat(monster.stats, e.id, e.value+tierEntry.stat_counts[0]+rarity)
+                StatUtil.setStat(unit.stats, e.id, e.value+tierEntry.stat_counts[0]+rarity)
             }
         })
 
@@ -220,7 +220,7 @@ class MonsterUtil extends UnitUtil {
 
         // okay the monster and items are generated, pass them back back
         // to the caller for saving in the database
-        return { monster, items }
+        return { unit, items }
     }
 }
 
