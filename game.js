@@ -99,6 +99,24 @@ class Game {
         DiscordUtil.setCommandHandler('create', this, this.createPlayer)
         DiscordUtil.setCommandHandler('delete', this, this.deletePlayer)
 
+        const combatRngCtx = new SecureRNGContext('combat secret')
+        if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
+            console.log('unable to add combat RNG context')
+            return false
+        }
+
+        const itemRngCtx = new SecureRNGContext('item secret')
+        if (!this.secureRng.addContext(itemRngCtx, 'item')) {
+            console.log('unable to add item RNG context')
+            return false
+        }
+
+        const monsterRngCtx = new SecureRNGContext('monster secret')
+        if (!this.secureRng.addContext(monsterRngCtx, 'monster')) {
+            console.log('unable to add monster RNG context')
+            return false
+        }
+
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
             .catch(e => {
@@ -586,24 +604,6 @@ class Game {
                 console.log('unable to create game settings')
                 return false
             }
-        }
-
-        const combatRngCtx = new SecureRNGContext('combat secret')
-        if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
-            console.log('unable to add combat RNG context')
-            return false
-        }
-
-        const itemRngCtx = new SecureRNGContext('item secret')
-        if (!this.secureRng.addContext(itemRngCtx, 'item')) {
-            console.log('unable to add item RNG context')
-            return false
-        }
-
-        const monsterRngCtx = new SecureRNGContext('monster secret')
-        if (!this.secureRng.addContext(monsterRngCtx, 'monster')) {
-            console.log('unable to add monster RNG context')
-            return false
         }
 
         // Create test player 1
