@@ -10,6 +10,9 @@ const { Player } = require('../player')
 const { Monster } = require('../monster')
 const { ItemTable } = require('../itemtable')
 
+const SU = StatUtil
+const ST = StatTable
+
 class UnitUtil {
     constructor(game) {
         this.game = game
@@ -48,7 +51,7 @@ class UnitUtil {
         if (!UnitUtil.isValidType(type))
             return null
 
-        let stats = Object.values(StatTable).filter(e => {
+        let stats = Object.values(ST).filter(e => {
             if (type === UnitType.PLAYER.id && (e.flags & StatFlag.PLAYER) !== 0)
                 return { id: e.id, value: 0 }
             else if (type === UnitType.MONSTER.id && (e.flags & StatFlag.MONSTER) !== 0)
@@ -65,6 +68,13 @@ class UnitUtil {
             return unit.descriptor.account
 
         return unit.name
+    }
+
+    // This is only to be used after final damage is calculated
+    static async takeDamage(unit, amount) {
+        SU.setStat(unit.stats, ST.UNIT_HP.id,
+                SU.getStat(unit.stats, ST.UNIT_HP.id).value - amount)
+        await unit.save()
     }
 
     getAllItemStats(items) {
@@ -110,17 +120,17 @@ class UnitUtil {
         if (!entry)
             return false
 
-        console.log(entry.requirements)
+        //console.log(entry.requirements)
 
         const met = entry.requirements.every(i => {
-            const unitStat = StatUtil.getStat(unit.stats, i.id)
-            if (unitStat >= i.value)
+            const unitStat = SU.getStat(unit.stats, i.id)
+            if (unitStat.value >= i.value)
                 return true
 
+            console.log('didn\'t meet stat', unitStat, i.value)
             return false
         })
 
-        console.log('met', met)
         return met
     }
 
@@ -239,9 +249,6 @@ class UnitUtil {
             return null
         }
 
-        const ST = StatTable
-        const SU = StatUtil
-
         let itemStats = await this.getAllItemStats(items)
         itemStats = SU.getReducedStats(itemStats)
 
@@ -261,11 +268,22 @@ class UnitUtil {
             return entry && entry.flags & StatFlag.PLAYER
         })
 
-        let stats = itemStats.concat(baseStats)
+        let stats = itemStats.concat(...baseStats)
         stats = SU.getReducedStats(stats)
+
+        // Okay, first we need to get the base_atk stat from equipped items
+        // FIXME, this should only consider actually equipped items
+        SU.setStat(unit.stats, ST.UNIT_BASE_ATK.id,
+                SU.getStat(stats, ST.BASE_ATK.id).value)
+        SU.setStat(unit.stats, ST.UNIT_BASE_MATK.id,
+                SU.getStat(stats, ST.BASE_MATK.id).value)
 
         // process each base stat which needs to be resolved by a formula
         let resolved = SU.resolve(stats, SU.getModifiers())
+        resolved = SU.getReducedStats(resolved)
+
+        console.log(resolved)
+        //process.exit(1)
 
         // recalculate unit special stats based on resolved base stats
         let currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
@@ -298,9 +316,12 @@ class UnitUtil {
         SU.setStat(unit.stats, ST.UNIT_MDEF.id,
                 SU.getStat(resolved, ST.MDEF.id).value)
 
-        //currHp = SU.getStat(unit.stats, ST.UNIT_HP.id)
-        //currHpMax = SU.getStat(unit.stats, ST.UNIT_HP_MAX.id)
-        //console.log(`${UnitUtil.getName(unit)} currHp: ${currHp.value} currHpMax: ${currHpMax.value}`)
+        SU.setStat(unit.stats, ST.UNIT_ACCURACY.id,
+                SU.getStat(resolved, ST.ACCURACY.id).value)
+        SU.setStat(unit.stats, ST.UNIT_REACTION.id,
+                SU.getStat(resolved, ST.REACTION.id).value)
+
+        //console.log(stats, itemStats, '->', resolved, unit.stats)
 
         // save else where once things settle a bit
         await unit.save()

@@ -34,9 +34,9 @@ WeaponFlags.CASTING_1H =        0x01 << 4
 WeaponFlags.CASTING_2H =        0x01 << 5
 WeaponFlags.RANGED =            0x01 << 6
 WeaponFlags.CAN_DUAL_WIELD =    0x01 << 7
-WeaponFlags.MELEE_ANY =         0x01 << 8
-WeaponFlags.CASTING_ANY =       0x01 << 9
-WeaponFlags.ANY_2H =            WeaponFlags.MELEE_2H | WeaponFlags.CASTING_2H
+
+WeaponFlags.ANY_MELEE =         WeaponFlags.MELEE_1H | WeaponFlags.MELEE_2H
+WeaponFlags.ANY_CASTING =       WeaponFlags.CASTING_1H | WeaponFlags.CASTING_2H
 
 const JewelFlags = { }
 JewelFlags.CHARM =              0x01

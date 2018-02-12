@@ -79,7 +79,7 @@ test('stats', async t => {
     let resolved = StatUtil.resolveModifier(stats, StatModifier.HP_PER_VIT)
     console.log(resolved)
 
-    t.deepEqual(resolved, [ { id: StatTable.HP.id, value: 8 } ])
+    t.deepEqual(resolved, [ { id: StatTable.HP.id, value: 14 } ])
 
     stats = [
         { id: StatTable.ALL_ATTR.id, value: 2 },

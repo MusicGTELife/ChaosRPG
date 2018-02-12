@@ -85,7 +85,9 @@ class StatUtil {
         let resolved = []
         inputs.map(i => {
             outputs.map(o => {
-                resolved.push(mod.operation(o, i.value))
+                let opRes = mod.operation(o, i.value)
+                opRes.value = Math.round(opRes.value)
+                resolved.push(opRes)
             })
         })
 

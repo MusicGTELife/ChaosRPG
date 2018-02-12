@@ -12,6 +12,7 @@ const { MonsterTable } = require('../monstertable')
 
 const { ItemTable } = require('../itemtable')
 const { ItemClass, ArmorClass, WeaponClass, JewelClass, WeaponFlags } = require('../itemclass')
+const { Tier } = require('../tier')
 
 class MonsterUtil extends UnitUtil {
     static getMonsterTableEntry(code) {
@@ -61,19 +62,19 @@ class MonsterUtil extends UnitUtil {
         let choices = weapons.filter(i => {
             if (i.item_sub_class === WeaponClass.MELEE_1H) {
                 if ((weaponFlags & WeaponFlags.MELEE_1H) !== 0 ||
-                        (weaponFlags & WeaponFlags.MELEE_ANY) !== 0)
+                        (weaponFlags & WeaponFlags.ANY_MELEE) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.MELEE_2H) {
                 if ((weaponFlags & WeaponFlags.MELEE_2H) !== 0 ||
-                        (weaponFlags & WeaponFlags.MELEE_ANY) !== 0)
+                        (weaponFlags & WeaponFlags.ANY_MELEE) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.CASTING_1H) {
                 if ((weaponFlags & WeaponFlags.CASTING_1H) !== 0 ||
-                        (weaponFlags & WeaponFlags.CASTING_ANY) !== 0)
+                        (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.CASTING_2H) {
                 if ((weaponFlags & WeaponFlags.CASTING_1H) !== 0 ||
-                        (weaponFlags & WeaponFlags.CASTING_ANY) !== 0)
+                        (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.RANGED) {
                 if ((weaponFlags & WeaponFlags.RANGED) !== 0)
@@ -83,7 +84,6 @@ class MonsterUtil extends UnitUtil {
             return false
         })
 
-        //console.log(choices)
         return choices
     }
 
@@ -96,12 +96,16 @@ class MonsterUtil extends UnitUtil {
             return null
         }
 
+        const tierEntry = Object.values(Tier).find(t => t.id === tier)
+        if (!tierEntry)
+            return null
+
         // Update monster stats based on tier and rarity, for now just scale
         // the values
         monster.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                StatUtil.setStat(monster.stats, e.id, e.value*(tier+rarity))
+                StatUtil.setStat(monster.stats, e.id, e.value+tierEntry.stat_counts[0]+rarity)
             }
         })
 

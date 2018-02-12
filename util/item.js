@@ -5,7 +5,7 @@ const { StatTable } = require('../stattable')
 
 const { Tier } = require('../tier')
 
-const { ItemClass } = require('../itemclass')
+const { ItemClass, WeaponClass, WeaponFlags } = require('../itemclass')
 const { ItemMod, ItemModTable } = require('../itemmod')
 const { ItemTable } = require('../itemtable')
 
@@ -110,7 +110,11 @@ class ItemUtil {
     }
 
     static generate(itemRngCtx, code, itemClass, itemSubClass, tier, rarity) {
-        if (!(itemRngCtx instanceof SecureRNGContext))
+        const tableEntry = ItemUtil.getItemTableEntry(code)
+        if (!tableEntry)
+            return null
+
+        if (!tableEntry.is_starter_item && !(itemRngCtx instanceof SecureRNGContext))
             throw new TypeError('invalid RNG context')
 
         const item = ItemUtil.createDescriptor(itemClass)
@@ -119,10 +123,6 @@ class ItemUtil {
             process.exit(1)
             return null
         }
-
-        const tableEntry = ItemUtil.getItemTableEntry(code)
-        if (!tableEntry)
-            return null
 
         const tierEntry = Object.values(Tier).find(t => t.id === tier)
         if (!tierEntry)
@@ -138,12 +138,35 @@ class ItemUtil {
         item.tier = tier
         item.rarity = rarity
 
+        if (tableEntry.item_class === ItemClass.WEAPON) {
+            if (tableEntry.item_sub_class === WeaponClass.RANGED)
+                item.descriptor.is_ranged = true
+            if (tableEntry.item_sub_class === WeaponClass.CASTING_2H ||
+                    tableEntry.item_sub_class === WeaponClass.MELEE_2H)
+                item.descriptor.is_2h = true
+            if (tableEntry.item_sub_class === WeaponClass.MELEE_1H)
+                item.descriptor.can_duel_wield = true
+        }
+
+        // Add implicit mods on items
+        // FIXME|TODO shields, quivers, spellbooks
+        tableEntry.implicit_stats.map(m => {
+            //let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
+            let stat = StatUtil.createDescriptor(m.id, m.value)
+            //console.log(`adding stat ${JSON.stringify(stat)}`)
+            item.stats.push(stat)
+            console.log('added implicit mod', stat)
+        })
+
+        if (tableEntry.is_starter_item) {
+            return item
+        }
 
         const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
-            let itemMods = Object.keys(ItemModTable)
+            let itemMods = Object.keys(ItemModTable).filter(i => i.mod_class !== ItemModClass.IMPLICIT)
             const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
-            //console.log('shuffled', shuffled)
+            console.log('shuffled', shuffled)
 
             let stats = [...Array(count)]
             stats.map((_,i) => {

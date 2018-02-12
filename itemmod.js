@@ -5,9 +5,7 @@ const ItemModClass = { }
 
 ItemModClass.MINOR = { id: 0x01, name: "Minor" }
 ItemModClass.MAJOR = { id: 0x02, name: "Major" }
-
-
-const ItemMod = { }
+ItemModClass.IMPLICIT = { id: 0xff, name: "Implicit" }
 
 function createItemModTableEntry(id, name, mod_class, stats) {
     return { id, name, mod_class, stat_descriptor: stats }
@@ -40,24 +38,37 @@ ItemModTable.ALL_ATTR = _(
 
 ItemModTable.ATK = _(
     0x0100, "attack", ItemModClass.MINOR.id,
-    [ { id: StatTable.ATK.id, min_value: 1, max_value: 5 } ]
+    [ { id: StatTable.ATK.id, min_value: 1, max_value: 4 } ]
 )
 ItemModTable.MATK = _(
     0x0101, "force", ItemModClass.MINOR.id,
-    [ { id: StatTable.MATK.id, min_value: 1, max_value: 5 } ]
+    [ { id: StatTable.MATK.id, min_value: 1, max_value: 4 } ]
 )
 ItemModTable.DEF = _(
     0x0102, "defense", ItemModClass.MINOR.id,
-    [ { id: StatTable.DEF.id, min_value: 1, max_value: 5 } ]
+    [ { id: StatTable.DEF.id, min_value: 1, max_value: 4 } ]
 )
 ItemModTable.MDEF = _(
     0x0103, "resistance", ItemModClass.MINOR.id,
-    [ { id: StatTable.MDEF.id, min_value: 1, max_value: 5 } ]
+    [ { id: StatTable.MDEF.id, min_value: 1, max_value: 4 } ]
 )
 
 ItemModTable.HP = _(
     0x0110, "hit points", ItemModClass.MINOR.id,
-    [ { id: StatTable.HP.id, min_value: 1, max_value: 5 } ]
+    [ { id: StatTable.HP.id, min_value: 1, max_value: 4 } ]
 )
 
-module.exports = { ItemModClass, ItemMod, ItemModTable }
+
+/* Not sure if these should be added yet
+ItemModTable.BASE_ATK = _(
+    0x0180, "base attack", ItemModClass.IMPLICIT.id,
+    [ { id: StatTable.BASE_ATK.id, min_value: 1, max_value: 5} ]
+)
+
+ItemModTable.BASE_ATK = _(
+    0x0181, "base magic attack", ItemModClass.IMPLICIT.id,
+    [ { id: StatTable.BASE_MATK.id, min_value: 1, max_value: 5} ]
+)
+*/
+
+module.exports = { ItemModClass, ItemModTable }

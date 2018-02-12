@@ -6,7 +6,7 @@ const { GameDb } = require('./db')
 const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameState } = require('./gamestate')
 
-const { CombatType, CombatContext } = require('./combat')
+const { CombatType, CombatContext, DamageType } = require('./combat')
 const { Storage, Slots } = require('./storage')
 const { StatTable, StatFlag } = require('./stattable')
 
@@ -44,7 +44,6 @@ class Game {
         this.discordConnected = false
         this.dbConnected = false
 
-
         this.secureRng = new SecureRNG()
         this.discord = new Discord.Client()
         this.md = new Markdown()
@@ -59,9 +58,11 @@ class Game {
 
         this.interrupt = false
 
-        this.syncinit()
         this.gameState = GameState.OFFLINE
         this.combatContext = null
+        this.combatMessage = null // FIXME for now, just to seperate it
+
+        this.syncinit()
     }
 
     async destroy() {
@@ -223,9 +224,9 @@ class Game {
         }
 
         let settings = await this.ctx.gameDb.getSettings()
-        let player = PlayerUtil.create(type, this.user)
-        player = await this.ctx.gameDb.createUnit(player)
-        if (player) {
+        let playerData = PlayerUtil.create(type, this.user)
+        playerData = await this.ctx.gameDb.createUnit(playerData.player)
+        if (playerData) {
             settings.save()
             this.ctx.discord.channels.get(this.channel)
                 .send(`<@${this.user}> Your ${typeString} character has been created`)
@@ -278,8 +279,19 @@ class Game {
 
     async getLocalTestPlayers() {
         let players = []
-        players.push(await this.gameDb.getUnitByAccount('ᛖᛒᛟᛚᚨ'))
-        players.push(await this.gameDb.getUnitByAccount('ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ'))
+        let player = await this.gameDb.getUnitByAccount('ᛖᛒᛟᛚᚨ')
+        if (!player) {
+            console.log('unable to get player1 by account')
+            return null
+        }
+        players.push(player)
+
+        player = await this.gameDb.getUnitByAccount('ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ')
+        if (!player) {
+            console.log('unable to get player1 by account')
+            return null
+        }
+        players.push(player)
 
         if (players.length !== 2) {
             console.log('unable to lookup players')
@@ -318,11 +330,12 @@ class Game {
 
         units.push(players.pop())
 
+        let monsterRarity = MonsterRarity.COMMON
+
         if (pvp) {
             console.log('pvp combat selected')
 
-            units.push(players.shift())
-
+            units.push(players.pop())
         } else {
             console.log('monster combat selected')
 
@@ -334,13 +347,13 @@ class Game {
             }
 
             let magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
-            let monsterRarity = Game.getFightMonsterRarity(magic)
+            monsterRarity = Game.getFightMonsterRarity(magic)
 
             let shuffledTable = SecureRNG.shuffleSequence(monsterRngCtx, Object.values(MonsterTable))
 
             // generate a monster
-            console.log('creating monster for combat')
-            const code = shuffledTable[0].code
+            console.log(`creating ${monsterRarity.name}(${magic}) monster for combat`)
+            const code = shuffledTable.shift().code
 
             let monsterData = this.monster.generate(monsterRngCtx, code, Tier.TIER1.id, monsterRarity.id)
             if (!monsterData) {
@@ -392,25 +405,31 @@ class Game {
         const ST = StatTable
 
         let unitAStr = `${UnitUtil.getName(units[0])}` +
-            ` HP ${SU.getStat(units[0].stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(units[0].stats, ST.UNIT_HP_MAX.id).value}` +
+            ` HP (${SU.getStat(units[0].stats, ST.UNIT_HP.id).value}/` +
+            `${SU.getStat(units[0].stats, ST.UNIT_HP_MAX.id).value})` +
+            ` BaseAtk ${SU.getStat(units[0].stats, ST.UNIT_BASE_ATK.id).value}` +
+            ` BaseMAtk ${SU.getStat(units[0].stats, ST.UNIT_BASE_MATK.id).value}` +
             ` Atk ${SU.getStat(units[0].stats, ST.UNIT_ATK.id).value}` +
             ` MAtk ${SU.getStat(units[0].stats, ST.UNIT_MATK.id).value}` +
             ` Def ${SU.getStat(units[0].stats, ST.UNIT_DEF.id).value}` +
             ` MDef ${SU.getStat(units[0].stats, ST.UNIT_MDEF.id).value}`
 
-        let unitBStr = `${UnitUtil.getName(units[1])}` +
-            ` HP ${SU.getStat(units[1].stats, ST.UNIT_HP.id).value}` +
-            ` HPMax ${SU.getStat(units[1].stats, ST.UNIT_HP_MAX.id).value}` +
+        let unitBStr = (units[1].type === UnitType.MONSTER.id ? monsterRarity.name : '') + ' ' +
+            `${UnitUtil.getName(units[1])}` +
+            ` HP (${SU.getStat(units[1].stats, ST.UNIT_HP.id).value}/` +
+            `${SU.getStat(units[1].stats, ST.UNIT_HP_MAX.id).value})` +
+            ` BaseAtk ${SU.getStat(units[1].stats, ST.UNIT_BASE_ATK.id).value}` +
+            ` BaseMAtk ${SU.getStat(units[1].stats, ST.UNIT_BASE_MATK.id).value}` +
             ` Atk ${SU.getStat(units[1].stats, ST.UNIT_ATK.id).value}` +
             ` MAtk ${SU.getStat(units[1].stats, ST.UNIT_MATK.id).value}` +
             ` Def ${SU.getStat(units[1].stats, ST.UNIT_DEF.id).value}` +
             ` MDef ${SU.getStat(units[1].stats, ST.UNIT_MDEF.id).value}`
 
-        let output = `\`${unitAStr}\`\n*VS.*\n\`${unitBStr}\``
+        let output = `combat selected\n\`${unitAStr}\`\n*VS.*\n\`${unitBStr}\``
 
-        this.discord.channels.get('406164903708327938')
-                .send(`combat selected\n${output}`)
+        console.log(output)
+        this.combatMessage = await this.discord.channels.get('406164903708327938')
+                .send(output)
 
         return units
     }
@@ -427,38 +446,6 @@ class Game {
         if (!this.combatContext)
             return false
 
-        let rngCtx = this.secureRng.getContext('combat')
-        if (!rngCtx) {
-            console.log('unable to get combat RNG context');
-            return false
-        }
-
-        const ST = StatTable
-        const SU = StatUtil
-
-        const unitA = this.combatContext.unitA
-        const unitB = this.combatContext.unitB
-
-        if (SU.getStat(unitA.stats, ST.UNIT_HP.id).value <= 0) {
-            console.log('unit is dead, but was expected to be alive')
-            return false
-        }
-
-        if (SU.getStat(unitB.stats, ST.UNIT_HP.id).value <= 0) {
-            console.log('unit is dead, but was expected to be alive')
-            return false
-        }
-
-        if (!this.combatContext.isAttackerSet()) {
-            this.combatContext.setAttacker(this.combatContext.unitA.id)
-
-            let magic = SecureRNG.getRandomInt(rngCtx, 0, 127)
-            if (magic > 63) {
-                // unitB attacks first
-                this.combatContext.swapAttacker()
-            }
-        }
-
         // resolve attack
         let results = await this.combatContext.resolveRound()
         if (!results) {
@@ -466,34 +453,76 @@ class Game {
             return false
         }
 
+        const ST = StatTable
+        const SU = StatUtil
+
         let output = ''
 
         results.map(async r => {
-            output += `\`${UnitUtil.getName(r.attacker)}\` did ${r.damage.amount} damage to \`${UnitUtil.getName(r.defender)}\``
+            const atkName = UnitUtil.getName(r.attacker)
+            const defName = UnitUtil.getName(r.defender)
+
+            const count = r.damage.length
+            let total = 0
+            let pDmg = 0
+            let mDmg = 0
+
+            output += `\`${atkName}\` did `
+            let dmgOut = ''
+
+            for (let i = 0; i < count; i++) {
+                const amount = r.damage[i].amount
+
+                if (r.damage[i].type === DamageType.PHYSICAL)
+                    pDmg += amount
+                else if (r.damage[i].type === DamageType.MAGIC)
+                    mDmg += amount
+                total += amount
+
+                let dType = r.damage[i].type === DamageType.PHYSICAL ? 'P' : 'M'
+                dmgOut += `${r.damage[i].amount}`
+
+                if (i !== count-1)
+                    dmgOut += '/'
+            }
+
+            output += `${total} (${dmgOut}) damage to \`${defName}\``
 
             if (r.fatal) {
                 output += ` killing them.`
 
                 this.gameState = GameState.ONLINE
 
-                if (r.defender.type === UnitType.MONSTER.id) {
+                if (r.attacker.type === UnitType.PLAYER.id) {
                     // TODO item drops
+
                     console.log('removing monster')
                     await this.gameDb.removeUnit(r.defender)
                 } else {
+                    console.log('removing monster')
+                    await this.gameDb.removeUnit(r.attacker)
+                }
+
+                if (r.attacker.type === UnitType.PLAYER.id) {
+                    // NOTE just temporary
+                    console.log('resurrecting player unit')
+                    SU.setStat(r.attacker.stats, ST.UNIT_HP.id,
+                            SU.getStat(r.attacker.stats, ST.UNIT_HP_MAX.id).value)
+                    await r.attacker.save()
+                } else if (r.defender.type === UnitType.PLAYER.id) {
+                   // NOTE just temporary
                     console.log('resurrecting player unit')
                     SU.setStat(r.defender.stats, ST.UNIT_HP.id,
                             SU.getStat(r.defender.stats, ST.UNIT_HP_MAX.id).value)
                     await r.defender.save()
                 }
             }
+
             output += '\n'
         })
 
-        this.discord.channels.get('406164903708327938').send(output)
-
-        // swap who attacker and defender are for next round
-        this.combatContext.swapAttacker()
+        console.log(output)
+        this.combatMessage = await this.combatMessage.edit(`${this.combatMessage.content}\n${output}\n`)
 
         return true
     }
@@ -510,8 +539,6 @@ class Game {
         this.combatContext = new CombatContext(this, ...units)
 
         console.log(`selected ${UnitUtil.getName(units[0])} and ${UnitUtil.getName(units[1])} for combat`)
-
-        //this.discord.channels.get('403320283261304835').send(`\`\`\`json\n[\n\{ 'player': ${JSON.stringify(player)},\n'playerItems': ${JSON.stringify(items)} }\n]\n\`\`\``)
 
         this.gameState = GameState.COMBAT
 
@@ -530,8 +557,10 @@ class Game {
         }
 
         if (this.gameState === GameState.OFFLINE && this.dbConnected &&
-                (this.isLocalTest || (!this.isLocalTest && this.discordConnected)))
+                (this.isLocalTest ||
+                (!this.isLocalTest && this.discordConnected))) {
             this.gameState = GameState.ONLINE
+        }
 
         switch (this.gameState) {
             case GameState.ONLINE:
@@ -577,29 +606,79 @@ class Game {
             return false
         }
 
-        // generate test player
-        console.log('creating player')
+        // Create test player 1
+        console.log('creating player 1')
 
-        let playerObj = PlayerUtil.create(PlayerType.CLERIC.id, "ᛖᛒᛟᛚᚨ")
-        playerObj.id = settings.next_unit_id
+        let playerData = PlayerUtil.create(PlayerType.MAGE.id, "ᛖᛒᛟᛚᚨ")
+        playerData.player.id = settings.next_unit_id
         settings.next_unit_id++
-        let player = await this.gameDb.createUnit(playerObj)
-        if (player) {
-            await this.unit.computeBaseStats(player)
+
+        let player = await this.gameDb.createUnit(playerData.player)
+        await this.unit.computeBaseStats(player)
+
+        playerData.weapon.owner = player.id
+        playerData.weapon.id = settings.next_item_id
+        settings.next_item_id++
+
+        let item = await this.gameDb.createItem(playerData.weapon)
+        if (!item) {
+            console.log('failed creating item', playerData.weapon)
+            process.exit(1)
         }
 
-        playerObj = PlayerUtil.create(PlayerType.RANGER.id, "ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ")
-        playerObj.id = settings.next_unit_id
-        settings.next_unit_id++
-        player = await this.gameDb.createUnit(playerObj)
-        if (player) {
-            await this.unit.computeBaseStats(player)
+        let items = await this.unit.getEquippedItems(player)
+
+        // and equip the starter item on the player
+        if (!this.unit.equipItemByType(player, items, item)) {
+            console.log('unable to equip item', item)
+            process.exit(1)
         }
 
+        await player.markModified('storage')
+        await player.save()
+
+        items = await this.unit.getEquippedItems(player)
+        await this.unit.computeBaseStats(player, items)
+
+        // Create test player 2
+        console.log('creating player 2')
+
+        playerData = PlayerUtil.create(PlayerType.RANGER.id, "ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ")
+        playerData.player.id = settings.next_unit_id
+        settings.next_unit_id++
+
+        player = await this.gameDb.createUnit(playerData.player)
+        await this.unit.computeBaseStats(player)
+
+        playerData.weapon.owner = player.id
+        playerData.weapon.id = settings.next_item_id
+        settings.next_item_id++
+
+        item = await this.gameDb.createItem(playerData.weapon)
+        if (!item) {
+            console.log('failed creating item', playerData.weapon)
+            process.exit(1)
+        }
+
+        items = await this.unit.getEquippedItems(player)
+
+        // and equip the items on the monster
+        if (!this.unit.equipItemByType(player, items, item)) {
+            console.log('unable to equip monster item', item)
+            process.exit(1)
+        }
+
+        await player.markModified('storage')
+        await player.save()
+
+        items = await this.unit.getEquippedItems(player)
+        await this.unit.computeBaseStats(player, items)
+
+        // and last, save the game settings
         await settings.save()
 
         while (!this.interrupt) {
-            await this.sleep(1*10000, async loop => { await this.loop() })
+            await this.sleep(1*2000, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')

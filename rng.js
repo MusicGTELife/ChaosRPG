@@ -93,7 +93,7 @@ class SecureRNG {
                 return sequence
         }
 
-        return sequence.map(a => [SecureRNG.getRandomInt(ctx, -1, 1), a])
+        return sequence.map(a => [SecureRNG.getRandomInt(ctx, -127, 128), a])
             .sort((a, b) => a[0] - b[0])
             .map((a) => a[1])
     }

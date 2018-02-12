@@ -23,7 +23,7 @@ StatModifier.ALL_ATTR =
 
 StatModifier.HP_PER_VIT =
     _(0x0010, [ StatTable.VIT.id ], [ StatTable.HP.id ],
-    "Hit points per", StatResolver.add, 2)
+    "Hit points per", StatResolver.add, 4)
 
 StatModifier.ATK_PER_STR =
     _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],
@@ -38,5 +38,22 @@ StatModifier.MATK_PER_INT =
 StatModifier.MDEF_PER_VIT =
     _(0x0041, [ StatTable.VIT.id ], [ StatTable.MDEF.id ],
     "Magic defence per", StatResolver.add, 2)
+
+StatModifier.ACCURACY =
+    _(0x0060, [ StatTable.DEX.id, StatTable.STR.id ], [ StatTable.ACCURACY.id ],
+    "Accuracy", StatResolver.mult, 1.01)
+
+StatModifier.REACTION =
+    _(0x0061, [ StatTable.DEX.id, StatTable.VIT.id ], [ StatTable.REACTION.id ],
+    "Reaction", StatResolver.add, 1)
+
+/*
+StatModifier.BASE_ATK =
+    _(0x0080, [ StatTable.ATK.id ], [ StatTable.BASE_ATK.id ],
+    "Base attack", StatResolver.add, 1.01)
+StatModifier.BASE_MATK =
+    _(0x0081, [ StatTable.MATK.id ], [ StatTable.BASE_MATK.id ],
+    "Base magic attack", StatResolver.mult, 1.01)
+*/
 
 module.exports = { StatModifier }
