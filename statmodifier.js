@@ -36,7 +36,7 @@ StatModifier.MATK_PER_INT =
     _(0x0040, [ StatTable.INT.id ], [ StatTable.MATK.id ],
     "Magic attack per", StatResolver.add, 2)
 StatModifier.MDEF_PER_VIT =
-    _(0x0041, [ StatTable.VIT.id ], [ StatTable.MDEF.id ],
+    _(0x0041, [ StatTable.INT.id ], [ StatTable.MDEF.id ],
     "Magic defence per", StatResolver.add, 2)
 
 StatModifier.ACCURACY =

@@ -2,8 +2,11 @@ const { UnitUtil } = require('./unit')
 const { StatUtil } = require('./stats')
 const { ItemUtil } = require('./item')
 
+const { getExperienceForLevel } = require('../experience')
+
+const { StatTable } = require('../stattable')
 const { UnitType } = require('../unit')
-const { PlayerType, Player, Mage, Warrior, Rogue, Ranger, Cleric } = require('../player')
+const { PlayerType, Player, Mage, Warrior, Rogue, Ranger, Cleric, statPointsPerLevel } = require('../player')
 const { ItemClass } = require('../itemclass')
 const { ItemRarity } = require('../itemrarity')
 const { Tier } = require('../tier')
@@ -14,11 +17,14 @@ class PlayerUtil extends UnitUtil {
         return Object.keys(PlayerType).map((k) => k.id === id ? type.name : 'unknown')
     }
 
-    static create(type, account) {
+    static create(type, level, account) {
         if (!PlayerUtil.isValidType(type))
             return null
 
-        let unit = UnitUtil.create(UnitType.PLAYER.id, '')
+        let unit = UnitUtil.create(UnitType.PLAYER.id, level, '')
+        if (!unit)
+            return null
+
         unit.descriptor.type = type
         unit.descriptor.account = account
         unit.stats = PlayerUtil.createBaseStats(type)
@@ -69,6 +75,46 @@ class PlayerUtil extends UnitUtil {
         StatUtil.applyOverrides(stats, overrides)
 
         return stats
+    }
+
+    // Utilities to apply stat changes
+    static async applyLevelGain(unit) {
+        if (!unit)
+            return null
+
+        if (unit.level >= 100)
+            return unit
+
+        unit.level++
+        unit.descriptor.stat_points_remaining += statPointsPerLevel
+
+        unit.markModified('descriptor')
+        await unit.save()
+
+        return unit
+    }
+
+    static async applyExperience(unit, amount) {
+        if (!unit)
+            return null
+
+        if (amount <= 0)
+            return null
+
+        const nextLevel = getExperienceForLevel(unit.level+1)
+        let xp = StatUtil.getStat(unit.stats, StatTable.UNIT_EXP.id)
+
+        // cap xp value off at the beginning of the next level if they advanced
+        if (xp.value + amount > nextLevel)
+            xp.value = nextLevel
+        else
+            xp.value += amount
+
+        StatUtil.setStat(unit.stats, StatTable.UNIT_EXP.id, xp.value)
+
+        unit.markModified('stats')
+        await unit.save()
+        return unit
     }
 }
 

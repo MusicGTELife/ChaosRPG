@@ -26,7 +26,7 @@ class UnitUtil {
         return valid
     }
 
-    static create(type) {
+    static create(type, level) {
         if (!UnitUtil.isValidType(type))
             return null
 
@@ -40,6 +40,7 @@ class UnitUtil {
         return {
             id: 0,
             type,
+            level,
             name: '',
             stats: UnitUtil.createBaseStats(type),
             storage: StorageUtil.createStorage(type),
@@ -105,8 +106,15 @@ class UnitUtil {
         return unit.name
     }
 
+    static isAlive(unit) {
+        if (!unit)
+            return false
+
+        return SU.getStat(unit.stats, ST.UNIT_HP.id).value > 0
+    }
+
     // This is only to be used after final damage is calculated
-    static async takeDamage(unit, amount) {
+    static async applyDamage(unit, amount) {
         SU.setStat(unit.stats, ST.UNIT_HP.id,
                 SU.getStat(unit.stats, ST.UNIT_HP.id).value - amount)
         await unit.save()
@@ -118,8 +126,11 @@ class UnitUtil {
 
         let stats = []
         items.map(v => {
-            stats = stats.concat(...v.stats)
+            stats = stats.concat(v.stats)
         })
+
+        console.log(stats)
+        //process.exit(1)
 
         return stats
     }
@@ -303,7 +314,7 @@ class UnitUtil {
             return entry && entry.flags & StatFlag.PLAYER
         })
 
-        let stats = itemStats.concat(...baseStats)
+        let stats = itemStats.concat(baseStats)
         stats = SU.getReducedStats(stats)
 
         // Okay, first we need to get the base_atk stat from equipped items

@@ -24,7 +24,7 @@ class MonsterUtil extends UnitUtil {
         return MonsterUtil.getMonsterTableEntry(code) !== undefined
     }
 
-    static create(code, tier, rarity) {
+    static create(code, level, tier, rarity) {
         if (!MonsterUtil.isValidType(code))
             return null
 
@@ -32,11 +32,19 @@ class MonsterUtil extends UnitUtil {
         if (!entry)
             return null
 
-        let monster = UnitUtil.create(UnitType.MONSTER.id)
+        let monster = UnitUtil.create(UnitType.MONSTER.id, level)
+        if (!monster)
+            return null
+
         monster.name = entry.name
         monster.descriptor.tier = tier
         monster.descriptor.rarity = rarity
         monster.descriptor.code = code
+
+        let stats = MonsterUtil.createBaseStats(code)
+        if (!stats)
+            return null
+
         monster.stats = MonsterUtil.createBaseStats(code)
 
         return monster
@@ -44,10 +52,20 @@ class MonsterUtil extends UnitUtil {
 
     static createBaseStats(code) {
         let entry = MonsterUtil.getMonsterTableEntry(code)
+        if (!entry)
+            return null
+
         let stats = UnitUtil.createBaseStats(UnitType.MONSTER.id)
+        if (!stats)
+            return null
+
         StatUtil.applyOverrides(stats, entry.stats)
 
         return stats
+    }
+
+    static getMonsterRarityEntry(id) {
+        return Object.values(MonsterRarity).find(r => r.id === id)
     }
 
     static getMonsterWeaponChoices(code, isPrimary) {
@@ -73,7 +91,7 @@ class MonsterUtil extends UnitUtil {
                         (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.CASTING_2H) {
-                if ((weaponFlags & WeaponFlags.CASTING_1H) !== 0 ||
+                if ((weaponFlags & WeaponFlags.CASTING_2H) !== 0 ||
                         (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
                     return true
             } else if (i.item_sub_class === WeaponClass.RANGED) {
@@ -89,8 +107,8 @@ class MonsterUtil extends UnitUtil {
 
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
-    generate(monsterRngCtx, code, tier, rarity) {
-        let unit = MonsterUtil.create(code, tier, rarity)
+    generate(monsterRngCtx, code, level, tier, rarity) {
+        let unit = MonsterUtil.create(code, level, tier, rarity)
         if (!unit) {
             console.log(`failed to create monster ${code}`)
             return null
@@ -105,7 +123,8 @@ class MonsterUtil extends UnitUtil {
         unit.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                StatUtil.setStat(unit.stats, e.id, e.value+tierEntry.stat_counts[0]+rarity)
+                const statBonus = e.value+Math.round(Math.sqrt(level*(tierEntry.stat_counts[0]+rarity)))
+                StatUtil.setStat(unit.stats, e.id, statBonus)
             }
         })
 

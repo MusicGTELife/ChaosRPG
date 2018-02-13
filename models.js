@@ -34,6 +34,7 @@ const StorageSchema = new Schema({
 const UnitSchema = {
     id: Number,
     type: Number,
+    level: Number,
     name: String,
     storage: [ StorageSchema ],
     stats: [ { _id: false, id: Number, value: Number } ],

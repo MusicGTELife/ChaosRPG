@@ -1,9 +1,11 @@
 const { SecureRNG } = require('./rng')
 
+const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
 
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
+const { PlayerUtil } = require('./util/player')
 
 const SU = StatUtil
 const ST = StatTable
@@ -13,34 +15,46 @@ CombatType.RANGED = { id: 0x10, name: "Ranged" }
 CombatType.MELEE = { id: 0x20, name: "Hand to hand"}
 CombatType.SPELL = { id: 0x30, name: "Spell"}
 
+const CombatEventType = { }
+CombatEventType.MONSTER_DAMAGE = { id: 0x01, name: "Monster Damaged" }
+CombatEventType.MONSTER_DEATH = { id: 0x02, name: "Monster Death" }
+CombatEventType.MONSTER_ITEM_DROP = { id: 0x03, name: "Player Dropped Item" }
+
+CombatEventType.PLAYER_DAMAGE = { id: 0x10, name: "Player Damaged" }
+CombatEventType.PLAYER_DEATH = { id: 0x11, name: "Player Death" }
+CombatEventType.PLAYER_ITEM_DROP = { id: 0x12, name: "Monster Dropped Item" }
+
+CombatEventType.PLAYER_LEVEL = { id: 0x13, name: "Player Leveled" }
+CombatEventType.PLAYER_EXPERIENCE = { id: 0x14, name: "Player Gained Experience" }
+
 const DamageType = { }
 DamageType.PHYSICAL =       0x01
 DamageType.MAGIC =          0x02
 
 class Damage {
-    constructor(type, amount) {
-        this.type = type
-        this.amount = amount
+    constructor(physical, magic) {
+        this.physical = physical
+        this.magic = magic
     }
 
     getDamage() {
         return {
-            type, amount
+            physical, magic
         }
     }
 }
 
-class CombatResult {
-    constructor(attacker, defender, damage) {
+class CombatEvent {
+    constructor(attacker, defender, type, data) {
         this.attacker = attacker
         this.defender = defender
-        this.damage = [ ]
-        this.fatal = false
+        this.type = type
+        this.data = data
     }
 
     getResult() {
         return {
-            attacker, defender, damage, fatal
+            attacker, defender, type, data
         }
     }
 }
@@ -116,12 +130,12 @@ class CombatContext {
     }
 
     async resolveRound() {
-        if (SU.getStat(this.unitA.stats, ST.UNIT_HP.id).value <= 0) {
+        if (!UnitUtil.isAlive(this.unitA)) {
             console.log('unit is dead, but was expected to be alive')
             return null
         }
 
-        if (SU.getStat(this.unitB.stats, ST.UNIT_HP.id).value <= 0) {
+        if (!UnitUtil.isAlive(this.unitB)) {
             console.log('unit is dead, but was expected to be alive')
             return null
         }
@@ -129,16 +143,19 @@ class CombatContext {
         this.setFirstAttacker()
 
         // resolve attack
-        let results = []
+        let events = []
         let result = await this.resolveAttack()
         if (!result) {
             console.log('failed to resolve attack')
             return results
         }
-        results.push(result)
+        events = events.concat(result)
+        if (events.find(e =>
+                e.type === CombatEventType.PLAYER_DEATH ||
+                e.type === CombatEventType.MONSTER_DEATH)) {
 
-        if (result.fatal)
-            return results
+            return events
+        }
 
         // toggle attacker
         this.swapAttacker()
@@ -149,16 +166,18 @@ class CombatContext {
             console.log('failed to resolve counter-attack')
             return results
         }
-        results.push(result)
+        events = events.concat(result)
 
-        return results
+        return events
     }
 
     async resolveAttack() {
         if (!this.isAttackerSet())
             return null
 
-        let result = new CombatResult(this.attacker, this.defender)
+        const defIsPlayer = this.defender.type === UnitType.PLAYER.id
+        let events = [ ]
+        let eventType = null
 
         let baseAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_ATK.id)
         let baseMAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_MATK.id)
@@ -169,28 +188,48 @@ class CombatContext {
         let def = SU.getStat(this.defender.stats, ST.UNIT_DEF.id)
         let mdef = SU.getStat(this.defender.stats, ST.UNIT_MDEF.id)
 
-        // Scale attack down according to accuracy roll
+        // Resolve damage dealt, we scale each attack type down according to the
+        // units accuracy roll
         let pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
-        atk.value = Math.floor(baseAtk.value + baseAtk.value*atk.value/100)
-        atk.value *= pAcc
+        atk.value = Math.floor(baseAtk.value + baseAtk.value*atk.value/100)*1+pAcc
         let physDmg = this.resolveDamageDealt(atk, def)
-        let dr = new Damage(DamageType.PHYSICAL, physDmg)
-        result.damage.push(dr)
 
         pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
-        matk.value = Math.floor(baseMAtk.value + baseMAtk.value*matk.value/100)
-        matk.value *= pAcc
+        matk.value = Math.floor(baseMAtk.value + baseMAtk.value*matk.value/100)*1+pAcc
         let magicDmg = this.resolveDamageDealt(matk, mdef)
-        dr = new Damage(DamageType.MAGIC, magicDmg)
-        result.damage.push(dr)
 
-        //console.log(`attacker did ${physDmg+magicDmg} (${physDmg}/${magicDmg}) damage`)
+        let dmg = new Damage(physDmg, magicDmg)
+        await UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
 
-        await UnitUtil.takeDamage(this.defender, physDmg+magicDmg)
-        if (SU.getStat(this.defender.stats, ST.UNIT_HP.id).value <= 0)
-            result.fatal = true
+        eventType = CombatEventType.MONSTER_DAMAGE
+        if (defIsPlayer)
+            eventType = CombatEventType.PLAYER_DAMAGE
 
-        return result
+        let event = new CombatEvent(this.attacker, this.defender, eventType, dmg)
+        events.push(event)
+
+        //console.log(`attacker did ${physDmg+magicDmg} (${physDmg}:${magicDmg}) damage`)
+
+        if (!UnitUtil.isAlive(this.defender)) {
+            eventType = CombatEventType.MONSTER_DEATH
+            if (defIsPlayer)
+                eventType = CombatEventType.PLAYER_DEATH
+
+            event = new CombatEvent(this.attacker, this.defender, eventType)
+            events.push(event)
+
+            if (!defIsPlayer) {
+                console.log('pre xp apply')
+                let exp = 50 // FIXME hardcoded for now
+                await PlayerUtil.applyExperience(this.attacker, exp)
+                console.log('post xp apply')
+
+                event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE, exp)
+                events.push(event)
+            }
+        }
+
+        return events
     }
 
     resolveDamageDealt(attack, defense) {
@@ -218,4 +257,4 @@ class CombatContext {
     }
 }
 
-module.exports = { CombatType, CombatContext, Damage, DamageType }
+module.exports = { CombatType, CombatContext, Damage, DamageType, CombatEventType }

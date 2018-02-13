@@ -17,6 +17,7 @@ class Player extends Unit { }
 Player.descriptor = {
     type: 0,
     account: '',
+    stat_points_remaining: 0,
     last_online_period: 0,
     last_chat_ts: 0
 }
@@ -24,9 +25,9 @@ Player.descriptor = {
 class Mage extends Player { }
 Mage.stats = [
     { id: StatTable.DEX.id, value: 2 },
-    { id: StatTable.INT.id, value: 10 },
+    { id: StatTable.INT.id, value: 8 },
     { id: StatTable.STR.id, value: 2 },
-    { id: StatTable.VIT.id, value: 6 },
+    { id: StatTable.VIT.id, value: 8 },
     { id: StatTable.BASE_MATK.id, value: 4 },
     { id: StatTable.BASE_ATK.id, value: 0 }
 ]
@@ -54,21 +55,25 @@ Rogue.stats = [
 class Ranger extends Player { }
 Ranger.stats = [
     { id: StatTable.DEX.id, value: 8 },
-    { id: StatTable.INT.id, value: 4 },
+    { id: StatTable.INT.id, value: 2 },
     { id: StatTable.STR.id, value: 4 },
-    { id: StatTable.VIT.id, value: 4 },
+    { id: StatTable.VIT.id, value: 6 },
     { id: StatTable.BASE_MATK.id, value: 1 },
     { id: StatTable.BASE_ATK.id, value: 3 }
 ]
 
 class Cleric extends Player { }
 Cleric.stats = [
-    { id: StatTable.DEX.id, value: 3 },
+    { id: StatTable.DEX.id, value: 2 },
     { id: StatTable.INT.id, value: 6 },
-    { id: StatTable.STR.id, value: 3 },
+    { id: StatTable.STR.id, value: 4 },
     { id: StatTable.VIT.id, value: 8 },
     { id: StatTable.BASE_MATK.id, value: 2 },
     { id: StatTable.BASE_ATK.id, value: 2 }
 ]
 
-module.exports = { PlayerType, Player, Mage, Warrior, Rogue, Ranger, Cleric }
+module.exports = {
+    PlayerType, Player,
+    Mage, Warrior, Rogue, Ranger, Cleric,
+    baseStatPoints, statPointsPerLevel
+}

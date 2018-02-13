@@ -6,7 +6,7 @@ const { GameDb } = require('./db')
 const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameState } = require('./gamestate')
 
-const { CombatType, CombatContext, DamageType } = require('./combat')
+const { CombatType, CombatContext, CombatEventType } = require('./combat')
 const { Storage, Slots } = require('./storage')
 const { StatTable, StatFlag } = require('./stattable')
 
@@ -15,6 +15,8 @@ const { Tier, TierStatCount } = require('./tier')
 const { ItemClass, ArmorClass, WeaponClass, JewelClass } = require('./itemclass')
 const { ItemRarity } = require('./itemrarity')
 const { ItemTable } = require('./itemtable')
+
+const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
 const { MonsterTable } = require('./monstertable')
@@ -242,7 +244,7 @@ class Game {
         }
 
         let settings = await this.ctx.gameDb.getSettings()
-        let playerData = PlayerUtil.create(type, this.user)
+        let playerData = PlayerUtil.create(type, 1, this.user)
         let player = this.ctx.unit.prepareGenerated(playerData, settings)
         if (player) {
             this.ctx.discord.channels.get(this.channel)
@@ -268,7 +270,7 @@ class Game {
         }
     }
 
-    async createPlayerInventoryEmbed(unit, items, color) {
+    createPlayerInventoryEmbed(unit, items, color) {
         let embed = new Discord.RichEmbed()
             .setColor(3447003).setDescription('**Character Inventory**')
 
@@ -284,6 +286,38 @@ class Game {
         //this.discord.channels.get('405592756908589056').send(embed)
     }
 
+    unitInfoToString(unit) {
+        if (!unit)
+            return ''
+
+        const ST = StatTable
+        const SU = StatUtil
+
+        let unitInfo = ''
+
+        const name = UnitUtil.getName(unit)
+        const isPlayer = unit.type === UnitType.PLAYER.id
+        if (isPlayer) {
+            unitInfo += `${name} Level ${unit.level} ` +
+                `Exp (${SU.getStat(unit.stats, ST.UNIT_EXP.id).value}/` +
+                `${getExperienceForLevel(unit.level+1)})`
+        } else {
+            const monsterRarity = MonsterUtil.getMonsterRarityEntry(unit.descriptor.rarity)
+            unitInfo += `${monsterRarity.name} ${name} Level ${unit.level}`
+        }
+
+        unitInfo += ` HP (${SU.getStat(unit.stats, ST.UNIT_HP.id).value}/` +
+            `${SU.getStat(unit.stats, ST.UNIT_HP_MAX.id).value})` +
+            ` BaseAtk ${SU.getStat(unit.stats, ST.UNIT_BASE_ATK.id).value}` +
+            ` BaseMAtk ${SU.getStat(unit.stats, ST.UNIT_BASE_MATK.id).value}` +
+            ` Atk ${SU.getStat(unit.stats, ST.UNIT_ATK.id).value}` +
+            ` MAtk ${SU.getStat(unit.stats, ST.UNIT_MATK.id).value}` +
+            ` Def ${SU.getStat(unit.stats, ST.UNIT_DEF.id).value}` +
+            ` MDef ${SU.getStat(unit.stats, ST.UNIT_MDEF.id).value}`
+
+        return unitInfo
+    }
+
     async getRecentlyActivePlayers() {
         let activeUsers = await this.gameDb.getActiveUsers()
         if (!activeUsers) {
@@ -296,21 +330,42 @@ class Game {
 
     async getLocalTestPlayers() {
         let players = []
-        let player = await this.gameDb.getUnitByAccount('ᛖᛒᛟᛚᚨ')
+        let player = await this.gameDb.getUnitByAccount('TestMage')
         if (!player) {
             console.log('unable to get player1 by account')
             return null
         }
         players.push(player)
 
-        player = await this.gameDb.getUnitByAccount('ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ')
+        player = await this.gameDb.getUnitByAccount('TestRanger')
         if (!player) {
-            console.log('unable to get player1 by account')
+            console.log('unable to get test ranger by account')
             return null
         }
         players.push(player)
 
-        if (players.length !== 2) {
+        player = await this.gameDb.getUnitByAccount('TestWarrior')
+        if (!player) {
+            console.log('unable to get test warrior by account')
+            return null
+        }
+        players.push(player)
+
+        player = await this.gameDb.getUnitByAccount('TestCleric')
+        if (!player) {
+            console.log('unable to get test cleric by account')
+            return null
+        }
+        players.push(player)
+
+        player = await this.gameDb.getUnitByAccount('TestRogue')
+        if (!player) {
+            console.log('unable to get test rogue by account')
+            return null
+        }
+        players.push(player)
+
+        if (players.length !== 5) {
             console.log('unable to lookup players')
             return null
         }
@@ -369,10 +424,13 @@ class Game {
             let shuffledTable = SecureRNG.shuffleSequence(monsterRngCtx, Object.values(MonsterTable))
 
             // generate a monster
-            console.log(`creating ${monsterRarity.name}(${magic}) monster for combat`)
             const code = shuffledTable.shift().code
+            const diff = SecureRNG.getRandomInt(rngCtx, -2, 2)
+            const level = Math.max(1, units[0].level+diff)
 
-            let monsterData = this.monster.generate(monsterRngCtx, code, Tier.TIER1.id, monsterRarity.id)
+            console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
+
+            let monsterData = this.monster.generate(monsterRngCtx, code, level, Tier.TIER1.id, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
                 return null
@@ -384,31 +442,14 @@ class Game {
         const SU = StatUtil
         const ST = StatTable
 
-        let unitAStr = `${UnitUtil.getName(units[0])}` +
-            ` HP (${SU.getStat(units[0].stats, ST.UNIT_HP.id).value}/` +
-            `${SU.getStat(units[0].stats, ST.UNIT_HP_MAX.id).value})` +
-            ` BaseAtk ${SU.getStat(units[0].stats, ST.UNIT_BASE_ATK.id).value}` +
-            ` BaseMAtk ${SU.getStat(units[0].stats, ST.UNIT_BASE_MATK.id).value}` +
-            ` Atk ${SU.getStat(units[0].stats, ST.UNIT_ATK.id).value}` +
-            ` MAtk ${SU.getStat(units[0].stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(units[0].stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(units[0].stats, ST.UNIT_MDEF.id).value}`
-
-        let unitBStr = (units[1].type === UnitType.MONSTER.id ? monsterRarity.name : '') + ' ' +
-            `${UnitUtil.getName(units[1])}` +
-            ` HP (${SU.getStat(units[1].stats, ST.UNIT_HP.id).value}/` +
-            `${SU.getStat(units[1].stats, ST.UNIT_HP_MAX.id).value})` +
-            ` BaseAtk ${SU.getStat(units[1].stats, ST.UNIT_BASE_ATK.id).value}` +
-            ` BaseMAtk ${SU.getStat(units[1].stats, ST.UNIT_BASE_MATK.id).value}` +
-            ` Atk ${SU.getStat(units[1].stats, ST.UNIT_ATK.id).value}` +
-            ` MAtk ${SU.getStat(units[1].stats, ST.UNIT_MATK.id).value}` +
-            ` Def ${SU.getStat(units[1].stats, ST.UNIT_DEF.id).value}` +
-            ` MDef ${SU.getStat(units[1].stats, ST.UNIT_MDEF.id).value}`
+        let unitAStr = this.unitInfoToString(units[0])
+        let unitBStr = this.unitInfoToString(units[1])
 
         let output = `combat selected\n\`${unitAStr}\`\n*VS.*\n\`${unitBStr}\``
 
         console.log(output)
-        this.combatMessage = await this.discord.channels.get('406164903708327938')
+        if (this.discordConnected)
+            this.combatMessage = await this.discord.channels.get('406164903708327938')
                 .send(output)
 
         return units
@@ -442,33 +483,19 @@ class Game {
             const atkName = UnitUtil.getName(r.attacker)
             const defName = UnitUtil.getName(r.defender)
 
-            const count = r.damage.length
-            let total = 0
-            let pDmg = 0
-            let mDmg = 0
+            const count = r.length
 
-            output += `\`${atkName}\` did `
-            let dmgOut = ''
+            if (r.type === CombatEventType.PLAYER_DAMAGE ||
+                    r.type === CombatEventType.MONSTER_DAMAGE) {
+                let total = r.data.physical + r.data.magic
 
-            for (let i = 0; i < count; i++) {
-                const amount = r.damage[i].amount
-
-                if (r.damage[i].type === DamageType.PHYSICAL)
-                    pDmg += amount
-                else if (r.damage[i].type === DamageType.MAGIC)
-                    mDmg += amount
-                total += amount
-
-                let dType = r.damage[i].type === DamageType.PHYSICAL ? 'P' : 'M'
-                dmgOut += `${r.damage[i].amount}`
-
-                if (i !== count-1)
-                    dmgOut += '/'
+                output += `\`${atkName}\` did ${total} ` +
+                    `(${r.data.physical}:${r.data.magic})` +
+                    ` damage to \`${defName}\``
             }
 
-            output += `${total} (${dmgOut}) damage to \`${defName}\``
-
-            if (r.fatal) {
+            if (r.type === CombatEventType.PLAYER_DEATH ||
+                    r.type === CombatEventType.MONSTER_DEATH) {
                 output += ` killing them.`
 
                 this.gameState = GameState.ONLINE
@@ -496,12 +523,15 @@ class Game {
                             SU.getStat(r.defender.stats, ST.UNIT_HP_MAX.id).value)
                     await r.defender.save()
                 }
-            }
 
-            output += '\n'
+                // TODO add experience deduction on player death
+            }
         })
 
         console.log(output)
+        if (output[output.length-1] !== '\n')
+            output += '\n'
+
         this.combatMessage = await this.combatMessage.edit(`${this.combatMessage.content}\n${output}\n`)
 
         return true
@@ -568,16 +598,29 @@ class Game {
             }
         }
 
-        // Create test player 1
-        console.log('creating player 1')
-
-        let playerData = PlayerUtil.create(PlayerType.MAGE.id, "ᛖᛒᛟᛚᚨ")
+        // Create test Mage
+        console.log('creating test Mage')
+        let playerData = PlayerUtil.create(PlayerType.MAGE.id, 1, "TestMage")
         let player = await this.unit.prepareGeneratedUnit(playerData, settings)
 
-        // Create test player 2
-        console.log('creating player 2')
+        // Create test Ranger
+        console.log('creating test Ranger')
+        playerData = PlayerUtil.create(PlayerType.RANGER.id, 1, "TestRanger")
+        player = await this.unit.prepareGeneratedUnit(playerData, settings)
 
-        playerData = PlayerUtil.create(PlayerType.RANGER.id, "ᛖᛞᚪᚫᛏᚩᛠᛖᛠᛉᚳᛠᛏ")
+        // Create test Cleric
+        console.log('creating test Cleric')
+        playerData = PlayerUtil.create(PlayerType.CLERIC.id, 1, "TestCleric")
+        player = await this.unit.prepareGeneratedUnit(playerData, settings)
+
+        // Create test Warrior
+        console.log('creating test Warrior')
+        playerData = PlayerUtil.create(PlayerType.WARRIOR.id, 1, "TestWarrior")
+        player = await this.unit.prepareGeneratedUnit(playerData, settings)
+
+        // Create test Warrior
+        console.log('creating test Rogue')
+        playerData = PlayerUtil.create(PlayerType.ROGUE.id, 1, "TestRogue")
         player = await this.unit.prepareGeneratedUnit(playerData, settings)
 
         // and last, save the game settings
