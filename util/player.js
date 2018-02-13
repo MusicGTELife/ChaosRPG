@@ -77,7 +77,38 @@ class PlayerUtil extends UnitUtil {
         return stats
     }
 
+    static getExperience(unit) {
+        if (!unit)
+            return 0
+
+        return StatUtil.getStat(unit.stats, StatTable.UNIT_EXP.id).value
+    }
+
     // Utilities to apply stat changes
+    static async applyStatPoint(unit, statId) {
+        if (!unit)
+            return false
+
+        let validStat = ({
+            [StatTable.STR.id]: true,
+            [StatTable.DEX.id]: true,
+            [StatTable.INT.id]: true,
+            [StatTable.VIT.id]: true,
+        })[statId] || false
+        if (!validStat)
+            return false
+
+        if (unit.descriptor.stat_points_remaining <= 0)
+            return false
+
+        unit.descriptor.stat_points_remaining--
+
+        const current = StatUtil.getStat(unit.stats, statId)
+        StatUtil.setStat(unit.stats, statId, current.value+1)
+
+        return true
+    }
+
     static async applyLevelGain(unit) {
         if (!unit)
             return null

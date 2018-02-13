@@ -1,11 +1,14 @@
 const { SecureRNG } = require('./rng')
 
+const { getExperienceForLevel } = require('./experience')
+
 const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
 
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
 const { PlayerUtil } = require('./util/player')
+const { MonsterUtil } = require('./util/monster')
 
 const SU = StatUtil
 const ST = StatTable
@@ -151,8 +154,8 @@ class CombatContext {
         }
         events = events.concat(result)
         if (events.find(e =>
-                e.type === CombatEventType.PLAYER_DEATH ||
-                e.type === CombatEventType.MONSTER_DEATH)) {
+                e.type === CombatEventType.PLAYER_DEATH.id ||
+                e.type === CombatEventType.MONSTER_DEATH.id)) {
 
             return events
         }
@@ -191,19 +194,19 @@ class CombatContext {
         // Resolve damage dealt, we scale each attack type down according to the
         // units accuracy roll
         let pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
-        atk.value = Math.floor(baseAtk.value + baseAtk.value*atk.value/100)*1+pAcc
+        atk.value = Math.ceil((baseAtk.value + baseAtk.value*atk.value/100)*pAcc)
         let physDmg = this.resolveDamageDealt(atk, def)
 
         pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
-        matk.value = Math.floor(baseMAtk.value + baseMAtk.value*matk.value/100)*1+pAcc
+        matk.value = Math.ceil((baseMAtk.value + baseMAtk.value*matk.value/100)*pAcc)
         let magicDmg = this.resolveDamageDealt(matk, mdef)
 
         let dmg = new Damage(physDmg, magicDmg)
         await UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
 
-        eventType = CombatEventType.MONSTER_DAMAGE
+        eventType = CombatEventType.MONSTER_DAMAGE.id
         if (defIsPlayer)
-            eventType = CombatEventType.PLAYER_DAMAGE
+            eventType = CombatEventType.PLAYER_DAMAGE.id
 
         let event = new CombatEvent(this.attacker, this.defender, eventType, dmg)
         events.push(event)
@@ -211,21 +214,32 @@ class CombatContext {
         //console.log(`attacker did ${physDmg+magicDmg} (${physDmg}:${magicDmg}) damage`)
 
         if (!UnitUtil.isAlive(this.defender)) {
-            eventType = CombatEventType.MONSTER_DEATH
+            eventType = CombatEventType.MONSTER_DEATH.id
             if (defIsPlayer)
-                eventType = CombatEventType.PLAYER_DEATH
+                eventType = CombatEventType.PLAYER_DEATH.id
 
             event = new CombatEvent(this.attacker, this.defender, eventType)
             events.push(event)
 
             if (!defIsPlayer) {
-                console.log('pre xp apply')
-                let exp = 50 // FIXME hardcoded for now
-                await PlayerUtil.applyExperience(this.attacker, exp)
-                console.log('post xp apply')
+                let nextLevelXp = getExperienceForLevel(this.attacker.level+1)
+                let currXp = PlayerUtil.getExperience(this.attacker)
+                let exp = MonsterUtil.getExperienceReward(this.defender, this.attacker)
 
-                event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE, exp)
+                await PlayerUtil.applyExperience(this.attacker, exp)
+                if (currXp+exp >= nextLevelXp) {
+                    await PlayerUtil.applyLevelGain(this.attacker)
+
+                    eventType = CombatEventType.PLAYER_LEVEL.id
+                    event = new CombatEvent(this.attacker, this.defender, eventType)
+                    events.push(event)
+                }
+
+                event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
                 events.push(event)
+            } else {
+                // TODO add experience deduction on player and a small chance of
+                // item loss on death
             }
         }
 

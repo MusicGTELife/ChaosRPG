@@ -425,7 +425,7 @@ class Game {
 
             // generate a monster
             const code = shuffledTable.shift().code
-            const diff = SecureRNG.getRandomInt(rngCtx, -2, 2)
+            const diff = SecureRNG.getRandomInt(rngCtx, -5, 5)
             const level = Math.max(1, units[0].level+diff)
 
             console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
@@ -479,14 +479,12 @@ class Game {
 
         let output = ''
 
-        results.map(async r => {
+        await results.map(async r => {
             const atkName = UnitUtil.getName(r.attacker)
             const defName = UnitUtil.getName(r.defender)
 
-            const count = r.length
-
-            if (r.type === CombatEventType.PLAYER_DAMAGE ||
-                    r.type === CombatEventType.MONSTER_DAMAGE) {
+            if (r.type === CombatEventType.PLAYER_DAMAGE.id ||
+                    r.type === CombatEventType.MONSTER_DAMAGE.id) {
                 let total = r.data.physical + r.data.magic
 
                 output += `\`${atkName}\` did ${total} ` +
@@ -494,18 +492,40 @@ class Game {
                     ` damage to \`${defName}\``
             }
 
-            if (r.type === CombatEventType.PLAYER_DEATH ||
-                    r.type === CombatEventType.MONSTER_DEATH) {
-                output += ` killing them.`
+            if (r.type === CombatEventType.PLAYER_DEATH.id ||
+                    r.type === CombatEventType.MONSTER_DEATH.id) {
+                output += `${atkName} has slain ${defName}.`
+            }
 
+            if (r.type === CombatEventType.PLAYER_EXPERIENCE.id) {
+                output += `${atkName} has gained ${r.data} experience.`
+            }
+
+            if (r.type === CombatEventType.PLAYER_LEVEL.id) {
+                output += `${atkName} has reached level ${r.attacker.level}!`
+            }
+
+            if (output[output.length-1] !== '\n')
+                output += '\n'
+        })
+
+        console.log(output)
+
+        await results.map(async r => {
+            if (r.type === CombatEventType.PLAYER_DEATH.id ||
+                    r.type === CombatEventType.MONSTER_DEATH.id) {
                 this.gameState = GameState.ONLINE
 
-                if (r.attacker.type === UnitType.PLAYER.id) {
+                if (r.defender.type === UnitType.MONSTER.id) {
+                    // Monster death Vs. player
+
                     // TODO item drops
 
                     console.log('removing monster')
                     await this.gameDb.removeUnit(r.defender)
-                } else {
+                } else if (r.attacker.type === UnitType.MONSTER.id &&
+                        r.defender.type === UnitType.PLAYER.id) {
+                    // Player death Vs. monster
                     console.log('removing monster')
                     await this.gameDb.removeUnit(r.attacker)
                 }
@@ -516,21 +536,16 @@ class Game {
                     SU.setStat(r.attacker.stats, ST.UNIT_HP.id,
                             SU.getStat(r.attacker.stats, ST.UNIT_HP_MAX.id).value)
                     await r.attacker.save()
-                } else if (r.defender.type === UnitType.PLAYER.id) {
+                }
+                if (r.defender.type === UnitType.PLAYER.id) {
                    // NOTE just temporary
                     console.log('resurrecting player unit')
                     SU.setStat(r.defender.stats, ST.UNIT_HP.id,
                             SU.getStat(r.defender.stats, ST.UNIT_HP_MAX.id).value)
                     await r.defender.save()
                 }
-
-                // TODO add experience deduction on player death
             }
         })
-
-        console.log(output)
-        if (output[output.length-1] !== '\n')
-            output += '\n'
 
         this.combatMessage = await this.combatMessage.edit(`${this.combatMessage.content}\n${output}\n`)
 
@@ -627,7 +642,7 @@ class Game {
         await settings.save()
 
         while (!this.interrupt) {
-            await this.sleep(1*2000, async loop => { await this.loop() })
+            await this.sleep(1*1500, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')

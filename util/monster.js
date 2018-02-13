@@ -105,6 +105,29 @@ class MonsterUtil extends UnitUtil {
         return choices
     }
 
+    static getExperienceReward(monster, player) {
+        if (!monster || !player)
+            return 0
+
+        if (monster.type !== UnitType.MONSTER.id)
+            return 0
+
+        if (player.type !== UnitType.PLAYER.id)
+            return 0
+
+        const entry = MonsterUtil.getMonsterTableEntry(monster.descriptor.code)
+        let exp = entry.base_experience
+        if (monster.level > 1)
+            exp = Math.pow(exp*(monster.level-1), 1.14)
+
+        const diff = Math.abs(monster.level-player.level)
+        if (diff > 2) {
+            exp *= 1/(diff-1)
+        }
+
+        return Math.floor(exp)
+    }
+
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
     generate(monsterRngCtx, code, level, tier, rarity) {

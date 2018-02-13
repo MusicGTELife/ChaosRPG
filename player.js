@@ -45,9 +45,9 @@ Warrior.stats = [
 class Rogue extends Player { }
 Rogue.stats = [
     { id: StatTable.DEX.id, value: 6 },
-    { id: StatTable.INT.id, value: 8 },
+    { id: StatTable.INT.id, value: 6 },
     { id: StatTable.STR.id, value: 2 },
-    { id: StatTable.VIT.id, value: 4 },
+    { id: StatTable.VIT.id, value: 6 },
     { id: StatTable.BASE_MATK.id, value: 1 },
     { id: StatTable.BASE_ATK.id, value: 3 }
 ]
