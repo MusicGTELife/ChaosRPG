@@ -12,9 +12,10 @@ Markdown.b = Markdown.bold
 Markdown.c = Markdown.code
 
 const Command = { }
-Command.trigger = '!'
+Command.trigger = '.'
 
 const Commands = { }
+
 Commands.CREATE_PLAYER = {
     name: "create",
     args_min: 1,
@@ -23,10 +24,20 @@ Commands.CREATE_PLAYER = {
     func: null,
     ctx: null
 }
+
 Commands.DELETE_PLAYER = {
     name: "delete",
     args_min: 1,
     args_max: 1,
+    confirm: true,
+    func: null,
+    ctx: null
+}
+
+Commands.SPEND_STAT_POINTS = {
+    name: "stat",
+    args_min: 0,
+    args_max: 2,
     confirm: true,
     func: null,
     ctx: null
@@ -63,16 +74,25 @@ class DiscordUtil {
             return null
 
         let args = message.content.substring(1).split(' ')
-        if (!args.length)
+        if (!args.length) {
+            console.log('invalid command format')
             return null
+        }
 
         let command = DiscordUtil.getCommandEntry(args[0])
-        if (!command)
+        if (!command) {
+            console.log('unable to parse as command', args[0])
             return null
+        }
 
         // get rid of the command name leaving only arguments
         if (args.length)
             args.shift()
+
+        if (args.length < args.args_min || args.length > args.args_max) {
+            console.log('invalid number of args', command)
+            return null
+        }
 
         let handler = new CommandHandler(
             command.name, command.ctx, command.func, args, message.channel.id, message.author.id

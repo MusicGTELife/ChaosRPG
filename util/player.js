@@ -85,8 +85,11 @@ class PlayerUtil extends UnitUtil {
     }
 
     // Utilities to apply stat changes
-    static async applyStatPoint(unit, statId) {
+    static async applyStatPoints(unit, statId, points) {
         if (!unit)
+            return false
+
+        if (!points)
             return false
 
         let validStat = ({
@@ -101,11 +104,16 @@ class PlayerUtil extends UnitUtil {
         if (unit.descriptor.stat_points_remaining <= 0)
             return false
 
-        unit.descriptor.stat_points_remaining--
+        if (points > unit.descriptor.stat_points_remaining)
+            return false
+
+        unit.descriptor.stat_points_remaining -= points
 
         const current = StatUtil.getStat(unit.stats, statId)
-        StatUtil.setStat(unit.stats, statId, current.value+1)
+        StatUtil.setStat(unit.stats, statId, current.value+points)
 
+        unit.markModified('descriptor')
+        await unit.save()
         return true
     }
 

@@ -100,6 +100,7 @@ class Game {
 
         DiscordUtil.setCommandHandler('create', this, this.createPlayer)
         DiscordUtil.setCommandHandler('delete', this, this.deletePlayer)
+        DiscordUtil.setCommandHandler('stat', this, this.spendStatPoints)
 
         const combatRngCtx = new SecureRNGContext('combat secret')
         if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
@@ -122,7 +123,8 @@ class Game {
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
             .catch(e => {
-                console.log(e)
+                console.log('caught', e)
+                return false
             })
             .then(await this.gameDb.connect())
             .then(await this.run())
@@ -245,7 +247,7 @@ class Game {
 
         let settings = await this.ctx.gameDb.getSettings()
         let playerData = PlayerUtil.create(type, 1, this.user)
-        let player = this.ctx.unit.prepareGenerated(playerData, settings)
+        let player = await this.ctx.unit.prepareGeneratedUnit(playerData, settings)
         if (player) {
             this.ctx.discord.channels.get(this.channel)
                 .send(`<@${this.user}> Your ${typeString} character has been created`)
@@ -268,6 +270,57 @@ class Game {
             this.ctx.discord.channels.get(this.channel)
                 .send(`<@${this.user}> Unable to delete, no character found`)
         }
+    }
+
+    // lexical this is in the context of CommandHandler
+    async spendStatPoints() {
+        console.log('spendStatPoints')
+
+        let player = await this.ctx.gameDb.getUnitByAccount(this.user)
+        if (!player) {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Unable to lookup your account, use .create to make an account`)
+            return
+        }
+
+        if (player.type !== UnitType.PLAYER.id) {
+            return
+        }
+
+        let remainingPoints = player.descriptor.stat_points_remaining
+
+        if (this.args.length === 0) {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> You have ${remainingPoints} available stat points`)
+            return
+        }
+
+        const value = parseInt(this.args[0], 10)
+        const typeString = this.args[1].toLowerCase()
+
+        if (value > remainingPoints) {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> You only ${remainingPoints} available and cannot apply ${value} points to ${typeString}`)
+            return
+        }
+
+        let stat = ({
+            ['str']: StatTable.STR.id,
+            ['dex']: StatTable.DEX.id,
+            ['int']: StatTable.INT.id,
+            ['vit']: StatTable.VIT.id,
+        })[typeString] || 0
+
+        if (!stat) {
+            this.ctx.discord.channels.get(this.channel)
+                .send(`<@${this.user}> Invalid stat type, choose one of: str, dex, int, vit`)
+            return
+        }
+
+        await PlayerUtil.applyStatPoints(player, stat, value)
+
+        this.ctx.discord.channels.get(this.channel)
+            .send(`<@${this.user}> ${value} points have been applied, you have ${remainingPoints-value} available stat points remaining`)
     }
 
     createPlayerInventoryEmbed(unit, items, color) {
