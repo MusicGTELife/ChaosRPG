@@ -2,61 +2,79 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
 // Game schemas
-const SettingsSchema = {
-    next_unit_id: Number,
-    next_item_id: Number,
+const GuildSettingsSchema = new Schema({
+    guild: String,
+    game_channel: String,
+    debug_channel: String,
 
     // SecureRNG
     base_rng_secret: String,
-    base_rng_hmac: String,
     base_rng_counter: Number,
 
-    player_hmac: String,
-    plater_counter: Number,
+    active_players: [ Number ]
+})
 
-    monster_hmac: String,
-    monster_counter: Number,
+const SettingsSchema = new Schema({
+    // unique id's shared across all guilds
+    next_account_id: Number,
+    next_unit_id: Number,
+    next_item_id: Number,
 
-    item_hmac: String,
-    item_counter: Number,
-}
+    guilds: [ String ]
+})
 
-const ActiveUsers = new Schema({
-    recent: [ Number ]
+const AccountSchema = new Schema({
+    id: Number,
+    guild: String,
+    name: String
 })
 
 const StorageSchema = new Schema({
     id: Number,
     size: Number,
     buffer: [ Number ]
-}, { _id: false })
+},
+    { _id: false }
+)
 
-const UnitSchema = {
+const StatSchema = new Schema({
+    id: Number,
+    value: Number,
+},
+    { _id: false }
+)
+
+const UnitSchema = new Schema({
     id: Number,
     type: Number,
     level: Number,
     name: String,
     storage: [ StorageSchema ],
-    stats: [ { _id: false, id: Number, value: Number } ],
+    stats: [ StatSchema ],
     descriptor: Schema.Types.Mixed
-}
+})
 
-const ItemSchema = {
+const ItemSchema = new Schema({
     id: Number,
     ilvl: Number,
     owner: Number,
     code: Number,
     storage_flag: Number,
     item_class: Number,
+    item_sub_class: Number,
     tier: Number,
-    stats: [ { _id: false, id: Number, value: Number } ],
+    rarity: Number,
+    stats: [ StatSchema ],
     descriptor: Schema.Types.Mixed
-}
+})
 
 // Game models
+const Account = mongoose.model('Account', AccountSchema)
+
 const Settings = mongoose.model('Settings', SettingsSchema)
+const GuildSettings = mongoose.model('GuildSettings', GuildSettingsSchema)
 
 const Unit = mongoose.model('Unit', UnitSchema)
 const Item = mongoose.model('Item', ItemSchema)
 
-module.exports = { Settings, Unit, Item }
+module.exports = { Account, Settings, GuildSettings, Unit, Item }

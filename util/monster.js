@@ -10,6 +10,7 @@ const { MonsterClass } = require('../monsterclass')
 const { MonsterRarity } = require('../monsterrarity')
 const { MonsterTable } = require('../monstertable')
 
+const { ItemRarity } = require('../itemrarity')
 const { ItemTable } = require('../itemtable')
 const { ItemClass, ArmorClass, WeaponClass, JewelClass, WeaponFlags } = require('../itemclass')
 const { Tier } = require('../tier')
@@ -32,11 +33,10 @@ class MonsterUtil extends UnitUtil {
         if (!entry)
             return null
 
-        let monster = UnitUtil.create(UnitType.MONSTER.id, level)
+        let monster = UnitUtil.create(UnitType.MONSTER.id, level, entry.name)
         if (!monster)
             return null
 
-        monster.name = entry.name
         monster.descriptor.tier = tier
         monster.descriptor.rarity = rarity
         monster.descriptor.code = code
@@ -118,13 +118,14 @@ class MonsterUtil extends UnitUtil {
         const entry = MonsterUtil.getMonsterTableEntry(monster.descriptor.code)
         let exp = entry.base_experience
         if (monster.level > 1)
-            exp = Math.pow(exp*(monster.level-1), 1.14)
+            exp = Math.pow(exp*(monster.level-1), 1.2)
 
+/*
         const diff = Math.abs(monster.level-player.level)
         if (diff > 2) {
             exp *= 1/(diff-1)
         }
-
+*/
         return Math.floor(exp)
     }
 
@@ -146,7 +147,9 @@ class MonsterUtil extends UnitUtil {
         unit.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                const statBonus = e.value+Math.round(Math.sqrt(level*(tierEntry.stat_counts[0]+rarity)))
+                let statBonus = e.value + e.value *
+                    (Math.pow(level, 1.1) *(1+tierEntry.stat_counts[0]/5) * (1+rarity/5))/10
+                statBonus = Math.round(statBonus)
                 StatUtil.setStat(unit.stats, e.id, statBonus)
             }
         })
@@ -161,7 +164,8 @@ class MonsterUtil extends UnitUtil {
             [MonsterRarity.SUPERBOSS.id]: { min: 6, max: 8},
         })[rarity] || { min: 0, max: 0 }
 
-        let count = SecureRNG.getRandomInt(monsterRngCtx, monsterItems.min, monsterItems.max)
+        const count = SecureRNG.getRandomInt(monsterRngCtx, monsterItems.min, monsterItems.max)
+        let remaining = count
 
         console.log(`generating ${count} monster items`)
 
@@ -189,23 +193,20 @@ class MonsterUtil extends UnitUtil {
             console.log('primary two handed')
 
         let item = ItemUtil.generate(itemRngCtx,
-            choice.code, choice.item_class, choice.item_sub_class, tier, rarity
+            choice.code, choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id
         )
-
         if (!item) {
             console.log('unable to generate item for monster')
             process.exit(1)
             return null
         }
-
         items.push(item)
-
-        count--
+        remaining--
 
         // Second, generate a shield, quiver or spellbook for casters, or a
         // second weapon if the monster can dual wield and the primary weapon
         // is not two-handed
-        if (count && !isPrimaryTwoHanded) {
+        if (remaining && !isPrimaryTwoHanded) {
             choices = MonsterUtil.getMonsterWeaponChoices(code, false)
             let weaponAvailable = choices.length !== 0
             let magic = 0
@@ -224,23 +225,31 @@ class MonsterUtil extends UnitUtil {
                 choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR,
                     [ ArmorClass.SHIELD, ArmorClass.SPELLBOOK, ArmorClass.QUIVER ])
                 choice = this.game.item.getRandomItemTableEntry(choices)
-                if (!choice)
-                    process.exit(1)
+            }
+
+            if (!choice) {
+                console.log('unable to get item choice generating monster')
+                process.exit(1)
+                return null
             }
 
             item = ItemUtil.generate(itemRngCtx, choice.code,
-                choice.item_class, choice.item_sub_class, tier, rarity
+                choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id
             )
-            if (item)
-                items.push(item)
-            count--
+            if (!item) {
+                console.log('failed generating item for monster', choice)
+                process.exit(1)
+                return null
+            }
+            items.push(item)
+            remaining--
         }
 
         // Additional items are randomly chosen from the remaining item types
         // FIXME, generate random array of indices into the combined remaining
         // choices array or shuffle the array to prevent multiple choices of the
         // same item subclass from being selected
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < remaining; i++) {
             // remaining armor choices
             choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, [
                 ArmorClass.BOOTS, ArmorClass.GLOVES,
@@ -250,10 +259,14 @@ class MonsterUtil extends UnitUtil {
             choice = this.game.item.getRandomItemTableEntry(choices)
 
             item = ItemUtil.generate(itemRngCtx, choice.code,
-                choice.item_class, choice.item_sub_class, tier, rarity
+                choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id
             )
-            if (item)
-                items.push(item)
+            if (!item) {
+                console.log('failed generating item for monster', choice)
+                process.exit(1)
+                return null
+            }
+            items.push(item)
 
             //console.log('additional', i, choice)
         }

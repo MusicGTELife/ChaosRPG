@@ -26,7 +26,7 @@ class UnitUtil {
         return valid
     }
 
-    static create(type, level) {
+    static create(type, level, name) {
         if (!UnitUtil.isValidType(type))
             return null
 
@@ -41,7 +41,7 @@ class UnitUtil {
             id: 0,
             type,
             level,
-            name: '',
+            name: name,
             stats: UnitUtil.createBaseStats(type),
             storage: StorageUtil.createStorage(type),
             descriptor
@@ -65,14 +65,22 @@ class UnitUtil {
     }
 
     async prepareGeneratedUnit(unitData, settings) {
-        unitData.unit.id = settings.next_unit_id++
+        if (!settings) {
+            console.log('prepareGeneratedUnit no settings')
+            process.exit(1)
+            return null
+        }
+
+        unitData.unit.id = settings.next_unit_id
+        settings.next_unit_id += 1
 
         let unit = await this.game.gameDb.createUnit(unitData.unit)
-        await this.computeBaseStats(unit)
+        unit.stats = await UnitUtil.computeBaseStats(unit)
 
-        await unitData.items.map(async i => {
+        let items = await Promise.all(unitData.items.map(async i => {
             i.owner = unit.id
-            i.id = settings.next_item_id++
+            i.id = settings.next_item_id
+            settings.next_item_id += 1
 
             let item = await this.game.gameDb.createItem(i)
             if (!item) {
@@ -80,29 +88,37 @@ class UnitUtil {
                 process.exit(1)
             }
 
+            return item
+        }))
+
+        await settings.save()
+
+        items.map(i => {
+            if (items.id === 0) {
+                console.log('bad item id when equipping')
+                process.exit(1)
+            }
+
             // equip the item on the unit
-            let items = await this.getEquippedItems(unit)
-            if (!this.equipItemByType(unit, items, item)) {
-                console.log('unable to equip item', item)
+            if (!this.equipItemByType(unit, items, i)) {
+                console.log('unable to equip item', i)
                 process.exit(1)
             }
         })
 
-        await unit.markModified('storage')
+        unit.stats = await UnitUtil.computeBaseStats(unit, items)
+        unit.markModified('storage')
+        unit.markModified('stats')
+        await unit.save()
 
-        let items = await this.getEquippedItems(unit)
-        await this.computeBaseStats(unit, items)
-        //await unit.save()
-
-        await settings.save()
+        unit.storage.map(s => {
+            console.log('post unit equip and save', s)
+        })
 
         return unit
     }
 
     static getName(unit) {
-        if (unit.type === UnitType.PLAYER.id)
-            return unit.descriptor.account
-
         return unit.name
     }
 
@@ -115,12 +131,15 @@ class UnitUtil {
 
     // This is only to be used after final damage is calculated
     static async applyDamage(unit, amount) {
-        SU.setStat(unit.stats, ST.UNIT_HP.id,
-                SU.getStat(unit.stats, ST.UNIT_HP.id).value - amount)
-        await unit.save()
+        const curr = SU.getStat(unit.stats, ST.UNIT_HP.id)
+        if (curr.value-amount < 0)
+            amount = curr.value
+
+        SU.setStat(unit.stats, ST.UNIT_HP.id, curr.value-amount)
+        unit.markModified('stats')
     }
 
-    getAllItemStats(items) {
+    static getAllItemStats(items) {
         if (!items)
             return []
 
@@ -129,13 +148,13 @@ class UnitUtil {
             stats = stats.concat(v.stats)
         })
 
-        console.log(stats)
+        //console.log(stats)
         //process.exit(1)
 
         return stats
     }
 
-    verifyUnitStorage(unit, equippedItems) {
+    static verifyUnitStorage(unit, equippedItems) {
         const valid = unit.storage.every(n => {
             let invalidStorage = n.buffer.every(s => {
                 if (s === 0)
@@ -181,27 +200,51 @@ class UnitUtil {
     }
 
     equipItem(unit, items, item, node, slot) {
-        if (!unit || !item)
+        if (!unit) {
+            console.log('no unit')
+            process.exit(1)
             return false
+        }
 
-        if (!StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code))
+        if (!item) {
+            console.log('no unit')
+            process.exit(1)
             return false
+        }
+
+        if (!StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)) {
+            console.log('unable to equip type in slot', node, slot, item.code)
+            process.exit(1)
+            return false
+        }
 
         //console.log('can equip type in slot')
 
-        if (!StorageUtil.canEquipInSlot(unit.storage, node, slot))
+        if (!StorageUtil.canEquipInSlot(unit.storage, node, slot)) {
+            console.log('unable to equip an item in slot', node, slot, item.code)
+            process.exit(1)
             return false
+        }
 
         //console.log('can equip in slot')
 
         // Special case to allow monsters to equip items regardless of the items
         // stat requirements
-        if (unit.type === UnitType.PLAYER.id && !UnitUtil.itemRequirementsAreMet(unit, item))
+        if (unit.type === UnitType.PLAYER.id && !UnitUtil.itemRequirementsAreMet(unit, item)) {
+            console.log('player didn\'t meet item requirements', item.code)
+            process.exit(1)
             return false
+        }
 
         if (!StorageUtil.setSlot(unit.storage, node, slot, item.id)) {
-            console.log('failed setting item slot')
+            console.log('failed setting item slot', node, slot, item.code)
+            process.exit(1)
             return false
+        }
+
+        if (unit.type === UnitType.PLAYER.id) {
+            console.log('equipped', unit.storage, node, slot, item.code)
+            //process.exit(1)
         }
 
         return true
@@ -285,17 +328,21 @@ class UnitUtil {
     // - a unit is generated
     // - item placed or on removed from a units equipment slot
     // - a player unit levels
-    async computeBaseStats(unit, items) {
-        if (!unit)
-            return null
-
-        let valid = this.verifyUnitStorage(unit, items)
-        if (!valid) {
-            console.log('unit storage is invalid')
+    static async computeBaseStats(unit, items) {
+        if (!unit) {
+            console.log('no unit')
+            process.exit(1)
             return null
         }
 
-        let itemStats = await this.getAllItemStats(items)
+        let valid = UnitUtil.verifyUnitStorage(unit, items)
+        if (!valid) {
+            console.log('unit storage is invalid')
+            process.exit(1)
+            return null
+        }
+
+        let itemStats = await UnitUtil.getAllItemStats(items)
         itemStats = SU.getReducedStats(itemStats)
 
         // filter stat types in seperate lists
@@ -328,7 +375,7 @@ class UnitUtil {
         let resolved = SU.resolve(stats, SU.getModifiers())
         resolved = SU.getReducedStats(resolved)
 
-        console.log(resolved)
+        console.log('resolved', resolved, stats, 'end resolved')
         //process.exit(1)
 
         // recalculate unit special stats based on resolved base stats
@@ -352,6 +399,15 @@ class UnitUtil {
                 throw new Error('Unable to set stat')
         }
 
+        SU.setStat(unit.stats, ST.UNIT_STR.id,
+                SU.getStat(stats, ST.STR.id).value)
+        SU.setStat(unit.stats, ST.UNIT_DEX.id,
+                SU.getStat(stats, ST.DEX.id).value)
+        SU.setStat(unit.stats, ST.UNIT_INT.id,
+                SU.getStat(stats, ST.INT.id).value)
+        SU.setStat(unit.stats, ST.UNIT_VIT.id,
+                SU.getStat(stats, ST.VIT.id).value)
+
         SU.setStat(unit.stats, ST.UNIT_ATK.id,
                 SU.getStat(resolved, ST.ATK.id).value)
         SU.setStat(unit.stats, ST.UNIT_MATK.id,
@@ -370,7 +426,8 @@ class UnitUtil {
         //console.log(stats, itemStats, '->', resolved, unit.stats)
 
         // save else where once things settle a bit
-        await unit.save()
+        unit.markModified('stats')
+        //await unit.save()
 
         return unit.stats
     }

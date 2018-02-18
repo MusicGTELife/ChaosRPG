@@ -12,16 +12,18 @@ const { ItemRarity } = require('../itemrarity')
 const { Tier } = require('../tier')
 const { ItemTable } = require('../itemtable')
 
+const { Unit: UnitModel } = require('../models')
+
 class PlayerUtil extends UnitUtil {
     static getPlayerTypeString(id) {
         return Object.keys(PlayerType).map((k) => k.id === id ? type.name : 'unknown')
     }
 
-    static create(type, level, account) {
+    static create(type, level, account, name) {
         if (!PlayerUtil.isValidType(type))
             return null
 
-        let unit = UnitUtil.create(UnitType.PLAYER.id, level, '')
+        let unit = UnitUtil.create(UnitType.PLAYER.id, level, name)
         if (!unit)
             return null
 
@@ -35,15 +37,22 @@ class PlayerUtil extends UnitUtil {
             [PlayerType.ROGUE.id]: ItemTable.CRACKED_DAGGER,
             [PlayerType.RANGER.id]: ItemTable.CRACKED_BOW,
             [PlayerType.CLERIC.id]: ItemTable.CRACKED_STAFF
-        })[type]
+        })[type] || null
+        if (!weaponEntry) {
+            console.log('unable to get starter item entry')
+            process.exit(1)
+        }
 
         let items = []
         let item = ItemUtil.generate(null, weaponEntry.code, ItemClass.WEAPON, Tier.TIER0.id, ItemRarity.COMMON.id)
-        if (!item)
+        if (!item) {
+            console.log('unable to generate starter item')
+            process.exit(1)
             return null
+        }
+        console.log(item)
 
         items.push(item)
-        //console.log(items)
 
         return { unit, items }
     }
@@ -85,7 +94,7 @@ class PlayerUtil extends UnitUtil {
     }
 
     // Utilities to apply stat changes
-    static async applyStatPoints(unit, statId, points) {
+    static async applyStatPoints(unit, items, statId, points) {
         if (!unit)
             return false
 
@@ -96,7 +105,7 @@ class PlayerUtil extends UnitUtil {
             [StatTable.STR.id]: true,
             [StatTable.DEX.id]: true,
             [StatTable.INT.id]: true,
-            [StatTable.VIT.id]: true,
+            [StatTable.VIT.id]: true
         })[statId] || false
         if (!validStat)
             return false
@@ -107,13 +116,33 @@ class PlayerUtil extends UnitUtil {
         if (points > unit.descriptor.stat_points_remaining)
             return false
 
+        console.log('applying stat', statId, points, unit.descriptor.stat_points_remaining)
         unit.descriptor.stat_points_remaining -= points
 
         const current = StatUtil.getStat(unit.stats, statId)
         StatUtil.setStat(unit.stats, statId, current.value+points)
 
         unit.markModified('descriptor')
-        await unit.save()
+        unit.markModified('stats')
+        unit.stats = await UnitUtil.computeBaseStats(unit, items)
+
+        let newVal = StatUtil.getStat(unit.stats, statId)
+        if (newVal.value === current.value) {
+            console.log('no write')
+            process.exit(1)
+        }
+
+        unit = await UnitModel.findOneAndUpdate({ id: unit.id },
+            { stats: unit.stats, descriptor: unit.descriptor },
+            { new: true }
+        )
+
+        newVal = StatUtil.getStat(unit.stats, statId)
+        if (newVal.value === current.value) {
+            console.log('no write after update')
+            process.exit(1)
+        }
+
         return true
     }
 
@@ -128,7 +157,9 @@ class PlayerUtil extends UnitUtil {
         unit.descriptor.stat_points_remaining += statPointsPerLevel
 
         unit.markModified('descriptor')
-        await unit.save()
+
+        unit = await UnitModel.findOneAndUpdate({ id: unit.id }, { descriptor: unit.descriptor, level: unit.level }, { new: true })
+        //await unit.save()
 
         return unit
     }
@@ -152,7 +183,8 @@ class PlayerUtil extends UnitUtil {
         StatUtil.setStat(unit.stats, StatTable.UNIT_EXP.id, xp.value)
 
         unit.markModified('stats')
-        await unit.save()
+        //await unit.save()
+        unit = await UnitModel.findOneAndUpdate({ id: unit.id }, { stats: unit.stats }, { new: true })
         return unit
     }
 }

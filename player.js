@@ -48,8 +48,8 @@ Rogue.stats = [
     { id: StatTable.INT.id, value: 6 },
     { id: StatTable.STR.id, value: 2 },
     { id: StatTable.VIT.id, value: 6 },
-    { id: StatTable.BASE_MATK.id, value: 1 },
-    { id: StatTable.BASE_ATK.id, value: 3 }
+    { id: StatTable.BASE_MATK.id, value: 3 },
+    { id: StatTable.BASE_ATK.id, value: 1 }
 ]
 
 class Ranger extends Player { }

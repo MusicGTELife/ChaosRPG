@@ -27,7 +27,7 @@ class StatUtil {
     static getReducedStats(stats) {
         // reduce into a map with a single summed value per stat id
         let reducedMap = stats.reduce((prev, curr) => {
-            prev.set(curr.id, curr.value + (prev.get(curr.id) || 0))
+            prev.set(curr.id, curr.value + (prev.has(curr.id) ? prev.get(curr.id) : 0))
             return prev
         }, new Map())
 
@@ -62,7 +62,7 @@ class StatUtil {
     }
 
     static getModifiers() {
-        let mods = Object.values(StatModifier)
+        let mods = Object.values(StatModifier).sort((a,b) => a.id-b.id)
         return mods
     }
 
@@ -104,6 +104,11 @@ class StatUtil {
             let resolved = StatUtil.resolveModifier(stats, e)
             resolvedStats = resolvedStats.concat(resolved)
         })
+
+        if (!resolvedStats.length === 1) {
+            console.log(resolvedStats)
+            process.exit(1)
+        }
 
         return resolvedStats
     }

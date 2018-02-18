@@ -62,7 +62,7 @@ class ItemUtil {
         return {
             can_duel_wield: false,
             is_2h: false,
-            is_ranged: false,
+            is_ranged: false
         }
     }
 
@@ -83,10 +83,10 @@ class ItemUtil {
             ilvl: 0,
             owner: 0,
             code: 0,
-            type: 0,
             item_class: 0,
             item_sub_class: 0,
             tier: 0,
+            rarity: 0,
             descriptor: { },
             stats: [ ]
         }
@@ -111,8 +111,11 @@ class ItemUtil {
 
     static generate(itemRngCtx, code, itemClass, itemSubClass, tier, rarity) {
         const tableEntry = ItemUtil.getItemTableEntry(code)
-        if (!tableEntry)
+        if (!tableEntry) {
+            console.log('unable to get item table entry')
+            process.exit(1)
             return null
+        }
 
         if (!tableEntry.is_starter_item && !(itemRngCtx instanceof SecureRNGContext))
             throw new TypeError('invalid RNG context')
@@ -125,8 +128,11 @@ class ItemUtil {
         }
 
         const tierEntry = Object.values(Tier).find(t => t.id === tier)
-        if (!tierEntry)
+        if (!tierEntry) {
+            console.log('unable to get item tier entry')
+            process.exit(1)
             return null
+        }
 
         item.code = code
 

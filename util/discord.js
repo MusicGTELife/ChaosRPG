@@ -11,46 +11,38 @@ class Markdown {
 Markdown.b = Markdown.bold
 Markdown.c = Markdown.code
 
+function createCommand(name, argsMin, argsMax, confirm) {
+    return {
+        name,
+        args_min: argsMin,
+        args_max: argsMax,
+        confirm,
+        func: null,
+        ctx: null
+    }
+}
+
 const Command = { }
 Command.trigger = '.'
 
+const C = createCommand
+
 const Commands = { }
+// Administrative command
+Commands.GUILD = C("guild", 0, 4, true, null, null)
 
-Commands.CREATE_PLAYER = {
-    name: "create",
-    args_min: 1,
-    args_max: 1,
-    confirm: false,
-    func: null,
-    ctx: null
-}
-
-Commands.DELETE_PLAYER = {
-    name: "delete",
-    args_min: 1,
-    args_max: 1,
-    confirm: true,
-    func: null,
-    ctx: null
-}
-
-Commands.SPEND_STAT_POINTS = {
-    name: "stat",
-    args_min: 0,
-    args_max: 2,
-    confirm: true,
-    func: null,
-    ctx: null
-}
+// User commands
+Commands.CREATE_PLAYER = C("create", 0, 1, false, null, null)
+Commands.DELETE_PLAYER = C("delete", 0, 0, false, null, null)
+Commands.SPEND_STAT_POINTS = C("stats", 0, 2, false, null, null)
 
 class CommandHandler {
-    constructor(name, ctx, func, args, channel, user) {
+    constructor(name, ctx, func, args, message) {
         this.name = name
         this.ctx = ctx
         this.func = func
         this.args = args
-        this.channel = channel
-        this.user = user
+        this.message = message
     }
 
     async run() {
@@ -73,7 +65,7 @@ class DiscordUtil {
         if (message.content.charAt(0) !== Command.trigger)
             return null
 
-        let args = message.content.substring(1).split(' ')
+        let args = message.content.substring(1).split(/\s* \s*/)
         if (!args.length) {
             console.log('invalid command format')
             return null
@@ -95,7 +87,7 @@ class DiscordUtil {
         }
 
         let handler = new CommandHandler(
-            command.name, command.ctx, command.func, args, message.channel.id, message.author.id
+            command.name, command.ctx, command.func, args, message
         )
 
         return handler

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Settings, Unit, Item } = require('./models')
+const { Account, Settings, GuildSettings, Unit, Item } = require('./models')
 const { UnitType } = require('./unit')
 
 mongoose.Promise = global.Promise
@@ -9,6 +9,16 @@ class GameDb {
         this.host = host
         this.options = options
         this.db = mongoose
+    }
+
+    execCb(err, results) {
+        if (err) {
+            console.log('err', err)
+            return null
+        }
+
+        console.log('results', results)
+        return results
     }
 
     async connect() {
@@ -38,12 +48,56 @@ class GameDb {
 
     async getSettings() {
         let settings = await Settings.findOne()
+        console.log('getSettings', settings)
         return settings
     }
 
     async updateSettings(settings) {
         console.log('updateSettings')
         return await settings.save()
+    }
+
+    async getGuildSettings(guild) {
+        let guildSettings = await GuildSettings.where('guild', guild).findOne()
+        return guildSettings
+    }
+
+    async createGuildSettings(guildSettingsObj) {
+        let existing = await this.getGuildSettings(guildSettingsObj.guild)
+        if (existing) {
+            console.log('guild settings already exist')
+            return null
+        }
+
+        let guildSettings = new GuildSettings(guildSettingsObj)
+        await guildSettings.save()
+
+        return guildSettings
+    }
+
+    async removeGuildSettings(guildSettings) {
+        return await GuildSettings.where('guild', guildSettings.guild).remove()
+    }
+
+    async createAccount(accountObj) {
+        let existing = await this.getAccount(accountObj.guild, accountObj.name)
+        if (existing) {
+            console.log('account exists')
+            return null
+        }
+
+        let account = new Account(accountObj)
+        await account.save()
+
+        return account
+    }
+
+    async getAccount(guild, name) {
+        let account = await Account.findOne({ guild, name })
+//.where('guild', guild)
+            //.where('name', name)
+        console.log(guild, name)
+        return account
     }
 
     async createActiveUsers() {
@@ -92,6 +146,7 @@ class GameDb {
 
     async getUnitByAccount(account) {
         let unit = await Unit.where('descriptor.account', account).findOne()
+        console.log(unit, account)
         return unit
     }
 

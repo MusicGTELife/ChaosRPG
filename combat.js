@@ -4,6 +4,7 @@ const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
+const { Unit: UnitModel } = require('./models')
 
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
@@ -63,13 +64,17 @@ class CombatEvent {
 }
 
 class CombatContext {
-    constructor(game, unitA, unitB) {
+    constructor(game, guild, unitA, unitB) {
         this.game = game
+        this.guild = guild
+
         this.unitA = unitA
         this.unitB = unitB
 
         this.attacker = null
         this.defender = null
+
+        this.message = null
 
         this.rngCtx = this.game.secureRng.getContext('combat')
         if (!this.rngCtx) {
@@ -143,6 +148,9 @@ class CombatContext {
             return null
         }
 
+        this.unitA = await this.game.gameDb.getUnit(this.unitA.id)
+        this.unitB = await this.game.gameDb.getUnit(this.unitB.id)
+
         this.setFirstAttacker()
 
         // resolve attack
@@ -182,6 +190,9 @@ class CombatContext {
         let events = [ ]
         let eventType = null
 
+        this.defender = await this.game.gameDb.getUnit(this.defender.id)
+        this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
+
         let baseAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_ATK.id)
         let baseMAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_MATK.id)
         let atk = SU.getStat(this.attacker.stats, ST.UNIT_ATK.id)
@@ -203,6 +214,10 @@ class CombatContext {
 
         let dmg = new Damage(physDmg, magicDmg)
         await UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
+        this.defender = await UnitModel.findOneAndUpdate({ id: this.defender.id },
+            { stats: this.defender.stats },
+            { new: true }
+        )
 
         eventType = CombatEventType.MONSTER_DAMAGE.id
         if (defIsPlayer)

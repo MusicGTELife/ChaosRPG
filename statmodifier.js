@@ -35,13 +35,13 @@ StatModifier.DEF_PER_DEX =
 StatModifier.MATK_PER_INT =
     _(0x0040, [ StatTable.INT.id ], [ StatTable.MATK.id ],
     "Magic attack per", StatResolver.add, 2)
-StatModifier.MDEF_PER_VIT =
+StatModifier.MDEF_PER_INT =
     _(0x0041, [ StatTable.INT.id ], [ StatTable.MDEF.id ],
     "Magic defence per", StatResolver.add, 2)
 
 StatModifier.ACCURACY =
     _(0x0060, [ StatTable.DEX.id, StatTable.STR.id ], [ StatTable.ACCURACY.id ],
-    "Accuracy", StatResolver.mult, 1.01)
+    "Accuracy", StatResolver.add, 1)
 
 StatModifier.REACTION =
     _(0x0061, [ StatTable.DEX.id, StatTable.VIT.id ], [ StatTable.REACTION.id ],

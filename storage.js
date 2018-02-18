@@ -40,8 +40,8 @@ Storage.EQUIPMENT = _(0x01, "Equipment",
         { id: Slots.FEET, flags: F.FEET },
         { id: Slots.BODY, flags: F.BODY },
         { id: Slots.NECK, flags: F.NECK },
-        { id: Slots.WRIST, flags: F.WRIST },
         { id: Slots.FINGER, flags: F.FINGER }
+        //{ id: Slots.WRIST, flags: F.WRIST },
     ], 8
 )
 

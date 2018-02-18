@@ -203,7 +203,7 @@ class StorageUtil {
         if (!slotDesc)
             return false
 
-        return (slotDesc.flags & itemTableEntry.storage_flag) !== 0
+        return (itemTableEntry.storage_flag & slotDesc.flags) !== 0
     }
 
     static canEquipInSlot(storage, nodeId, slotId) {
