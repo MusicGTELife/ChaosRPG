@@ -282,8 +282,6 @@ class CombatContext {
                 return this.game.gameDb.removeItem(i)
             }
 
-            console.log('will drop item', i)
-
             let slots = StorageUtil.getValidSlotsForItem(this.attacker.storage, i)
                 .filter(st => StorageUtil.canEquipInSlot(this.attacker.storage, st.id, st.slot))
             if (!slots) {
@@ -295,14 +293,16 @@ class CombatContext {
                 return this.game.gameDb.removeItem(i)
             }
 
+            console.log('will drop item', i)
+
             i.owner = this.attacker.id
             let equipSuccess = this.game.unit.equipItem(this.attacker, null, i, slot.id, slot.slot)
             if (!equipSuccess) {
-                // no storage slot available, the item burns
-                this.game.gameDb.removeItem(i)
-
                 console.log('unable to equip item in empty inv slot')
                 process.exit(1)
+
+                // no storage slot available, the item burns
+                return this.game.gameDb.removeItem(i)
             }
 
             eventType = CombatEventType.MONSTER_ITEM_DROP.id
@@ -311,12 +311,13 @@ class CombatContext {
 
             console.log('saving item to player')
 
-            await i.save()
-            this.attacker.markModified('stats')
-            this.attacker.markModified('storage')
-            this.attacker.markModified('descriptor')
-            await this.attacker.save()
+            return i.save()
         }))
+
+        this.attacker.markModified('stats')
+        this.attacker.markModified('storage')
+        this.attacker.markModified('descriptor')
+        await this.attacker.save()
 
         console.log('resolveDeath update unit')
         /*
