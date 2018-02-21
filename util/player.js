@@ -222,8 +222,8 @@ class PlayerUtil extends UnitUtil {
         let xp = StatUtil.getStat(unit.stats, StatTable.UNIT_EXP.id)
 
         // cap xp value off at the beginning of the next level if they advanced
-        if (xp.value + amount > nextLevel)
-            xp.value = nextLevel+1
+        if (xp.value + amount >= nextLevel)
+            xp.value = nextLevel
         else
             xp.value += amount
 

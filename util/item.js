@@ -155,13 +155,10 @@ class ItemUtil {
         }
 
         // Add implicit mods on items
-        // FIXME|TODO shields, quivers, spellbooks
         tableEntry.implicit_stats.map(m => {
-            //let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
+            //console.log('adding implicit mod', stat)
             let stat = StatUtil.createDescriptor(m.id, m.value)
-            //console.log(`adding stat ${JSON.stringify(stat)}`)
             item.stats.push(stat)
-            console.log('added implicit mod', stat)
         })
 
         if (tableEntry.is_starter_item) {
@@ -172,7 +169,7 @@ class ItemUtil {
         if (count > 0) {
             let itemMods = Object.keys(ItemModTable).filter(i => i.mod_class !== ItemModClass.IMPLICIT)
             const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
-            console.log('shuffled', shuffled)
+            //console.log('shuffled', shuffled)
 
             let stats = [...Array(count)]
             stats.map((_,i) => {

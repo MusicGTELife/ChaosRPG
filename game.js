@@ -817,6 +817,8 @@ class Game {
             let desc = ''
             if (item) {
                 name = ItemUtil.getName(item.code)
+                if (!UnitUtil.itemRequirementsAreMet(unit, item))
+                    name += '🛑'
                 item.stats.map(s => {
                     let entry = StatUtil.getStatTableEntry(s.id)
                     desc += `(+${s.value}) ${entry.name_short}\n`
@@ -825,7 +827,7 @@ class Game {
             }
             let nodeEntry = sNode.id === Storage.EQUIPMENT.id ? Storage.EQUIPMENT : Storage.INVENTORY
             let slotName = nodeEntry.descriptor[slotIdx].name
-            embed.addField(`*${slotName}* **\`${name}\`**`, `**${desc}**`, true)
+            embed.addField(`*${slotName}*`, `**\`${name}\`**\n**${desc}**`, true)
             slotIdx++
         })
 
@@ -905,6 +907,7 @@ class Game {
         return activeUsers
     }
 
+    // FIXME push into combat module
     async getUnitsForCombat(online) {
         let rngCtx = this.secureRng.getContext('combat')
         if (!rngCtx) {

@@ -262,7 +262,7 @@ class CombatContext {
         event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
         events.push(event)
 
-        if (currXp+exp > nextLevelXp) {
+        if (currXp+exp >= nextLevelXp) {
             PlayerUtil.applyLevelGain(this.attacker)
 
             eventType = CombatEventType.PLAYER_LEVEL.id
