@@ -35,6 +35,9 @@ Commands.GUILD = C("guild", 0, 4, true, null, null)
 Commands.CREATE_PLAYER = C("create", 0, 1, false, null, null)
 Commands.DELETE_PLAYER = C("delete", 0, 0, false, null, null)
 Commands.SPEND_STAT_POINTS = C("stats", 0, 2, false, null, null)
+Commands.PLAYER_INFO = C("character", 0, 0, false, null, null)
+Commands.EQUIPMENT = C("equipment", 0, 0, false, null, null)
+Commands.EQUIP = C("equip", 0, 2, false, null, null)
 
 class CommandHandler {
     constructor(name, ctx, func, args, message) {
@@ -81,7 +84,7 @@ class DiscordUtil {
         if (args.length)
             args.shift()
 
-        if (args.length < args.args_min || args.length > args.args_max) {
+        if (args.length > command.args_max || args.length < command.args_min) {
             console.log('invalid number of args', command)
             return null
         }
@@ -93,10 +96,10 @@ class DiscordUtil {
         return handler
     }
 
-    static processCommand(command) {
-        console.log('processCommand', command)
+    static async processCommand(command) {
+        //console.log('processCommand', command)
         if (command && command.func)
-            command.func()
+            await command.func()
     }
 }
 

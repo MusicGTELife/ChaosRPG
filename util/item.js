@@ -6,7 +6,7 @@ const { StatTable } = require('../stattable')
 const { Tier } = require('../tier')
 
 const { ItemClass, WeaponClass, WeaponFlags } = require('../itemclass')
-const { ItemMod, ItemModTable } = require('../itemmod')
+const { ItemModTable, ItemModClass } = require('../itemmod')
 const { ItemTable } = require('../itemtable')
 
 class ItemUtil {

@@ -48,7 +48,7 @@ class GameDb {
 
     async getSettings() {
         let settings = await Settings.findOne()
-        console.log('getSettings', settings)
+        //console.log('getSettings', settings)
         return settings
     }
 
@@ -94,9 +94,8 @@ class GameDb {
 
     async getAccount(guild, name) {
         let account = await Account.findOne({ guild, name })
-//.where('guild', guild)
-            //.where('name', name)
-        console.log(guild, name)
+        //console.log(guild, name)
+
         return account
     }
 
@@ -146,7 +145,7 @@ class GameDb {
 
     async getUnitByAccount(account) {
         let unit = await Unit.where('descriptor.account', account).findOne()
-        console.log(unit, account)
+        //console.log(unit, account)
         return unit
     }
 

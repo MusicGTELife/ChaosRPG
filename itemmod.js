@@ -38,26 +38,35 @@ ItemModTable.ALL_ATTR = _(
 
 ItemModTable.ATK = _(
     0x0100, "attack", ItemModClass.MINOR.id,
-    [ { id: StatTable.ATK.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.ATK.id, min_value: 1, max_value: 10 } ]
 )
 ItemModTable.MATK = _(
     0x0101, "force", ItemModClass.MINOR.id,
-    [ { id: StatTable.MATK.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.MATK.id, min_value: 1, max_value: 10 } ]
 )
 ItemModTable.DEF = _(
     0x0102, "defense", ItemModClass.MINOR.id,
-    [ { id: StatTable.DEF.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.DEF.id, min_value: 1, max_value: 10 } ]
 )
 ItemModTable.MDEF = _(
     0x0103, "resistance", ItemModClass.MINOR.id,
-    [ { id: StatTable.MDEF.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.MDEF.id, min_value: 1, max_value: 10 } ]
 )
 
 ItemModTable.HP = _(
     0x0110, "hit points", ItemModClass.MINOR.id,
-    [ { id: StatTable.HP.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.HP.id, min_value: 1, max_value: 10 } ]
 )
 
+ItemModTable.ACCURACY = _(
+    0x0120, "accuracy", ItemModClass.MINOR.id,
+    [ { id: StatTable.ACCURACY.id, min_value: 1, max_value: 10 } ]
+)
+
+ItemModTable.REACTION = _(
+    0x0121, "reaction", ItemModClass.MINOR.id,
+    [ { id: StatTable.REACTION.id, min_value: 1, max_value: 10 } ]
+)
 
 /* Not sure if these should be added yet
 ItemModTable.BASE_ATK = _(

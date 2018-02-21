@@ -71,63 +71,59 @@ ItemTable.LIGHT_GLOVES = _(0x0500, "Light Gloves", SF.INVENTORY|SF.HANDS, IC.ARM
     false
 )
 ItemTable.SMALL_SHIELD = _(0x0600, "Small Shield", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.SHIELD,
-    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ ],
+    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ CR(ST.BLOCK.id, 10) ],
     false
 )
 ItemTable.APPRENTICE_BOOK = _(0x0700, "Apprentice's Spell Book", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.SPELLBOOK,
-    [ CR(ST.INT.id, 4), CR(ST.VIT.id, 3) ], [ ],
+    [ CR(ST.INT.id, 4), CR(ST.VIT.id, 3) ], [ CR(ST.BASE_MATK.id, 1), CR(ST.BLOCK.id, 5) ],
     false
 )
 ItemTable.QUIVER = _(0x0800, "Quiver", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.QUIVER,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 3) ], [ ],
+    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 3) ], [ CR(ST.BASE_ATK.id, 1) ],
     false
 )
 
 // Weapons
 ItemTable.DAGGER = _(0x1000, "Dagger", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.MELEE_1H,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 5) ], [ CR(ST.BASE_ATK.id, 1) ],
+    [ CR(ST.DEX.id, 3), CR(ST.STR.id, 3) ], [ CR(ST.BASE_ATK.id, 2) ],
     false
 )
 ItemTable.RAPIER = _(0x1080, "Rapier", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.MELEE_1H,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_ATK.id, 2) ],
+    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ CR(ST.BASE_ATK.id, 3) ],
     false
 )
 ItemTable.POLEARM = _(0x1100, "Polearm", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.MELEE_2H,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_ATK.id, 3) ],
+    [ CR(ST.DEX.id, 4), CR(ST.STR.id, 6) ], [ CR(ST.BASE_ATK.id, 4) ],
     false
 )
 ItemTable.BOW = _(0x1200, "Bow", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.RANGED,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_ATK.id, 1) ],
+    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 4) ], [ CR(ST.BASE_ATK.id, 2) ],
     false
 )
 ItemTable.CROSSBOW = _(0x1280, "Crossbow", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.RANGED,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_ATK.id, 2) ],
+    [ CR(ST.DEX.id, 6), CR(ST.STR.id, 4) ], [ CR(ST.BASE_ATK.id, 3) ],
     false
 )
 ItemTable.WAND = _(0x1300, "Wand", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.CASTING_1H,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_MATK.id, 3) ],
+    [ CR(ST.INT.id, 5), CR(ST.STR.id, 2) ], [ CR(ST.BASE_MATK.id, 2) ],
     false
 )
 ItemTable.STAFF = _(0x1380, "Staff", SF.INVENTORY|SF.ARM, IC.WEAPON, WC.CASTING_2H,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ CR(ST.BASE_ATK.id, 1), CR(ST.BASE_MATK.id, 4) ],
+    [ CR(ST.INT.id, 4), CR(ST.STR.id, 6) ], [ CR(ST.BASE_ATK.id, 1), CR(ST.BASE_MATK.id, 2) ],
     false
 )
 
 // Jewellery
 ItemTable.RING = _(0x2000, "Ring", SF.INVENTORY|SF.FINGER, IC.JEWEL, JC.RING,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ ],
+    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ ],
     false
 )
 ItemTable.NECKLACE = _(0x2100, "Necklace", SF.INVENTORY|SF.NECK, IC.JEWEL, JC.NECKLACE,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ ],
-    false
-)
-ItemTable.BRACELET = _(0x2200, "Bracelet", SF.INVENTORY|SF.WRIST, IC.JEWEL, JC.BRACELET,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ ],
+    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ ],
     false
 )
 ItemTable.CHARM = _(0x2300, "Small Charm", SF.INVENTORY, IC.JEWEL, JC.CHARM,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 8) ], [ ],
+    [ CR(ST.DEX.id, 2), CR(ST.STR.id, 4) ], [ ],
     false
 )
 

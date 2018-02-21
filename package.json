@@ -1,7 +1,7 @@
 {
   "name": "chaos-rpg",
   "description": "A (currently) discord based IdleRPG inspired chat RPG",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "main": "game.js",
   "repository": {
     "type": "git",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "ava": "^0.25.0",
     "husky": "^0.14.3",
-    "nyc": "^11.4.1",
+    "nyc": "^11.5.0",
     "semantic-release": "^12.4.1"
   }
 }

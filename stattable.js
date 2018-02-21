@@ -38,10 +38,10 @@ StatTable.DEF = _(0x0214, StatFlag.BASE, "Def", "Defense", 0, 65536)
 StatTable.MDEF = _(0x0215, StatFlag.BASE, "MDef", "Magic defense", 0, 65536)
 
 // Unit specific stats
-StatTable.UNIT_STR = _(0x8000, StatFlag.BASE, "UnitStr", "Strength", 0, 4096)
-StatTable.UNIT_DEX = _(0x8001, StatFlag.BASE, "UnitDex", "Dexterity", 0, 4096)
-StatTable.UNIT_INT = _(0x8002, StatFlag.BASE, "UnitInt", "Intelligence", 0, 4096)
-StatTable.UNIT_VIT = _(0x8003, StatFlag.BASE, "UnitVit", "Vitality", 0, 4096)
+StatTable.UNIT_STR = _(0x8000, StatFlag.UNIT, "UnitStr", "Strength", 0, 4096)
+StatTable.UNIT_DEX = _(0x8001, StatFlag.UNIT, "UnitDex", "Dexterity", 0, 4096)
+StatTable.UNIT_INT = _(0x8002, StatFlag.UNIT, "UnitInt", "Intelligence", 0, 4096)
+StatTable.UNIT_VIT = _(0x8003, StatFlag.UNIT, "UnitVit", "Vitality", 0, 4096)
 
 StatTable.UNIT_BASE_ATK = _(0x8030, StatFlag.UNIT, "UnitBaseAtk", "Unit base attack", 0, 65536)
 StatTable.UNIT_BASE_MATK = _(0x8031, StatFlag.UNIT, "UnitBaseMAtk", "Unit base magic attack", 0, 65536)

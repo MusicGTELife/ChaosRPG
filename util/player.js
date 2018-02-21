@@ -20,16 +20,21 @@ class PlayerUtil extends UnitUtil {
     }
 
     static create(type, level, account, name) {
-        if (!PlayerUtil.isValidType(type))
+        if (!PlayerUtil.isValidType(type)) {
             return null
+        }
 
         let unit = UnitUtil.create(UnitType.PLAYER.id, level, name)
-        if (!unit)
+        if (!unit) {
             return null
+        }
 
         unit.descriptor.type = type
         unit.descriptor.account = account
         unit.stats = PlayerUtil.createBaseStats(type)
+        if (!unit.stats) {
+            return null
+        }
 
         let weaponEntry = ({
             [PlayerType.MAGE.id]: ItemTable.CRACKED_WAND,
@@ -50,7 +55,6 @@ class PlayerUtil extends UnitUtil {
             process.exit(1)
             return null
         }
-        console.log(item)
 
         items.push(item)
 
@@ -86,9 +90,34 @@ class PlayerUtil extends UnitUtil {
         return stats
     }
 
+    static getClass(unit) {
+        if (unit.type !== UnitType.PLAYER.id) {
+            console.log('invalid player unit type')
+            process.exit(1)
+            return 'invalid'
+        }
+
+        let className = ({
+            [PlayerType.MAGE.id]: PlayerType.MAGE.name,
+            [PlayerType.WARRIOR.id]: PlayerType.WARRIOR.name,
+            [PlayerType.ROGUE.id]: PlayerType.ROGUE.name,
+            [PlayerType.RANGER.id]: PlayerType.RANGER.name,
+            [PlayerType.CLERIC.id]: PlayerType.CLERIC.name
+        })[unit.descriptor.type] || 'invalid'
+
+        if (className === 'invalid') {
+            console.log('invalid player unit')
+            process.exit(1)
+        }
+
+        return className
+    }
+
     static getExperience(unit) {
-        if (!unit)
+        if (!unit) {
+            console.log('getExperience no unit')
             return 0
+        }
 
         return StatUtil.getStat(unit.stats, StatTable.UNIT_EXP.id).value
     }
@@ -96,10 +125,7 @@ class PlayerUtil extends UnitUtil {
     // Utilities to apply stat changes
     static async applyStatPoints(unit, items, statId, points) {
         if (!unit)
-            return false
-
-        if (!points)
-            return false
+            return null
 
         let validStat = ({
             [StatTable.STR.id]: true,
@@ -108,13 +134,16 @@ class PlayerUtil extends UnitUtil {
             [StatTable.VIT.id]: true
         })[statId] || false
         if (!validStat)
-            return false
+            return null
+
+        if (!points)
+            return unit
 
         if (unit.descriptor.stat_points_remaining <= 0)
-            return false
+            return unit
 
         if (points > unit.descriptor.stat_points_remaining)
-            return false
+            return unit
 
         console.log('applying stat', statId, points, unit.descriptor.stat_points_remaining)
         unit.descriptor.stat_points_remaining -= points
@@ -122,8 +151,6 @@ class PlayerUtil extends UnitUtil {
         const current = StatUtil.getStat(unit.stats, statId)
         StatUtil.setStat(unit.stats, statId, current.value+points)
 
-        unit.markModified('descriptor')
-        unit.markModified('stats')
         unit.stats = await UnitUtil.computeBaseStats(unit, items)
 
         let newVal = StatUtil.getStat(unit.stats, statId)
@@ -132,10 +159,13 @@ class PlayerUtil extends UnitUtil {
             process.exit(1)
         }
 
-        unit = await UnitModel.findOneAndUpdate({ id: unit.id },
+        unit.markModified('descriptor')
+        unit.markModified('stats')
+        await UnitModel.findOneAndUpdate({ id: unit.id },
             { stats: unit.stats, descriptor: unit.descriptor },
             { new: true }
         )
+
 
         newVal = StatUtil.getStat(unit.stats, statId)
         if (newVal.value === current.value) {
@@ -143,40 +173,57 @@ class PlayerUtil extends UnitUtil {
             process.exit(1)
         }
 
-        return true
+        return unit
     }
 
     static async applyLevelGain(unit) {
-        if (!unit)
+        if (!unit) {
+            console.log('applyLevelGain no unit')
+            process.exit(1)
             return null
+        }
 
         if (unit.level >= 100)
             return unit
 
-        unit.level++
-        unit.descriptor.stat_points_remaining += statPointsPerLevel
+        let level = unit.level+1
+        let descriptor = unit.descriptor
+        descriptor.stat_points_remaining += statPointsPerLevel
+
+        unit.level = level
+        unit.descriptor = descriptor
 
         unit.markModified('descriptor')
 
-        unit = await UnitModel.findOneAndUpdate({ id: unit.id }, { descriptor: unit.descriptor, level: unit.level }, { new: true })
+        unit = await UnitModel.findOneAndUpdate({ id: unit.id },
+            { level: unit.level, descriptor: unit.descriptor },
+            { new: true }
+        )
         //await unit.save()
 
+        console.log('unit level applied', unit.level, unit.descriptor)
         return unit
     }
 
     static async applyExperience(unit, amount) {
-        if (!unit)
+        if (!unit) {
+            console.log('applyExperience, no unit')
+            process.exit(1)
             return null
+        }
 
-        if (amount <= 0)
-            return null
+        if (amount <= 0) {
+            console.log('bad experience amount', unit.name, amount)
+            process.exit(1)
+            return unit
+        }
 
         const nextLevel = getExperienceForLevel(unit.level+1)
         let xp = StatUtil.getStat(unit.stats, StatTable.UNIT_EXP.id)
 
         // cap xp value off at the beginning of the next level if they advanced
         if (xp.value + amount > nextLevel)
-            xp.value = nextLevel
+            xp.value = nextLevel+1
         else
             xp.value += amount
 
@@ -184,6 +231,7 @@ class PlayerUtil extends UnitUtil {
 
         unit.markModified('stats')
         //await unit.save()
+
         unit = await UnitModel.findOneAndUpdate({ id: unit.id }, { stats: unit.stats }, { new: true })
         return unit
     }

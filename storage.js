@@ -28,33 +28,35 @@ Slots.INV5 =            0x25
 Slots.INV6 =            0x26
 Slots.INV7 =            0x27
 
+Slots.GROUND =          0xff
+
 const _ = createEntry
 
 const Storage = { }
 Storage.EQUIPMENT = _(0x01, "Equipment",
     [
-        { id: Slots.ARM_R, flags: F.ARM },
-        { id: Slots.ARM_L, flags: F.ARM },
-        { id: Slots.HEAD, flags: F.HEAD },
-        { id: Slots.HANDS, flags: F.HANDS },
-        { id: Slots.FEET, flags: F.FEET },
-        { id: Slots.BODY, flags: F.BODY },
-        { id: Slots.NECK, flags: F.NECK },
-        { id: Slots.FINGER, flags: F.FINGER }
+        { id: Slots.ARM_R, name: 'RightArm', flags: F.ARM },
+        { id: Slots.ARM_L, name: 'LeftArm', flags: F.ARM },
+        { id: Slots.HEAD, name: 'Head', flags: F.HEAD },
+        { id: Slots.HANDS, name: 'Hands', flags: F.HANDS },
+        { id: Slots.FEET, name: 'Feet', flags: F.FEET },
+        { id: Slots.BODY, name: 'Body', flags: F.BODY },
+        { id: Slots.NECK, name: 'Neck', flags: F.NECK },
+        { id: Slots.FINGER, name: 'Ring', flags: F.FINGER }
         //{ id: Slots.WRIST, flags: F.WRIST },
     ], 8
 )
 
 Storage.INVENTORY = _(0x02, "Inventory",
     [
-        { id: Slots.INV0, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV1, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV2, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV3, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV4, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV5, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV6, flags: F.ANY|F.INVENTORY },
-        { id: Slots.INV7, flags: F.ANY|F.INVENTORY }
+        { id: Slots.INV0, name: 'Slot1', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV1, name: 'Slot2', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV2, name: 'Slot3', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV3, name: 'Slot4', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV4, name: 'Slot5', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV5, name: 'Slot6', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV6, name: 'Slot7', flags: F.ANY|F.INVENTORY },
+        { id: Slots.INV7, name: 'Slot8', flags: F.ANY|F.INVENTORY }
     ], 8
 )
 

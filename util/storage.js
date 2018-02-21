@@ -29,6 +29,11 @@ class StorageUtil {
         return storage
     }
 
+    static getSlotName(slotId) {
+        let entry = Object.values(Storage).find(s => s.descriptor.id === slotId)
+        return entry.name
+    }
+
     static getStorageTableEntry(id) {
         return Object.values(Storage).find(s => s.id === id)
     }
@@ -75,8 +80,10 @@ class StorageUtil {
     }
 
     static isSlotValid(storage, nodeId, slotId) {
-        if (!StorageUtil.isNodeValid(storage, nodeId))
+        if (!StorageUtil.isNodeValid(storage, nodeId)) {
+            console.log('invalid node')
             return false
+        }
 
         const node = StorageUtil.getNode(storage, nodeId)
         const slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
@@ -117,19 +124,29 @@ class StorageUtil {
             return false
 
         let node = StorageUtil.getNode(storage, nodeId)
-        if (node && node.buffer) {
-            let slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
-            if (slot < 0)
-                return false
-
-            if (node.buffer[slot] !== 0)
-                return false
-
-            node.buffer[slot] = itemId
-            return true
+        if (!node) {
+            console.log('setSlot unable to get node')
+            return false
         }
 
-        return false
+        if (!node.buffer) {
+            console.log('setSlot unable to get buffer')
+            return false
+        }
+
+        let slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
+        if (slot < 0) {
+            console.log('setSlot bad slotIdx')
+            return false
+        }
+
+        if (itemId !== 0 && node.buffer[slot] !== 0) {
+            console.log('setSlot slot not empty', node.buffer[slot])
+            return false
+        }
+
+        node.buffer[slot] = itemId
+        return true
     }
 
     static getSlotTypeForItem(storage, item) {
@@ -192,16 +209,21 @@ class StorageUtil {
     }
 
     static canEquipItemTypeInSlot(storage, nodeId, slotId, itemCode) {
-        if (!StorageUtil.isSlotValid(storage, nodeId, slotId))
+        if (!StorageUtil.isSlotValid(storage, nodeId, slotId)) {
+            console.log('invalid slot')
             return false
+        }
 
         const itemTableEntry = ItemUtil.getItemTableEntry(itemCode)
         if (!itemTableEntry)
             return false
 
         let slotDesc = StorageUtil.getStorageSlotDescriptor(nodeId, slotId)
-        if (!slotDesc)
+        if (!slotDesc) {
+            console.log('no slot descriptor found')
+            process.exit(1)
             return false
+        }
 
         return (itemTableEntry.storage_flag & slotDesc.flags) !== 0
     }

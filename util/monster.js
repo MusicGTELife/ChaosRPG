@@ -118,7 +118,7 @@ class MonsterUtil extends UnitUtil {
         const entry = MonsterUtil.getMonsterTableEntry(monster.descriptor.code)
         let exp = entry.base_experience
         if (monster.level > 1)
-            exp = Math.pow(exp*(monster.level-1), 1.2)
+            exp = Math.pow(exp*(monster.level-1), 1.125)
 
 /*
         const diff = Math.abs(monster.level-player.level)
@@ -147,10 +147,15 @@ class MonsterUtil extends UnitUtil {
         unit.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                let statBonus = e.value + e.value *
-                    (Math.pow(level, 1.1) *(1+tierEntry.stat_counts[0]/5) * (1+rarity/5))/10
-                statBonus = Math.round(statBonus)
-                StatUtil.setStat(unit.stats, e.id, statBonus)
+                let statBonus = e.value *
+                    (Math.pow(level, 1.125) *
+                    (1+tierEntry.stat_counts[0]*0.25) *
+                    (1+rarity*0.25)) / 10
+
+                if (statEntry.id === StatTable.BASE_ATK.id || statEntry.id === StatTable.BASE_MATK.id)
+                    statBonus /= 2
+
+                StatUtil.setStat(unit.stats, e.id, Math.round(e.value+statBonus))
             }
         })
 
@@ -160,9 +165,11 @@ class MonsterUtil extends UnitUtil {
             [MonsterRarity.MAGIC.id]: { min: 2, max: 3},
             [MonsterRarity.RARE.id]: { min: 3, max: 4},
             [MonsterRarity.UNIQUE.id]: { min: 4, max: 5},
-            [MonsterRarity.BOSS.id]: { min: 5, max: 6},
+            [MonsterRarity.BOSS.id]: { min: 5, max: 7},
             [MonsterRarity.SUPERBOSS.id]: { min: 6, max: 8},
-        })[rarity] || { min: 0, max: 0 }
+        })[rarity] || null
+        if (!monsterItems)
+            return null
 
         const count = SecureRNG.getRandomInt(monsterRngCtx, monsterItems.min, monsterItems.max)
         let remaining = count
@@ -174,7 +181,9 @@ class MonsterUtil extends UnitUtil {
 
         // FIXME|TODO decide if a monster can equip an item regardless of
         // meeting the items stat requirements, or alternatively implement code
-        // to provide additional requirement filters
+        // to provide additional requirement filters, currently, they are
+        // filtered but low monster can spawn without enough stats, perhaps
+        // a fallback starter item could be used in that case
 
         let itemRngCtx = this.game.secureRng.getContext('item')
         let items = []
@@ -203,12 +212,12 @@ class MonsterUtil extends UnitUtil {
         items.push(item)
         remaining--
 
-        // Second, generate a shield, quiver or spellbook for casters, or a
-        // second weapon if the monster can dual wield and the primary weapon
-        // is not two-handed
+        // generate a second weapon if the monster can dual wield and the
+        // primary weapon is not two-handed or, generate a shield, quiver or
+        // spellbook for casters based upon the first items type
         if (remaining && !isPrimaryTwoHanded) {
             choices = MonsterUtil.getMonsterWeaponChoices(code, false)
-            let weaponAvailable = choices.length !== 0
+            let weaponAvailable = choices.length !== 0 && choice.item_sub_class !== WeaponClass.RANGED
             let magic = 0
             if (weaponAvailable) {
                 // okay, the unit is able to dual wield, give a 1/4 chance of
@@ -219,12 +228,34 @@ class MonsterUtil extends UnitUtil {
 
             if (weaponAvailable && magic === 3) {
                 // generate weapon
+                choices = choices.filter(c => {
+                    return c.item_class === ItemClass.WEAPON &&
+                        c.item_sub_class !== WeaponClass.RANGED &&
+                        c.item_sub_class !== WeaponClass.MELEE_2H &&
+                        c.item_sub_class !== WeaponClass.CASTING_2H
+                })
+
                 choice = this.game.item.getRandomItemTableEntry(choices)
+                console.log('monster is dual-wielding', item, choices, choice)
             } else {
                 // generate a shield, quiver or a spell book for the second hand
-                choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR,
-                    [ ArmorClass.SHIELD, ArmorClass.SPELLBOOK, ArmorClass.QUIVER ])
+                let entry = ItemUtil.getItemTableEntry(item.code)
+                let choiceTypes = []
+
+                if (entry.item_sub_class === WeaponClass.MELEE_1H) {
+                    choiceTypes.push(ArmorClass.SHIELD)
+                } else if (entry.item_sub_class === WeaponClass.MELEE_2H) {
+                } else if (entry.item_sub_class === WeaponClass.CASTING_1H) {
+                    choiceTypes.push(ArmorClass.SHIELD)
+                    choiceTypes.push(ArmorClass.SPELLBOOK)
+                } else if (entry.item_sub_class === WeaponClass.CASTING_2H) {
+                } else if (entry.item_sub_class === WeaponClass.RANGED) {
+                    choiceTypes.push(ArmorClass.QUIVER)
+                }
+
+                choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, choiceTypes)
                 choice = this.game.item.getRandomItemTableEntry(choices)
+                console.log('monster gets shield type', item, choices, choice)
             }
 
             if (!choice) {
@@ -243,6 +274,7 @@ class MonsterUtil extends UnitUtil {
             }
             items.push(item)
             remaining--
+
         }
 
         // Additional items are randomly chosen from the remaining item types

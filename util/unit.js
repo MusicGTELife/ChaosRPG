@@ -8,6 +8,7 @@ const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
 const { Player } = require('../player')
 const { Monster } = require('../monster')
+const { ItemClass, JewelClass } = require('../itemclass')
 const { ItemTable } = require('../itemtable')
 
 const SU = StatUtil
@@ -139,41 +140,45 @@ class UnitUtil {
         unit.markModified('stats')
     }
 
-    static getAllItemStats(items) {
+    static getAllItemStats(unit, items) {
+        if (!unit)
+            return []
+
         if (!items)
             return []
 
         let stats = []
-        items.map(v => {
-            stats = stats.concat(v.stats)
+        items.map(i => {
+            if (UnitUtil.itemRequirementsAreMet(unit, i)) {
+                // okay, make sure the item is in an equipment node, or is a
+                // charm in an inventory node
+
+                stats = stats.concat(i.stats)
+            }
         })
 
         //console.log(stats)
-        //process.exit(1)
 
         return stats
     }
 
-    static verifyUnitStorage(unit, equippedItems) {
+    static verifyUnitStorage(unit, items) {
         const valid = unit.storage.every(n => {
-            let invalidStorage = n.buffer.every(s => {
+            return n.buffer.every(s => {
                 if (s === 0)
                     return true
 
                 if (s < 0)
                     return false
 
-                if (n.id === Storage.INVENTORY.id && equippedItems &&
-                        !equippedItems.find(i => i.id === s))
-                    return false
-
-                return true
-            }) !== true
-
-            return !invalidStorage
+                return items.find(i => i.id === s)
+            })
         })
 
-        //console.log(unit.storage)
+        if (!valid) {
+            console.log(unit.storage)
+        }
+
         return valid
     }
 
@@ -214,7 +219,6 @@ class UnitUtil {
 
         if (!StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)) {
             console.log('unable to equip type in slot', node, slot, item.code)
-            process.exit(1)
             return false
         }
 
@@ -230,9 +234,8 @@ class UnitUtil {
 
         // Special case to allow monsters to equip items regardless of the items
         // stat requirements
-        if (unit.type === UnitType.PLAYER.id && !UnitUtil.itemRequirementsAreMet(unit, item)) {
+        if (unit.type === UnitType.PLAYER.id && node === Storage.EQUIPMENT.id && !UnitUtil.itemRequirementsAreMet(unit, item)) {
             console.log('player didn\'t meet item requirements', item.code)
-            process.exit(1)
             return false
         }
 
@@ -250,7 +253,7 @@ class UnitUtil {
         return true
     }
 
-    unequipItem(player, items, item, nodeId, slotId) {
+    unequipItem(unit, items, item, nodeId, slotId) {
         if (!unit || !items || !item)
             return false
 
@@ -262,12 +265,12 @@ class UnitUtil {
 
         console.log('can unequip item')
 
-        if (!StorageUtil.setSlot(storage, node, slot, 0)) {
+        if (!StorageUtil.setSlot(unit.storage, nodeId, slotId, 0)) {
             console.log('failed setting item slot')
             return false
         }
 
-        console.log(`unequip eq ${JSON.stringify(player.storage)}`)
+        console.log(`unequip eq ${JSON.stringify(unit.storage)}`)
 
         return true
     }
@@ -312,16 +315,45 @@ class UnitUtil {
         return this.equipItem(unit, items, item, entry.id, entry.slot)
     }
 
-    async getEquippedItems(unit) {
-        if (unit) {
-            let items = await this.game.gameDb.getUnitItems(unit.id)
-            //console.log(`getEquippedItems ${JSON.stringify(items)}`)
+    async getItems(unit) {
+        let items = await this.game.gameDb.getUnitItems(unit.id)
+        return items
+    }
 
-            return items
+    static async getEquippedItems(unit, items) {
+        if (!unit) {
+            process.exit(1)
+            return null
         }
 
-        process.exit(1)
-        return null
+        if (!items)
+            return null
+
+        let equipped = items.filter(i => {
+            if (!UnitUtil.itemRequirementsAreMet(unit, i))
+                return false
+
+            let found = false
+            unit.storage.map(s => {
+                if (s.buffer.find(si => si === i.id)) {
+                    //console.log('found', i, s)
+                    if (s.id === Storage.EQUIPMENT.id)
+                        found = true
+
+                    if (s.id === Storage.INVENTORY.id) {
+                        let itemEntry = ItemUtil.getItemTableEntry(i.code)
+                        if (itemEntry.item_class === ItemClass.JEWEL &&
+                                itemEntry.item_sub_class == JewelClass.CHARM) {
+                            found = true
+                        }
+                    }
+                }
+            })
+
+            return found
+        })
+
+        return equipped
     }
 
     // called when:
@@ -342,7 +374,9 @@ class UnitUtil {
             return null
         }
 
-        let itemStats = await UnitUtil.getAllItemStats(items)
+        items = await UnitUtil.getEquippedItems(unit, items)
+
+        let itemStats = await UnitUtil.getAllItemStats(unit, items)
         itemStats = SU.getReducedStats(itemStats)
 
         // filter stat types in seperate lists
@@ -374,9 +408,7 @@ class UnitUtil {
         // process each base stat which needs to be resolved by a formula
         let resolved = SU.resolve(stats, SU.getModifiers())
         resolved = SU.getReducedStats(resolved)
-
-        console.log('resolved', resolved, stats, 'end resolved')
-        //process.exit(1)
+        //console.log('resolved', resolved, stats, 'end resolved')
 
         // recalculate unit special stats based on resolved base stats
         let currHp = SU.getStat(unitStats, ST.UNIT_HP.id)

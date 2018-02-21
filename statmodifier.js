@@ -41,7 +41,7 @@ StatModifier.MDEF_PER_INT =
 
 StatModifier.ACCURACY =
     _(0x0060, [ StatTable.DEX.id, StatTable.STR.id ], [ StatTable.ACCURACY.id ],
-    "Accuracy", StatResolver.add, 1)
+    "Accuracy", StatResolver.add, 2)
 
 StatModifier.REACTION =
     _(0x0061, [ StatTable.DEX.id, StatTable.VIT.id ], [ StatTable.REACTION.id ],

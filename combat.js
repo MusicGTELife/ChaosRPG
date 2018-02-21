@@ -5,7 +5,9 @@ const { getExperienceForLevel } = require('./experience')
 const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
 const { Unit: UnitModel } = require('./models')
+const { Storage } = require('./storage')
 
+const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
 const { PlayerUtil } = require('./util/player')
@@ -190,8 +192,8 @@ class CombatContext {
         let events = [ ]
         let eventType = null
 
-        this.defender = await this.game.gameDb.getUnit(this.defender.id)
-        this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
+        //this.defender = await this.game.gameDb.getUnit(this.defender.id)
+        //this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
 
         let baseAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_ATK.id)
         let baseMAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_MATK.id)
@@ -226,37 +228,114 @@ class CombatContext {
         let event = new CombatEvent(this.attacker, this.defender, eventType, dmg)
         events.push(event)
 
+        if (!UnitUtil.isAlive(this.defender))
+            events = events.concat(await this.resolveDeath())
         //console.log(`attacker did ${physDmg+magicDmg} (${physDmg}:${magicDmg}) damage`)
 
-        if (!UnitUtil.isAlive(this.defender)) {
-            eventType = CombatEventType.MONSTER_DEATH.id
-            if (defIsPlayer)
-                eventType = CombatEventType.PLAYER_DEATH.id
+        return events
+    }
 
+    async resolveDeath() {
+        let events = [ ]
+
+        let defIsPlayer = this.defender.type === UnitType.PLAYER.id
+
+        let eventType = CombatEventType.MONSTER_DEATH.id
+        if (defIsPlayer)
+            eventType = CombatEventType.PLAYER_DEATH.id
+
+        let event = new CombatEvent(this.attacker, this.defender, eventType)
+        events.push(event)
+
+        if (defIsPlayer) {
+            // TODO add experience deduction on player and a small chance of
+            // item loss on death
+            return events
+        }
+
+        // okay, a monster has died, give experience and drop items
+        let nextLevelXp = getExperienceForLevel(this.attacker.level+1)
+        let currXp = PlayerUtil.getExperience(this.attacker)
+        let exp = MonsterUtil.getExperienceReward(this.defender, this.attacker)
+
+        this.attacker = await PlayerUtil.applyExperience(this.attacker, exp)
+        event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
+        events.push(event)
+
+        if (currXp+exp > nextLevelXp) {
+            PlayerUtil.applyLevelGain(this.attacker)
+
+            eventType = CombatEventType.PLAYER_LEVEL.id
             event = new CombatEvent(this.attacker, this.defender, eventType)
             events.push(event)
-
-            if (!defIsPlayer) {
-                let nextLevelXp = getExperienceForLevel(this.attacker.level+1)
-                let currXp = PlayerUtil.getExperience(this.attacker)
-                let exp = MonsterUtil.getExperienceReward(this.defender, this.attacker)
-
-                await PlayerUtil.applyExperience(this.attacker, exp)
-                if (currXp+exp >= nextLevelXp) {
-                    await PlayerUtil.applyLevelGain(this.attacker)
-
-                    eventType = CombatEventType.PLAYER_LEVEL.id
-                    event = new CombatEvent(this.attacker, this.defender, eventType)
-                    events.push(event)
-                }
-
-                event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
-                events.push(event)
-            } else {
-                // TODO add experience deduction on player and a small chance of
-                // item loss on death
-            }
         }
+
+        let monsterItems = await this.game.unit.getItems(this.defender)
+        if (!monsterItems)
+            return events
+
+        // Drop items
+        let equipped = false
+        await Promise.all(monsterItems.map(async i => {
+            let magic = SecureRNG.getRandomInt(this.rngCtx, 0, 9)
+            if (magic !== 9) {
+                return this.game.gameDb.removeItem(i)
+            }
+
+            console.log('will drop item', i)
+
+            let slots = StorageUtil.getValidSlotsForItem(this.attacker.storage, i)
+                .filter(st => StorageUtil.canEquipInSlot(this.attacker.storage, st.id, st.slot))
+            if (!slots) {
+                return this.game.gameDb.removeItem(i)
+            }
+
+            let slot = slots.find(st => st.id === Storage.INVENTORY.id)
+            if (!slot) {
+                return this.game.gameDb.removeItem(i)
+            }
+
+            i.owner = this.attacker.id
+            let equipSuccess = this.game.unit.equipItem(this.attacker, null, i, slot.id, slot.slot)
+            if (!equipSuccess) {
+                // no storage slot available, the item burns
+                this.game.gameDb.removeItem(i)
+
+                console.log('unable to equip item in empty inv slot')
+                process.exit(1)
+            }
+
+            eventType = CombatEventType.MONSTER_ITEM_DROP.id
+            event = new CombatEvent(this.attacker, this.defender, eventType, i)
+            events.push(event)
+
+            console.log('saving item to player')
+
+            await i.save()
+            this.attacker.markModified('stats')
+            this.attacker.markModified('storage')
+            this.attacker.markModified('descriptor')
+            await this.attacker.save()
+        }))
+
+        console.log('resolveDeath update unit')
+        /*
+        await UnitModel.findOneAndUpdate({ id: this.attacker.id },
+            { stats: this.attacker.stats, storage: this.attacker.storage },
+            { new: true }, (err, res) => {
+                if (err)
+                    console.log('err', err)
+                else {
+                    console.log(
+                        res.isModified(),
+                        res.isModified('descriptor'),
+                        res.isDirectModified('descriptor'),
+                        err, res
+                    )
+                    this.attacker = res
+                }
+            }
+        )*/
 
         return events
     }
