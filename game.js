@@ -722,20 +722,17 @@ class Game {
             // now it's time to check the slots
             // first check if the source slot contains an item
             if (!srcDesc) {
+                console.log('no source item descriptor')
                 this.message.channel
                     .send(`<@${this.message.author.id}> ${slotSrc} is not a valid slot`).then(m => m.delete(10000))
-
-                console.log('no source item descriptor')
-                process.exit(1)
                 return
             }
 
             if (!destDesc && slotDest !== 'ground') {
+                console.log('no dest item descriptor')
                 this.message.channel
                     .send(`<@${this.message.author.id}> ${slotDest} is not a valid slot`).then(m => m.delete(10000))
-
-                console.log('no dest item descriptor')
-                process.exit(1)
+                return
             }
 
             // then check if the destination slot is empty and can contain the
@@ -818,7 +815,7 @@ class Game {
             if (item) {
                 name = ItemUtil.getName(item.code)
                 if (!UnitUtil.itemRequirementsAreMet(unit, item))
-                    name += '🛑'
+                    name += ' 🛑'
                 item.stats.map(s => {
                     let entry = StatUtil.getStatTableEntry(s.id)
                     desc += `(+${s.value}) ${entry.name_short}\n`
@@ -1244,7 +1241,7 @@ class Game {
         await settings.save()
 
         while (!this.interrupt) {
-            await this.sleep(1*2500, async loop => { await this.loop() })
+            await this.sleep(1*5000, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')

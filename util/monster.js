@@ -129,6 +129,68 @@ class MonsterUtil extends UnitUtil {
         return Math.floor(exp)
     }
 
+    getSecondaryWeaponChoice(monsterRngCtx, monsterCode, primaryChoice) {
+        let choice = null
+        let choices = MonsterUtil.getMonsterWeaponChoices(monsterCode, false)
+        const weaponAvailable = choices.length !== 0
+
+        const isPrimaryTwoHanded =
+            (primaryChoice.item_class === ItemClass.WEAPON && primaryChoice.item_sub_class === WeaponClass.MELEE_2H) ||
+            (primaryChoice.item_class === ItemClass.WEAPON && primaryChoice.item_sub_class === WeaponClass.CASTING_2H)
+
+        const isRanged = primaryChoice.item_class === ItemClass.WEAPON && primaryChoice.item_sub_class === WeaponClass.RANGED
+
+        if (isPrimaryTwoHanded)
+            console.log('primary two handed')
+
+        // okay, the unit is able to dual wield, give a 1/4 chance of
+        // selecting a secondary weapon
+        // FIXME add the chance of dual wielding to a data table
+        let magic = 0
+        if (weaponAvailable)
+            magic = SecureRNG.getRandomInt(monsterRngCtx, 0, 3)
+
+        if (weaponAvailable && magic === 3) {
+            // generate weapon
+            choices = choices.filter(c => {
+                return c.item_class === ItemClass.WEAPON &&
+                    c.item_sub_class !== WeaponClass.RANGED &&
+                    c.item_sub_class !== WeaponClass.MELEE_2H &&
+                    c.item_sub_class !== WeaponClass.CASTING_2H
+            })
+
+            choice = this.game.item.getRandomItemTableEntry(choices)
+            console.log('monster is dual-wielding', item, choices, choice)
+        } else {
+            // generate a shield, quiver or a spell book for the second hand
+            let entry = ItemUtil.getItemTableEntry(item.code)
+            let choiceTypes = []
+
+            if (entry.item_sub_class === WeaponClass.MELEE_1H) {
+                choiceTypes.push(ArmorClass.SHIELD)
+            } else if (entry.item_sub_class === WeaponClass.MELEE_2H) {
+            } else if (entry.item_sub_class === WeaponClass.CASTING_1H) {
+                choiceTypes.push(ArmorClass.SHIELD)
+                choiceTypes.push(ArmorClass.SPELLBOOK)
+            } else if (entry.item_sub_class === WeaponClass.CASTING_2H) {
+            } else if (entry.item_sub_class === WeaponClass.RANGED) {
+                choiceTypes.push(ArmorClass.QUIVER)
+            }
+
+            choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, choiceTypes)
+            choice = this.game.item.getRandomItemTableEntry(choices)
+            console.log('monster gets shield type', item, choices, choice)
+        }
+
+        if (!choice) {
+            console.log('unable to get item choice generating monster')
+            process.exit(1)
+            return null
+        }
+
+        return choice
+    }
+
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
     generate(monsterRngCtx, code, level, tier, rarity) {
@@ -194,12 +256,7 @@ class MonsterUtil extends UnitUtil {
         // First, generate a primary weapon
         let choices = MonsterUtil.getMonsterWeaponChoices(code, true)
         let choice = this.game.item.getRandomItemTableEntry(choices)
-        const isPrimaryTwoHanded =
-            (choice.item_class === ItemClass.WEAPON && choice.item_sub_class === WeaponClass.MELEE_2H) ||
-            (choice.item_class === ItemClass.WEAPON && choice.item_sub_class === WeaponClass.CASTING_2H)
-
-        if (isPrimaryTwoHanded)
-            console.log('primary two handed')
+        let primaryChoice = choice
 
         let item = ItemUtil.generate(itemRngCtx,
             choice.code, choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id
@@ -212,83 +269,35 @@ class MonsterUtil extends UnitUtil {
         items.push(item)
         remaining--
 
-        // generate a second weapon if the monster can dual wield and the
-        // primary weapon is not two-handed or, generate a shield, quiver or
-        // spellbook for casters based upon the first items type
-        if (remaining && !isPrimaryTwoHanded) {
-            choices = MonsterUtil.getMonsterWeaponChoices(code, false)
-            let weaponAvailable = choices.length !== 0 && choice.item_sub_class !== WeaponClass.RANGED
-            let magic = 0
-            if (weaponAvailable) {
-                // okay, the unit is able to dual wield, give a 1/4 chance of
-                // selecting a secondary weapon
-                // FIXME add the chance of dual wielding to a data table
-                magic = SecureRNG.getRandomInt(monsterRngCtx, 0, 3)
-            }
-
-            if (weaponAvailable && magic === 3) {
-                // generate weapon
-                choices = choices.filter(c => {
-                    return c.item_class === ItemClass.WEAPON &&
-                        c.item_sub_class !== WeaponClass.RANGED &&
-                        c.item_sub_class !== WeaponClass.MELEE_2H &&
-                        c.item_sub_class !== WeaponClass.CASTING_2H
-                })
-
-                choice = this.game.item.getRandomItemTableEntry(choices)
-                console.log('monster is dual-wielding', item, choices, choice)
-            } else {
-                // generate a shield, quiver or a spell book for the second hand
-                let entry = ItemUtil.getItemTableEntry(item.code)
-                let choiceTypes = []
-
-                if (entry.item_sub_class === WeaponClass.MELEE_1H) {
-                    choiceTypes.push(ArmorClass.SHIELD)
-                } else if (entry.item_sub_class === WeaponClass.MELEE_2H) {
-                } else if (entry.item_sub_class === WeaponClass.CASTING_1H) {
-                    choiceTypes.push(ArmorClass.SHIELD)
-                    choiceTypes.push(ArmorClass.SPELLBOOK)
-                } else if (entry.item_sub_class === WeaponClass.CASTING_2H) {
-                } else if (entry.item_sub_class === WeaponClass.RANGED) {
-                    choiceTypes.push(ArmorClass.QUIVER)
-                }
-
-                choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, choiceTypes)
-                choice = this.game.item.getRandomItemTableEntry(choices)
-                console.log('monster gets shield type', item, choices, choice)
-            }
-
-            if (!choice) {
-                console.log('unable to get item choice generating monster')
-                process.exit(1)
-                return null
-            }
-
-            item = ItemUtil.generate(itemRngCtx, choice.code,
-                choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id
-            )
-            if (!item) {
-                console.log('failed generating item for monster', choice)
-                process.exit(1)
-                return null
-            }
-            items.push(item)
-            remaining--
-
-        }
-
         // Additional items are randomly chosen from the remaining item types
         // FIXME, generate random array of indices into the combined remaining
         // choices array or shuffle the array to prevent multiple choices of the
         // same item subclass from being selected
+        let secondarySelected = false
         for (let i = 0; i < remaining; i++) {
-            // remaining armor choices
-            choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, [
-                ArmorClass.BOOTS, ArmorClass.GLOVES,
-                ArmorClass.HELMET, ArmorClass.BODY_ARMOR
-            ])
-            choices = choices.concat(ItemUtil.getItemClassEntries([ItemClass.JEWEL]))
-            choice = this.game.item.getRandomItemTableEntry(choices)
+
+            let magic = SecureRNG.getRandomInt(monsterRngCtx, 0, remaining)
+            if (magic === remaining && !secondarySelected) {
+                // generate a second weapon if the monster can dual wield and the
+                // primary weapon is not two-handed or, generate a shield, quiver or
+                // spellbook for casters based upon the first items type
+
+                choice = this.getSecondaryWeaponChoice(monsterRngCtx, code, primaryChoice)
+                if (!choice) {
+                    console.log('unable to get item choice generating monster')
+                    process.exit(1)
+                    return null
+                }
+                secondarySelected = true
+            } else {
+                // remaining armor choices
+                choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, [
+                    ArmorClass.BOOTS, ArmorClass.GLOVES,
+                    ArmorClass.HELMET, ArmorClass.BODY_ARMOR
+                ])
+                choices = choices.concat(ItemUtil.getItemClassEntries([ItemClass.JEWEL]))
+                choice = this.game.item.getRandomItemTableEntry(choices)
+            }
 
             item = ItemUtil.generate(itemRngCtx, choice.code,
                 choice.item_class, choice.item_sub_class, tier, ItemRarity.COMMON.id

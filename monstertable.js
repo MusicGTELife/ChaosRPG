@@ -96,7 +96,7 @@ MonsterTable.GIANT = _(
     { id: ST.DEX.id, value: 4 },
     { id: ST.INT.id, value: 2 },
     { id: ST.STR.id, value: 5 },
-    { id: ST.VIT.id, value: 9 },
+    { id: ST.VIT.id, value: 8 },
     { id: StatTable.BASE_MATK.id, value: 0 },
     { id: StatTable.BASE_ATK.id, value: 4 }
 ])
