@@ -120,6 +120,7 @@ test('items', async t => {
     t.deepEqual(entries, Object.values(ItemTable))
 
     entries = ItemUtil.getItemSubClassEntries(ItemClass.WEAPON, [WeaponClass.MELEE_2H, WeaponClass.MELEE_1H])
+
 })
 
 test('db', async t => {
@@ -156,6 +157,15 @@ test('storage', t => {
     t.false(StorageUtil.canEquipItemTypeInSlot(storage, Storage.EQUIPMENT.id, Slots.BODY, ItemTable.GREAT_HELM.code))
     t.false(StorageUtil.canEquipItemTypeInSlot(storage, Storage.EQUIPMENT.id, Slots.HANDS, ItemTable.GREAT_HELM.code))
 
+    t.true(StorageUtil.canEquipItemTypeInSlot(storage, Storage.EQUIPMENT.id, Slots.ARM_L, ItemTable.CRACKED_SWORD.code))
+    t.true(StorageUtil.canEquipItemTypeInSlot(storage, Storage.EQUIPMENT.id, Slots.ARM_R, ItemTable.CRACKED_SWORD.code))
+    t.true(StorageUtil.canEquipItemTypeInSlot(storage, Storage.INVENTORY.id, Slots.INV0, ItemTable.CRACKED_SWORD.code))
+    t.false(StorageUtil.canEquipItemTypeInSlot(storage, Storage.EQUIPMENT.id, Slots.BODY, ItemTable.CRACKED_SWORD.code))
+
+    t.false(StorageUtil.isSlotOccupied(storage, Storage.EQUIPMENT.id, Slots.ARM_L))
+
+    t.false(StorageUtil.setSlot(storage, Storage.EQUIPMENT.id, Slots.ARM_L, -1))
+
     t.deepEqual(StorageUtil.createStorage(UnitType.PLAYER.id), storage)
     t.deepEqual(StorageUtil.createStorage(UnitType.MONSTER.id), storage)
 
@@ -168,9 +178,7 @@ test('storage', t => {
         storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size-1
     ))
 
-    t.false(StorageUtil.isSlotValid(
-        storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size
-    ))
+    t.false(StorageUtil.isSlotValid(storage, Storage.EQUIPMENT.id, 0xff))
     t.false(StorageUtil.isSlotValid(storage, -1, Storage.EQUIPMENT.size))
 
     t.false(StorageUtil.isSlotOccupied(
