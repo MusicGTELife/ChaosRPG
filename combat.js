@@ -33,6 +33,8 @@ CombatEventType.PLAYER_ITEM_DROP = { id: 0x12, name: "Monster Dropped Item" }
 CombatEventType.PLAYER_LEVEL = { id: 0x13, name: "Player Leveled" }
 CombatEventType.PLAYER_EXPERIENCE = { id: 0x14, name: "Player Gained Experience" }
 
+CombatEventType.BLOCK = { id: 0x20, name: "Blocked" }
+
 const DamageType = { }
 DamageType.PHYSICAL =       0x01
 DamageType.MAGIC =          0x02
@@ -150,8 +152,8 @@ class CombatContext {
             return null
         }
 
-        this.unitA = await this.game.gameDb.getUnit(this.unitA.id)
-        this.unitB = await this.game.gameDb.getUnit(this.unitB.id)
+        //this.unitA = await this.game.gameDb.getUnit(this.unitA.id)
+        //this.unitB = await this.game.gameDb.getUnit(this.unitB.id)
 
         this.setFirstAttacker()
 
@@ -192,30 +194,47 @@ class CombatContext {
         let events = [ ]
         let eventType = null
 
-        //this.defender = await this.game.gameDb.getUnit(this.defender.id)
-        //this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
-
         let baseAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_ATK.id)
         let baseMAtk = SU.getStat(this.attacker.stats, ST.UNIT_BASE_MATK.id)
         let atk = SU.getStat(this.attacker.stats, ST.UNIT_ATK.id)
         let matk = SU.getStat(this.attacker.stats, ST.UNIT_MATK.id)
         let acc = SU.getStat(this.attacker.stats, ST.UNIT_ACCURACY.id)
+        let attackReact = SU.getStat(this.attacker.stats, ST.UNIT_REACTION.id)
 
         let def = SU.getStat(this.defender.stats, ST.UNIT_DEF.id)
         let mdef = SU.getStat(this.defender.stats, ST.UNIT_MDEF.id)
+        let block = SU.getStat(this.defender.stats, ST.UNIT_BLOCK.id)
+        let defendReact = SU.getStat(this.defender.stats, ST.UNIT_REACTION.id)
+
+        // Unsure if I'll do dodge yet, but is so, it will be based on reaction
+        let attackReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, attackReact.value)
+        let defendReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, defendReact.value)
+
+        let blocked = false
+        if (block.value)
+            blocked = SecureRNG.getRandomInt(0, 100) > 100-block.value
+
+        if (blocked) {
+            console.log('blocked', this.attacker.name, this.defender.name)
+
+            eventType = CombatEventType.BLOCK.id
+            let event = new CombatEvent(this.attacker, this.defender, eventType)
+            events.push(event)
+            return events
+        }
 
         // Resolve damage dealt, we scale each attack type down according to the
         // units accuracy roll
-        let pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
+        let pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
         atk.value = Math.ceil((baseAtk.value + baseAtk.value*atk.value/100)*pAcc)
-        let physDmg = this.resolveDamageDealt(atk, def)
 
-        pAcc = this.getHitAccuracyRoll(this.attacker, acc)/100
+        pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
         matk.value = Math.ceil((baseMAtk.value + baseMAtk.value*matk.value/100)*pAcc)
-        let magicDmg = this.resolveDamageDealt(matk, mdef)
 
+        let physDmg = this.resolveDamageDealt(atk, def)
+        let magicDmg = this.resolveDamageDealt(matk, mdef)
         let dmg = new Damage(physDmg, magicDmg)
-        await UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
+        UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
         this.defender = await UnitModel.findOneAndUpdate({ id: this.defender.id },
             { stats: this.defender.stats },
             { new: true }
@@ -256,7 +275,7 @@ class CombatContext {
         // okay, a monster has died, give experience and drop items
         let nextLevelXp = getExperienceForLevel(this.attacker.level+1)
         let currXp = PlayerUtil.getExperience(this.attacker)
-        let exp = MonsterUtil.getExperienceReward(this.defender, this.attacker)
+        let exp = MonsterUtil.getExperienceReward(this.defender)
 
         this.attacker = await PlayerUtil.applyExperience(this.attacker, exp)
         event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
@@ -299,17 +318,17 @@ class CombatContext {
             let equipSuccess = this.game.unit.equipItem(this.attacker, null, i, slot.id, slot.slot)
             if (!equipSuccess) {
                 console.log('unable to equip item in empty inv slot')
+                this.game.gameDb.removeItem(i)
                 process.exit(1)
 
                 // no storage slot available, the item burns
-                return this.game.gameDb.removeItem(i)
             }
 
             eventType = CombatEventType.MONSTER_ITEM_DROP.id
             event = new CombatEvent(this.attacker, this.defender, eventType, i)
             events.push(event)
 
-            console.log('saving item to player')
+            //console.log('saving item to player')
 
             return i.save()
         }))
@@ -319,33 +338,14 @@ class CombatContext {
         this.attacker.markModified('descriptor')
         await this.attacker.save()
 
-        console.log('resolveDeath update unit')
-        /*
-        await UnitModel.findOneAndUpdate({ id: this.attacker.id },
-            { stats: this.attacker.stats, storage: this.attacker.storage },
-            { new: true }, (err, res) => {
-                if (err)
-                    console.log('err', err)
-                else {
-                    console.log(
-                        res.isModified(),
-                        res.isModified('descriptor'),
-                        res.isDirectModified('descriptor'),
-                        err, res
-                    )
-                    this.attacker = res
-                }
-            }
-        )*/
-
         return events
     }
 
     resolveDamageDealt(attack, defense) {
-        const pDef = defense.value/100
-        let dmg = Math.ceil(attack.value*attack.value / (attack.value+pDef))
+        //const pDef = defense.value/100
+        let dmg = Math.ceil(attack.value*attack.value / (attack.value+defense.value*0.5))
         if (dmg < 0) {
-            console.log('negative damage', pDmg, atk)
+            console.log('negative damage', dmg, attack, defense)
             process.exit()
         }
 
@@ -358,11 +358,12 @@ class CombatContext {
 
     getHitAccuracyRoll(unit, accuracy) {
         // Scale attack down according to accuracy roll
-        let pAcc = Math.max(1, Math.floor(accuracy.value/100))
-        let accMagic = SecureRNG.getRandomInt(this.rngCtx, pAcc, 100)
+        //let pAcc = Math.round(accuracy/10)
+        let pAcc = SecureRNG.getRandomInt(this.rngCtx, accuracy, 10000)
 
-        //console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${accMagic}`)
-        return accMagic
+        let acc = Math.max(1, pAcc/100)
+        //console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${acc}`)
+        return acc
     }
 }
 

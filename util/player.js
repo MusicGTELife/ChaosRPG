@@ -19,7 +19,7 @@ class PlayerUtil extends UnitUtil {
         return Object.keys(PlayerType).map((k) => k.id === id ? type.name : 'unknown')
     }
 
-    static create(type, level, account, name) {
+    static create(type, level, account, name, items) {
         if (!PlayerUtil.isValidType(type)) {
             return null
         }
@@ -36,6 +36,13 @@ class PlayerUtil extends UnitUtil {
             return null
         }
 
+        return { unit, items }
+    }
+
+    static createStarterItems(itemRngCtx, type) {
+        if (!itemRngCtx)
+            return null
+
         let weaponEntry = ({
             [PlayerType.MAGE.id]: ItemTable.CRACKED_WAND,
             [PlayerType.WARRIOR.id]: ItemTable.CRACKED_SWORD,
@@ -49,7 +56,12 @@ class PlayerUtil extends UnitUtil {
         }
 
         let items = []
-        let item = ItemUtil.generate(null, weaponEntry.code, ItemClass.WEAPON, Tier.TIER0.id, ItemRarity.COMMON.id)
+        const item = ItemUtil.generate(
+            itemRngCtx, weaponEntry.code,
+            weaponEntry.item_class, weaponEntry.item_sub_class,
+            Tier.TIER0.id, ItemRarity.COMMON.id
+        )
+
         if (!item) {
             console.log('unable to generate starter item')
             process.exit(1)
@@ -57,8 +69,7 @@ class PlayerUtil extends UnitUtil {
         }
 
         items.push(item)
-
-        return { unit, items }
+        return items
     }
 
     static isValidType(type) {
@@ -195,7 +206,8 @@ class PlayerUtil extends UnitUtil {
 
         unit.markModified('descriptor')
 
-        unit = await UnitModel.findOneAndUpdate({ id: unit.id },
+        unit = await UnitModel.findOneAndUpdate(
+            { id: unit.id },
             { level: unit.level, descriptor: unit.descriptor },
             { new: true }
         )
@@ -232,7 +244,9 @@ class PlayerUtil extends UnitUtil {
         unit.markModified('stats')
         //await unit.save()
 
-        unit = await UnitModel.findOneAndUpdate({ id: unit.id }, { stats: unit.stats }, { new: true })
+        unit = await UnitModel.findOneAndUpdate(
+            { id: unit.id }, { stats: unit.stats }, { new: true }
+        )
         return unit
     }
 }

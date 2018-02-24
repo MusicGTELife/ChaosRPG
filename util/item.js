@@ -5,9 +5,10 @@ const { StatTable } = require('../stattable')
 
 const { Tier } = require('../tier')
 
-const { ItemClass, WeaponClass, WeaponFlags } = require('../itemclass')
+const { ItemClass, WeaponClass, ArmorClass, JewelClass, WeaponFlags } = require('../itemclass')
 const { ItemModTable, ItemModClass } = require('../itemmod')
 const { ItemTable } = require('../itemtable')
+const { ItemRarity } = require('../itemrarity')
 
 class ItemUtil {
     constructor(game) {
@@ -56,6 +57,20 @@ class ItemUtil {
             return 'invalid'
 
         return entry.name
+    }
+
+    static getItemRarityEntry(rarity) {
+        console.log('rarity', rarity)
+        return Object.values(ItemRarity).find(e => e.id === rarity)
+    }
+
+    static getRarityName(rarity) {
+        let entry = ItemUtil.getItemRarityEntry(rarity)
+        if (entry)
+            return entry.name
+
+        console.log('rarityEntry', entry)
+        return ItemRarity.INFERIOR.name
     }
 
     static createWeaponDescriptor() {
@@ -109,6 +124,17 @@ class ItemUtil {
         return item
     }
 
+    static getAdjustedStat(value, tier, rarity) {
+        return value *= Math.round(1+((rarity-1)*0.25)+((tier-1)*0.25))
+    }
+
+    static rollItemStat(itemRngCtx, min, max) {
+        let magic = min
+        if (min !== max)
+            magic = SecureRNG.getRandomInt(itemRngCtx, min, max)
+        return magic
+    }
+
     static generate(itemRngCtx, code, itemClass, itemSubClass, tier, rarity) {
         const tableEntry = ItemUtil.getItemTableEntry(code)
         if (!tableEntry) {
@@ -117,7 +143,7 @@ class ItemUtil {
             return null
         }
 
-        if (!tableEntry.is_starter_item && !(itemRngCtx instanceof SecureRNGContext))
+        if (!(itemRngCtx instanceof SecureRNGContext))
             throw new TypeError('invalid RNG context')
 
         const item = ItemUtil.createDescriptor(itemClass)
@@ -156,9 +182,15 @@ class ItemUtil {
 
         // Add implicit mods on items
         tableEntry.implicit_stats.map(m => {
-            //console.log('adding implicit mod', stat)
-            let stat = StatUtil.createDescriptor(m.id, m.value)
+            let increased = m
+            increased.min = ItemUtil.getAdjustedStat(m.min, tier, rarity)
+            increased.max = ItemUtil.getAdjustedStat(m.max, tier, rarity)
+
+            let magic = ItemUtil.rollItemStat(itemRngCtx, increased.min, increased.max)
+            let stat = StatUtil.createDescriptor(m.id, magic)
+
             item.stats.push(stat)
+            //console.log('added implicit mod', stat)
         })
 
         if (tableEntry.is_starter_item) {
@@ -178,8 +210,16 @@ class ItemUtil {
 
                 Object.values(mod.stat_descriptor).map(desc => {
                     //console.log(`stat desc ${JSON.stringify(desc)}`)
-                    let value = SecureRNG.getRandomInt(itemRngCtx, desc.min_value, desc.max_value)
-                    let stat = StatUtil.createDescriptor(desc.id, value)
+
+                    let increased = { min: desc.min_value, max: desc.max_value }
+                    increased.min = ItemUtil.getAdjustedStat(desc.min_value, tier, rarity)
+                    increased.max = ItemUtil.getAdjustedStat(desc.max_value, tier, rarity)
+
+                    let magic = ItemUtil.rollItemStat(itemRngCtx, increased.min, increased.max)
+
+                    console.log('stat', tier, rarity, magic)
+
+                    let stat = StatUtil.createDescriptor(desc.id, magic)
                     //console.log(`adding stat ${JSON.stringify(stat)}`)
                     item.stats.push(stat)
                 })
@@ -191,6 +231,79 @@ class ItemUtil {
 
     static setOwner(item, ownerId) {
         item.owner = ownerId
+    }
+
+    static isWeapon(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+
+        return itemEntry.item_class === ItemClass.WEAPON
+    }
+
+    static isRanged(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+        return ItemUtil.isWeapon(item) &&
+                itemEntry.item_sub_class === WeaponClass.RANGED
+    }
+
+    static isMelee(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+        return ItemUtil.isWeapon(item) &&
+                (itemEntry.item_sub_class === WeaponClass.MELEE_1H ||
+                itemEntry.item_sub_class === WeaponClass.MELEE_2H)
+    }
+
+    static isCasting(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+        return ItemUtil.isWeapon(item) &&
+                (itemEntry.item_sub_class === WeaponClass.CASTING_1H ||
+                itemEntry.item_sub_class === WeaponClass.CASTING_2H)
+    }
+
+    static isTwoHanded(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+
+        return ItemUtil.isWeapon(item) &&
+                (itemEntry.item_sub_class === WeaponClass.MELEE_2H ||
+                itemEntry.item_sub_class === WeaponClass.CASTING_2H)
+    }
+
+    static isWeaponOrShieldType(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+
+        return ItemUtil.isWeapon(item) || (itemEntry.item_class === ItemClass.ARMOR &&
+                (itemEntry.item_sub_class === ArmorClass.SHIELD ||
+                itemEntry.item_sub_class === ArmorClass.SPELLBOOK ||
+                itemEntry.item_sub_class === ArmorClass.QUIVER))
     }
 }
 

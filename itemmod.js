@@ -16,24 +16,24 @@ const _ = ItemModTable.createEntry
 
 ItemModTable.INT = _(
     0x0001, "intelligence", ItemModClass.MINOR.id,
-    [ { id: StatTable.INT.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.INT.id, min_value: 1, max_value: 5 } ]
 )
 ItemModTable.DEX = _(
     0x0002, "dexterity", ItemModClass.MINOR.id,
-    [ { id: StatTable.DEX.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.DEX.id, min_value: 1, max_value: 5 } ]
 )
 ItemModTable.STR = _(
     0x0003, "strength", ItemModClass.MINOR.id,
-    [ { id: StatTable.STR.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.STR.id, min_value: 1, max_value: 5 } ]
 )
 ItemModTable.VIT = _(
     0x0004, "vitality", ItemModClass.MINOR.id,
-    [ { id: StatTable.VIT.id, min_value: 1, max_value: 4 } ]
+    [ { id: StatTable.VIT.id, min_value: 1, max_value: 5 } ]
 )
 
 ItemModTable.ALL_ATTR = _(
     0x0010, "All Attr", ItemModClass.MINOR.id,
-    [ { id: StatTable.ALL_ATTR.id, min_value: 1, max_value: 2 } ]
+    [ { id: StatTable.ALL_ATTR.id, min_value: 1, max_value: 3 } ]
 )
 
 ItemModTable.ATK = _(
@@ -60,7 +60,7 @@ ItemModTable.HP = _(
 
 ItemModTable.ACCURACY = _(
     0x0120, "accuracy", ItemModClass.MINOR.id,
-    [ { id: StatTable.ACCURACY.id, min_value: 1, max_value: 10 } ]
+    [ { id: StatTable.ACCURACY.id, min_value: 10, max_value: 50 } ]
 )
 
 ItemModTable.REACTION = _(

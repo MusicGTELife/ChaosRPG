@@ -2,13 +2,13 @@ const { StatUtil } = require('./stats')
 const { StorageUtil } = require('./storage')
 const { ItemUtil } = require('./item')
 
-const { Storage } = require('../storage')
+const { Storage, Slots } = require('../storage')
 const { StatModifier } = require('../statmodifier')
 const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
 const { Player } = require('../player')
 const { Monster } = require('../monster')
-const { ItemClass, JewelClass } = require('../itemclass')
+const { ItemClass, WeaponClass, ArmorClass, JewelClass } = require('../itemclass')
 const { ItemTable } = require('../itemtable')
 
 const SU = StatUtil
@@ -131,7 +131,7 @@ class UnitUtil {
     }
 
     // This is only to be used after final damage is calculated
-    static async applyDamage(unit, amount) {
+    static applyDamage(unit, amount) {
         const curr = SU.getStat(unit.stats, ST.UNIT_HP.id)
         if (curr.value-amount < 0)
             amount = curr.value
@@ -180,6 +180,130 @@ class UnitUtil {
         }
 
         return valid
+    }
+
+    static isItemEquippableInSlot(unit, items, item, node, slot) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+
+        if (StorageUtil.isSlotOccupied(unit.storage, node, slot)) {
+            console.log('slotOccupied')
+            return false
+        }
+
+        const isWeaponOrShieldType = ItemUtil.isWeaponOrShieldType(item)
+        if (isWeaponOrShieldType) {
+            const currArmRId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_R)
+            const currArmLId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_L)
+
+            let currArmR = null
+            let currArmL = null
+
+            if (currArmRId) {
+                currArmR = items.find(i => i.id === currArmRId)
+                const currArmREntry = ItemUtil.getItemTableEntry(currArmR.code)
+            }
+
+            if (currArmLId) {
+                currArmL = items.find(i => i.id === currArmLId)
+                const currArmLEntry = ItemUtil.getItemTableEntry(currArmL.code)
+            }
+
+            if (ItemUtil.isTwoHanded(item) && (currArmR || currArmL)) {
+                console.log('can\'t dual wield two handed')
+                return false
+            }
+
+            if (ItemUtil.isTwoHanded(item) && currArmR && ItemUtil.isTwoHanded(currArmR))
+                return false
+
+            if (ItemUtil.isTwoHanded(item) && currArmL && ItemUtil.isTwoHanded(currArmL))
+                return false
+
+            if (ItemUtil.isMelee(item)) {
+                if (currArmR) {
+                    if (ItemUtil.isWeapon(currArmR) && !ItemUtil.isMelee(currArmR)) {
+                        console.log('can\'t mix types')
+                        return false
+                    }
+
+                    const entry = currArmR
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            entry.item_sub_class !== ArmorClass.SHIELD)
+                        return false
+                }
+
+                if (currArmL) {
+                    if (ItemUtil.isWeapon(currArmL) && !ItemUtil.isMelee(currArmL)) {
+                        console.log('can\'t mix types')
+                        return false
+                    }
+
+                    const entry = currArmL
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            entry.item_sub_class !== ArmorClass.SHIELD)
+                        return false
+                }
+            }
+
+            if (ItemUtil.isCasting(item)) {
+                if (currArmR) {
+                    if (ItemUtil.isWeapon(currArmR) && !ItemUtil.isCasting(currArmR)) {
+                        console.log('can\'t mix types')
+                        return false
+                    }
+
+                    const entry = currArmR
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            (entry.item_sub_class !== ArmorClass.SHIELD ||
+                            entry.item_sub_class !== ArmorClass.SPELLBOOK))
+                        return false
+                }
+
+                if (currArmL) {
+                    if (ItemUtil.isWeapon(currArmL) && !ItemUtil.isCasting(currArmL)) {
+                        console.log('can\'t mix types')
+                        return false
+                    }
+
+                    const entry = currArmL
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            (entry.item_sub_class !== ArmorClass.SHIELD ||
+                            entry.item_sub_class !== ArmorClass.SPELLBOOK))
+                        return false
+                }
+            }
+
+            if (ItemUtil.isRanged(item)) {
+                if (currArmR) {
+                    const entry = currArmR
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            entry.item_sub_class !== ArmorClass.QUIVER)
+                        return false
+                }
+
+                if (currArmL) {
+                    const entry = currArmR
+                    if (entry.item_class === ItemClass.ARMOR &&
+                            entry.item_sub_class !== ArmorClass.QUIVER)
+                        return false
+                }
+            }
+
+            if (itemEntry.item_class === ItemClass.ARMOR) {
+                if (currArmR && !ItemUtil.isWeapon(currArmR))
+                    return false
+
+                if (currArmL && !ItemUtil.isWeapon(currArmL))
+                    return false
+            }
+        }
+
+        return StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
     }
 
     static itemRequirementsAreMet(unit, item) {
@@ -450,6 +574,8 @@ class UnitUtil {
         SU.setStat(unit.stats, ST.UNIT_MDEF.id,
                 SU.getStat(resolved, ST.MDEF.id).value)
 
+        SU.setStat(unit.stats, ST.UNIT_BLOCK.id,
+                SU.getStat(resolved, ST.BLOCK.id).value)
         SU.setStat(unit.stats, ST.UNIT_ACCURACY.id,
                 SU.getStat(resolved, ST.ACCURACY.id).value)
         SU.setStat(unit.stats, ST.UNIT_REACTION.id,

@@ -106,8 +106,20 @@ class Game {
     }
 
     async destroy() {
-        let res = await this.discord.destroy()
-            .then(await this.gameDb.disconnect())
+        console.log('connections', this.discordConnected, this.dbConnected)
+
+        if (this.discordConnected) {
+            if (this.dbConnected) {
+                await this.broadcastMessage('ChaosRPG is shutting down.')
+                await this.discord.destroy()
+            }
+        }
+
+        if (this.dbConnected) {
+            await this.gameDb.disconnect()
+        }
+
+        process.exit(0)
     }
 
     async init() {
@@ -130,6 +142,7 @@ class Game {
 
         this.discord.on('ready', () => { this.onReady() })
         this.discord.on('disconnect', reason => { this.onDiscordDisconnect(reason) })
+        this.discord.on('reconnecting', () => { this.onDiscordReconnecting() })
         this.discord.on('message', message => { this.onMessage(message) })
         this.discord.on('messageUpdate', (oldMessage, newMessage) => { this.onMessageUpdate(oldMessage, newMessage) })
         this.discord.on('messageReactionAdd', (reaction, user) => { this.onMessageReactionAdd(reaction, user) })
@@ -178,8 +191,6 @@ class Game {
                 console.log('caught', e)
                 return false
             })
-
-        process.exit(0)
     }
 
     syncinit() {
@@ -213,6 +224,10 @@ class Game {
         console.log(`DEBUG: disconnected ${reason.reason} (${reason.code})`)
     }
 
+    onDiscordReconnecting() {
+        this.discordConnected = false
+    }
+
     async onReady() {
         console.log('connected to discord')
 
@@ -220,48 +235,36 @@ class Game {
 
         this.discord.user.setActivity('ChaosRPG', { type: 'PLAYING' })
 
-        let settings = await this.gameDb.getSettings()
-        settings.guilds.map(async g => {
-            let guild = this.discord.guilds.get(g)
-            if (!guild) {
-                console.log('no guild record', g)
-                process.exit(1)
-                return
-            }
-
-            let guildSettings = await this.gameDb.getGuildSettings(guild.id)
-
-            let gameChannel = guild.channels.get(guildSettings.game_channel)
-            if (gameChannel) {
-
-            }
-
-            let debugChannel = guild.channels.get(guildSettings.debug_channel)
-            if (debugChannel) {
-                debugChannel.send('ChaosRPG is online.')
-            }
-        })
+        await this.broadcastMessage('ChaosRPG is online.')
     }
 
     async onMessage(message) {
         //console.log(message.content)
+        if (message.author.id === this.discord.user.id)
+            return
 
         let command = DiscordUtil.parseCommand(message)
         if (command) {
             console.log(`processing command ${command.name}`)
             await DiscordUtil.processCommand(command)
         }
+    }
 
-        if (message.author.id !== this.discord.user.id) {
-            //const emojiList = message.guild.emojis.map(e=>e.toString()).join(" ")
-            //if (emojiList) message.channel.send(emojiList)
+    async onMessageUpdate(oldMessage, newMessage) {
+        if (newMessage.author.id === this.discord.user.id)
+            return
+
+        let command = DiscordUtil.parseCommand(newMessage)
+        if (command) {
+            console.log(`processing command ${command.name}`)
+            await DiscordUtil.processCommand(command)
         }
     }
 
-    onMessageUpdate(oldMessage, newMessage) {
-    }
-
     async onMessageReaction(reaction, user, added) {
+        if (user.id === this.discord.user.id)
+            return
+
         let tracked = this.trackedCommands.get(reaction.message.id)
         if (!tracked) {
             return
@@ -356,6 +359,36 @@ class Game {
         return MonsterRarity.COMMON
     }
 
+    async broadcastMessage(message, debugOnly = false) {
+        if (!this.discordConnected)
+            return
+
+        if (!this.dbConnected)
+            return
+
+        let settings = await this.gameDb.getSettings()
+        await Promise.all(settings.guilds.map(async g => {
+            let guild = await this.discord.guilds.get(g)
+            if (!guild) {
+                console.log('no guild record', g)
+                process.exit(1)
+                    return
+                }
+
+                let guildSettings = await this.gameDb.getGuildSettings(guild.id)
+
+                let gameChannel = guild.channels.get(guildSettings.game_channel)
+                if (gameChannel && !debugOnly) {
+                    await gameChannel.send(message)
+                }
+
+                let debugChannel = guild.channels.get(guildSettings.debug_channel)
+                if (debugChannel) {
+                    await debugChannel.send(message)
+            }
+        }))
+    }
+
     // discord command handlers
 
     // administrative handlers
@@ -364,7 +397,11 @@ class Game {
     // TODO break this up into multiple commands, or at least some utility
     // functions to make it easier to deal with all of the cases
     async guildSettingsHandler() {
-        console.log('guild settings', this.args.length)
+        console.log('guild settings')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
+
         if (this.args.length >= 2) {
             let subCmd = this.args[0]
             let guildName = this.args[1]
@@ -477,6 +514,9 @@ class Game {
     async createPlayerHandler() {
         console.log('createPlayer')
 
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
+
         let settings = await this.ctx.gameDb.getSettings()
 
         let account = await this.ctx.gameDb.getAccount(this.message.guild.id, this.message.author.id)
@@ -519,8 +559,13 @@ class Game {
             return
         }
 
-        let playerData = PlayerUtil.create(type, 1, account.id, this.message.author.username)
-        console.log(settings)
+        let itemRngCtx = this.ctx.secureRng.getContext('item')
+        let starterItems = PlayerUtil.createStarterItems(itemRngCtx, type)
+        if (!starterItems) {
+            console.log('unable to create starter items')
+            process.exit(1)
+        }
+        let playerData = PlayerUtil.create(type, 1, account.id, this.message.author.username, starterItems)
 
         let player = await this.ctx.unit.prepareGeneratedUnit(playerData, settings)
         if (player) {
@@ -535,6 +580,9 @@ class Game {
     // lexical this is in the context of CommandHandler
     async deletePlayerHandler() {
         console.log('deletePlayer')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
 
         let settings = await this.ctx.gameDb.getSettings()
 
@@ -569,6 +617,9 @@ class Game {
     // lexical this is in the context of CommandHandler
     async spendStatsHandler() {
         console.log('spendStatPoints')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
 
         let settings = await this.ctx.gameDb.getSettings()
 
@@ -609,6 +660,9 @@ class Game {
     async characterHandler() {
         console.log('characterHandler')
 
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
+
         let settings = await this.ctx.gameDb.getSettings()
 
         let account = await this.ctx.gameDb.getAccount(this.message.guild.id, this.message.author.id)
@@ -632,6 +686,9 @@ class Game {
     // lexical this is in the context of CommandHandler
     async equipmentHandler() {
         console.log('deletePlayer')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
 
         let account = await this.ctx.gameDb.getAccount(this.message.guild.id, this.message.author.id)
         if (!account) {
@@ -660,6 +717,9 @@ class Game {
 
     async equipHandler() {
         console.log('equipHandler')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
 
         let settings = await this.ctx.gameDb.getSettings()
 
@@ -777,6 +837,12 @@ class Game {
                     .send(`<@${this.message.author.id}> ${slotDest} item has been dropped`).then(m => m.delete(10000))
 
             } else {
+                if (!UnitUtil.isItemEquippableInSlot(player, items, item, destDesc.node, destDesc.slot)) {
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Unable to equip item in slot due to wielding restrictions ${slotDest}`).then(m => m.delete(10000))
+                    return
+                }
+
                 if (!this.ctx.unit.unequipItem(player, items, item, srcDesc.node, srcDesc.slot)) {
                     this.message.channel
                         .send(`<@${this.message.author.id}> ${slotDest} failed unequipping item`).then(m => m.delete(10000))
@@ -813,18 +879,32 @@ class Game {
             let name = 'Empty'
             let desc = ''
             if (item) {
-                name = ItemUtil.getName(item.code)
-                if (!UnitUtil.itemRequirementsAreMet(unit, item))
-                    name += ' 🛑'
-                item.stats.map(s => {
-                    let entry = StatUtil.getStatTableEntry(s.id)
-                    desc += `(+${s.value}) ${entry.name_short}\n`
-                })
+                const rarity = ItemUtil.getItemRarityEntry(item.rarity)
+                name = `${rarity.name} ${ItemUtil.getName(item.code)} [T:${item.tier}]`
+                if (!UnitUtil.itemRequirementsAreMet(unit, item)) {
+                    name += '🛑'
+                    desc += 'Stat requirements not met, item requires:\n'
+                    const entry = ItemUtil.getItemTableEntry(item.code)
+                    entry.requirements.map(s => {
+                        const entry = StatUtil.getStatTableEntry(s.id)
+                        desc += `${s.value} ${entry.name_long}\n`
+                    })
+                } else {
+                    item.stats.map(s => {
+                        const entry = StatUtil.getStatTableEntry(s.id)
+                        desc += `(+${s.value}) ${entry.name_long}\n`
+                    })
+                    if (desc === '')
+                        desc = 'No stats'
+                }
                 desc = Markdown.c(desc, 'prolog')
             }
-            let nodeEntry = sNode.id === Storage.EQUIPMENT.id ? Storage.EQUIPMENT : Storage.INVENTORY
-            let slotName = nodeEntry.descriptor[slotIdx].name
-            embed.addField(`*${slotName}*`, `**\`${name}\`**\n**${desc}**`, true)
+            if (desc === '')
+                desc = 'None'
+
+            const nodeEntry = sNode.id === Storage.EQUIPMENT.id ? Storage.EQUIPMENT : Storage.INVENTORY
+            const slotName = nodeEntry.descriptor[slotIdx].name
+            embed.addField(`*${slotName}* **\`${name}\`**`, `${desc}`)
             slotIdx++
         })
 
@@ -939,48 +1019,49 @@ class Game {
         units.push(online.pop())
 
         let pvp = false
-        if (online.length > 1) {
-            let diff = Math.abs(online[online.length-1].level-units[0].level)
-            let range = Math.round(units[0].level * 0.1)
-            if (range <= diff && SecureRNG.getRandomInt(rngCtx, 0, 127) === 127)
-                pvp = true
+        const wantPvp = SecureRNG.getRandomInt(rngCtx, 0, 127) === 127
+        if (wantPvp) {
+            online.map(o => {
+                const diff = Math.abs(o.level-units[0].level)
+                const range = Math.round(units[0].level * 0.1)+1
+                if (!pvp && diff <= range) {
+                    pvp = true
+                    units.push(o)
+                }
+            })
         }
-
-        let monsterRarity = MonsterRarity.COMMON
 
         if (pvp) {
             console.log('pvp combat selected')
-
-            units.push(online.pop())
         } else {
             console.log('monster combat selected')
 
-            let settings = await this.gameDb.getSettings()
-            let monsterRngCtx = this.secureRng.getContext('monster')
+            const settings = await this.gameDb.getSettings()
+            const monsterRngCtx = this.secureRng.getContext('monster')
             if (!monsterRngCtx) {
                 console.log('unable to get monster RNG context')
                 return null
             }
 
             let magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
-            monsterRarity = Game.getFightMonsterRarity(magic)
+            const monsterRarity = Game.getFightMonsterRarity(magic)
 
             let shuffledTable = SecureRNG.shuffleSequence(monsterRngCtx, Object.values(MonsterTable))
 
             // generate a monster
             const range = 1 + Math.round(units[0].level * 0.1)
             const code = shuffledTable.shift().code
-            const diff = SecureRNG.getRandomInt(rngCtx, -range, range)
+            const diff = SecureRNG.getRandomInt(rngCtx, -(range*2), range)
             const level = Math.max(1, units[0].level+diff)
 
             console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
 
-            let monsterData = this.monster.generate(monsterRngCtx, code, level, Tier.TIER1.id, monsterRarity.id)
+            const monsterData = this.monster.generate(monsterRngCtx, code, level, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
                 return null
             }
-            let monster = await this.unit.prepareGeneratedUnit(monsterData, settings)
+            const monster = await this.unit.prepareGeneratedUnit(monsterData, settings)
             units.push(monster)
         }
 
@@ -1028,13 +1109,20 @@ class Game {
                     r.type === CombatEventType.MONSTER_DAMAGE.id) {
                 let total = r.data.physical + r.data.magic
 
-                let out = `dealt ${total} (${r.data.physical}|${r.data.magic})\n`
+                let out = `took ${total} (${r.data.physical}|${r.data.magic})\n`
 
                 if (r.attacker.id === combatContext.unitA.id) {
-                    dmgA += out
-                } else {
                     dmgB += out
+                } else {
+                    dmgA += out
                 }
+            }
+
+            if (r.type === CombatEventType.BLOCK.id) {
+                if (r.attacker.id === combatContext.unitA.id)
+                    dmgA += 'blocked'
+                else
+                    dmgB += 'blocked'
             }
 
             if (r.type === CombatEventType.PLAYER_DEATH.id ||
@@ -1062,9 +1150,6 @@ class Game {
 
                 if (r.defender.type === UnitType.MONSTER.id) {
                     // Monster death Vs. player
-
-                    // TODO item drops
-
                     console.log('removing monster')
                     this.gameDb.removeUnit(r.defender)
                 } else if (r.attacker.type === UnitType.MONSTER.id &&
@@ -1130,9 +1215,9 @@ class Game {
         // Okay, here we need to iterate through each guild configured guild,
         // check the current game state of that guild
         let settings = await this.gameDb.getSettings()
-        settings.guilds.map(async g => {
+        await Promise.all(settings.guilds.map(async g => {
             console.log(g)
-            let guild = this.discord.guilds.get(g)
+            let guild = await this.discord.guilds.get(g)
             let guildSettings = await this.gameDb.getGuildSettings(guild.id)
             if (!guildSettings) {
                 console.log('expected guild not found')
@@ -1140,7 +1225,7 @@ class Game {
             }
 
             //console.log('guild', g, guildSettings)
-            const channel = this.discord.channels.get(guildSettings.game_channel)
+            const channel = await this.discord.channels.get(guildSettings.game_channel)
             if (!channel) {
                 if (guildSettings.game_channel !== '') {
                     console.log('could not get configured channel', guildSettings.game_channel)
@@ -1188,7 +1273,7 @@ class Game {
                 let combatContext = new CombatContext(this, guild.id, ...units)
                 this.combatContexts.set(guild.id, combatContext)
             }
-        })
+        }))
 
         return true
     }
@@ -1241,7 +1326,7 @@ class Game {
         await settings.save()
 
         while (!this.interrupt) {
-            await this.sleep(1*5000, async loop => { await this.loop() })
+            await this.sleep(1*2500, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')

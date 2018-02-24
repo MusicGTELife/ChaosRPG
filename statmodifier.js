@@ -28,8 +28,8 @@ StatModifier.HP_PER_VIT =
 StatModifier.ATK_PER_STR =
     _(0x0030, [ StatTable.STR.id ], [ StatTable.ATK.id ],
     "Attack rating per", StatResolver.add, 2)
-StatModifier.DEF_PER_DEX =
-    _(0x0031, [ StatTable.DEX.id ], [ StatTable.DEF.id ],
+StatModifier.DEF_PER_STR =
+    _(0x0031, [ StatTable.STR.id ], [ StatTable.DEF.id ],
     "Defense per", StatResolver.add, 2)
 
 StatModifier.MATK_PER_INT =
@@ -40,12 +40,12 @@ StatModifier.MDEF_PER_INT =
     "Magic defence per", StatResolver.add, 2)
 
 StatModifier.ACCURACY =
-    _(0x0060, [ StatTable.DEX.id, StatTable.STR.id ], [ StatTable.ACCURACY.id ],
-    "Accuracy", StatResolver.add, 2)
+    _(0x0060, [ StatTable.DEX.id ], [ StatTable.ACCURACY.id ],
+    "Accuracy", StatResolver.add, 20)
 
 StatModifier.REACTION =
-    _(0x0061, [ StatTable.DEX.id, StatTable.VIT.id ], [ StatTable.REACTION.id ],
-    "Reaction", StatResolver.add, 1)
+    _(0x0061, [ StatTable.DEX.id ], [ StatTable.REACTION.id ],
+    "Reaction", StatResolver.add, 2)
 
 /*
 StatModifier.BASE_ATK =

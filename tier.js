@@ -1,15 +1,15 @@
-function createTierEntry(id, name, ilvlMin, ilvlMax, statCounts) {
+function createTierEntry(id, name, levelMin, levelMax, statCounts) {
     return {
         id,
         name,
-        ilvl_min: ilvlMin,
-        ilvl_max: ilvlMax,
+        level_min: levelMin,
+        level_max: levelMax,
         stat_counts: statCounts
     }
 }
 
 const Tier = {}
-Tier.TIER0 = createTierEntry(0x00, "Tier 0", 0, 1, [ 0, 0, 0 ])
+Tier.TIER0 = createTierEntry(0x00, "Tier 0", 0, 0, [ 0, 0, 0 ])
 Tier.TIER1 = createTierEntry(0x01, "Tier 1", 1, 11, [ 0, 0, 1 ])
 Tier.TIER2 = createTierEntry(0x02, "Tier 2", 12, 22, [ 0, 0, 1 ])
 Tier.TIER3 = createTierEntry(0x03, "Tier 3", 23, 33, [ 0, 0, 2 ])
