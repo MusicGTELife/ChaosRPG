@@ -129,4 +129,4 @@ class DiscordUtil {
     }
 }
 
-module.exports = { Markdown, DiscordUtil, TrackedCommand }
+module.exports = { Markdown, DiscordUtil, Command, TrackedCommand }
