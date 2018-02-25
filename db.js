@@ -29,7 +29,7 @@ class GameDb {
     }
 
     async disconnect() {
-        await this.db.connection.close().then(await this.db.disconnect())
+        await this.db.disconnect()
     }
 
     async createSettings(settingsObj) {

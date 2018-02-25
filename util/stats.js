@@ -62,7 +62,7 @@ class StatUtil {
     }
 
     static getModifiers() {
-        let mods = Object.values(StatModifier).sort((a,b) => a.id-b.id)
+        let mods = Object.values(StatModifier).sort((a, b) => a.id-b.id)
         return mods
     }
 

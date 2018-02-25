@@ -312,13 +312,12 @@ class CombatContext {
         let blocked = false
         if (block.value) {
             let magic  = SecureRNG.getRandomInt(this.rngCtx, 0, 100)
-            if (magic < block.value)
+            if (magic <= block.value)
                 blocked = true
         }
-        console.log('block', block.value)
 
         if (blocked) {
-            console.log('blocked', this.attacker.name, this.defender.name)
+            //console.log('blocked', this.attacker.name, this.defender.name)
 
             eventType = CombatEventType.BLOCK.id
             let event = new CombatEvent(this.attacker, this.defender, eventType)
@@ -333,10 +332,8 @@ class CombatContext {
         let pCrit = false
         if (atk.value && pAcc > 0.99) {
             pCrit = true
-            console.log('phys crit', atk.value)
             const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
             atk.value = Math.round(atk.value*(1+roll/10000))
-            console.log('phys crit2', atk.value, roll/10000)
         }
 
         pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
@@ -344,10 +341,8 @@ class CombatContext {
         let mCrit = false
         if (matk.value && pAcc > 0.99) {
             mCrit = true
-            console.log('magic crit', matk.value)
             const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
             matk.value = Math.round(matk.value*(1+roll/10000))
-            console.log('magic crit2', matk.value, roll/10000)
         }
 
         let physDmg = this.resolveDamageDealt(atk, def)
@@ -473,7 +468,7 @@ class CombatContext {
 
     resolveDamageDealt(attack, defense) {
         //const pDef = defense.value/100
-        let dmg = Math.ceil(attack.value*attack.value / (attack.value+defense.value*0.5))
+        let dmg = Math.ceil(attack.value * attack.value/(attack.value+defense.value*0.1))
         if (dmg < 0) {
             console.log('negative damage', dmg, attack, defense)
             process.exit()

@@ -115,7 +115,7 @@ class MonsterUtil extends UnitUtil {
         const entry = MonsterUtil.getMonsterTableEntry(monster.descriptor.code)
         let exp = entry.base_experience
         if (monster.level > 1)
-            exp = Math.pow(exp*(monster.level-1), 1.15)
+            exp = Math.pow(exp*(monster.level-1), 1.16)
 
         return Math.floor(exp)
     }

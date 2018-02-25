@@ -60,7 +60,6 @@ class ItemUtil {
     }
 
     static getItemRarityEntry(rarity) {
-        console.log('rarity', rarity)
         return Object.values(ItemRarity).find(e => e.id === rarity)
     }
 
@@ -69,7 +68,6 @@ class ItemUtil {
         if (entry)
             return entry.name
 
-        console.log('rarityEntry', entry)
         return ItemRarity.INFERIOR.name
     }
 

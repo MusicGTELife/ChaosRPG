@@ -71,24 +71,21 @@ class Game {
         this.trackedCommands = new Map()
 
         this.timerInterval = null
-        this.syncinit()
     }
 
     async destroy() {
         console.log('connections', this.discordConnected, this.dbConnected)
 
         if (this.discordConnected) {
-            if (this.dbConnected) {
-                await this.broadcastMessage('ChaosRPG is shutting down.')
-                await this.discord.destroy()
-            }
+            await this.broadcastMessage('ChaosRPG is shutting down.')
+            await this.discord.destroy()
+            this.discordConnected = false
         }
 
         if (this.dbConnected) {
             await this.gameDb.disconnect()
+            this.dbConnected = false
         }
-
-        process.exit(0)
     }
 
     async init() {
@@ -163,7 +160,7 @@ class Game {
     }
 
     syncinit() {
-        this.init()
+        return new Promise(resolve => this.init())
     }
 
     timeout(ms) {
@@ -1160,3 +1157,4 @@ class Game {
 }
 
 const game = new Game(Config)
+game.syncinit()
