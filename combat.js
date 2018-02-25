@@ -6,6 +6,8 @@ const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
 const { Unit: UnitModel } = require('./models')
 const { Storage } = require('./storage')
+const { MonsterRarity } = require('./monsterrarity.js')
+const { MonsterTable } = require('./monstertable')
 
 const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
@@ -47,7 +49,7 @@ class Damage {
 
     getDamage() {
         return {
-            physical, magic
+            physical: this.physical, magic: this.magic
         }
     }
 }
@@ -68,12 +70,13 @@ class CombatEvent {
 }
 
 class CombatContext {
-    constructor(game, guild, unitA, unitB) {
+    constructor(game, guild) {
+        this.inCombat = false
         this.game = game
         this.guild = guild
 
-        this.unitA = unitA
-        this.unitB = unitB
+        this.unitA = null
+        this.unitB = null
 
         this.attacker = null
         this.defender = null
@@ -141,6 +144,105 @@ class CombatContext {
         return true
     }
 
+    // FIXME move this somewhere else
+    static getFightMonsterRarity(value) {
+        if (value >= MonsterRarity.SUPERBOSS.rarity)
+            return MonsterRarity.SUPERBOSS
+        else if (value >= MonsterRarity.BOSS.rarity)
+            return MonsterRarity.BOSS
+        else if (value >= MonsterRarity.UNIQUE.rarity)
+            return MonsterRarity.UNIQUE
+        else if (value >= MonsterRarity.RARE.rarity)
+            return MonsterRarity.RARE
+        else if (value >= MonsterRarity.MAGIC.rarity)
+            return MonsterRarity.MAGIC
+
+        return MonsterRarity.COMMON
+    }
+
+    async getUnitsForCombat(online) {
+        let rngCtx = this.game.secureRng.getContext('combat')
+        if (!rngCtx) {
+            console.log('unable to get combat RNG context')
+            return null
+        }
+
+        if (!online || online.length < 1) {
+            console.log('not enough online players, skipping combat')
+            return null
+        }
+
+        if (online.length > 1)
+            online = SecureRNG.shuffleSequence(rngCtx, online)
+
+        await Promise.all(online.map(async u => {
+            //if (!UnitUtil.isAlive(u)) {
+                // NOTE just temporary
+                console.log('resurrecting player unit')
+                StatUtil.setStat(u.stats, StatTable.UNIT_HP.id,
+                    StatUtil.getStat(u.stats, StatTable.UNIT_HP_MAX.id).value)
+
+                u = await UnitModel.findOneAndUpdate(
+                    { id: u.id },
+                    { stats: u.stats },
+                    { new: true }
+                )
+            //}
+        }))
+
+        let units = []
+        units.push(online.pop())
+
+        let pvp = false
+        const wantPvp = SecureRNG.getRandomInt(rngCtx, 0, 127) === 127
+        if (wantPvp) {
+            online.map(o => {
+                const diff = Math.abs(o.level-units[0].level)
+                const range = Math.round(units[0].level * 0.1)+1
+                if (!pvp && diff <= range) {
+                    pvp = true
+                    units.push(o)
+                }
+            })
+        }
+
+        if (pvp) {
+            console.log('pvp combat selected')
+        } else {
+            console.log('monster combat selected')
+
+            const settings = await this.game.gameDb.getSettings()
+            const monsterRngCtx = this.game.secureRng.getContext('monster')
+            if (!monsterRngCtx) {
+                console.log('unable to get monster RNG context')
+                return null
+            }
+
+            let magic = SecureRNG.getRandomInt(rngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
+            const monsterRarity = CombatContext.getFightMonsterRarity(magic)
+
+            let shuffledTable = SecureRNG.shuffleSequence(monsterRngCtx, Object.values(MonsterTable))
+
+            // generate a monster
+            const range = 1 + Math.round(units[0].level * 0.1)
+            const code = shuffledTable.shift().code
+            const diff = SecureRNG.getRandomInt(rngCtx, -(range*2), range)
+            const level = Math.max(1, units[0].level+diff)
+
+            console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
+
+            const monsterData = this.game.monster.generate(monsterRngCtx, code, level, monsterRarity.id)
+            if (!monsterData) {
+                console.log('failed creating a monster')
+                return null
+            }
+            const monster = await this.game.unit.prepareGeneratedUnit(monsterData, settings)
+            units.push(monster)
+        }
+
+        return units
+    }
+
     async resolveRound() {
         if (!UnitUtil.isAlive(this.unitA)) {
             console.log('unit is dead, but was expected to be alive')
@@ -151,9 +253,6 @@ class CombatContext {
             console.log('unit is dead, but was expected to be alive')
             return null
         }
-
-        //this.unitA = await this.game.gameDb.getUnit(this.unitA.id)
-        //this.unitB = await this.game.gameDb.getUnit(this.unitB.id)
 
         this.setFirstAttacker()
 
@@ -211,8 +310,12 @@ class CombatContext {
         let defendReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, defendReact.value)
 
         let blocked = false
-        if (block.value)
-            blocked = SecureRNG.getRandomInt(0, 100) > 100-block.value
+        if (block.value) {
+            let magic  = SecureRNG.getRandomInt(this.rngCtx, 0, 100)
+            if (magic < block.value)
+                blocked = true
+        }
+        console.log('block', block.value)
 
         if (blocked) {
             console.log('blocked', this.attacker.name, this.defender.name)
@@ -227,13 +330,33 @@ class CombatContext {
         // units accuracy roll
         let pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
         atk.value = Math.ceil((baseAtk.value + baseAtk.value*atk.value/100)*pAcc)
+        let pCrit = false
+        if (atk.value && pAcc > 0.99) {
+            pCrit = true
+            console.log('phys crit', atk.value)
+            const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
+            atk.value = Math.round(atk.value*(1+roll/10000))
+            console.log('phys crit2', atk.value, roll/10000)
+        }
 
         pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
         matk.value = Math.ceil((baseMAtk.value + baseMAtk.value*matk.value/100)*pAcc)
+        let mCrit = false
+        if (matk.value && pAcc > 0.99) {
+            mCrit = true
+            console.log('magic crit', matk.value)
+            const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
+            matk.value = Math.round(matk.value*(1+roll/10000))
+            console.log('magic crit2', matk.value, roll/10000)
+        }
 
         let physDmg = this.resolveDamageDealt(atk, def)
         let magicDmg = this.resolveDamageDealt(matk, mdef)
-        let dmg = new Damage(physDmg, magicDmg)
+        let dmg = new Damage(
+            { damage: physDmg, is_crit: pCrit },
+            { damage: magicDmg, is_crit: mCrit }
+        )
+
         UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
         this.defender = await UnitModel.findOneAndUpdate({ id: this.defender.id },
             { stats: this.defender.stats },
@@ -259,16 +382,18 @@ class CombatContext {
 
         let defIsPlayer = this.defender.type === UnitType.PLAYER.id
 
-        let eventType = CombatEventType.MONSTER_DEATH.id
+        let deathEvent = CombatEventType.MONSTER_DEATH.id
         if (defIsPlayer)
-            eventType = CombatEventType.PLAYER_DEATH.id
+            deathEvent = CombatEventType.PLAYER_DEATH.id
 
+        let eventType = deathEvent
         let event = new CombatEvent(this.attacker, this.defender, eventType)
         events.push(event)
 
         if (defIsPlayer) {
             // TODO add experience deduction on player and a small chance of
             // item loss on death
+            this.inCombat = false
             return events
         }
 
@@ -290,8 +415,10 @@ class CombatContext {
         }
 
         let monsterItems = await this.game.unit.getItems(this.defender)
-        if (!monsterItems)
+        if (!monsterItems) {
+            this.inCombat = false
             return events
+        }
 
         // Drop items
         let equipped = false
@@ -333,6 +460,9 @@ class CombatContext {
             return i.save()
         }))
 
+        await this.game.gameDb.removeUnit(this.defender)
+        this.inCombat = false
+
         this.attacker.markModified('stats')
         this.attacker.markModified('storage')
         this.attacker.markModified('descriptor')
@@ -358,10 +488,9 @@ class CombatContext {
 
     getHitAccuracyRoll(unit, accuracy) {
         // Scale attack down according to accuracy roll
-        //let pAcc = Math.round(accuracy/10)
         let pAcc = SecureRNG.getRandomInt(this.rngCtx, accuracy, 10000)
-
         let acc = Math.max(1, pAcc/100)
+
         //console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${acc}`)
         return acc
     }

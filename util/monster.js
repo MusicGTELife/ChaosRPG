@@ -115,7 +115,7 @@ class MonsterUtil extends UnitUtil {
         const entry = MonsterUtil.getMonsterTableEntry(monster.descriptor.code)
         let exp = entry.base_experience
         if (monster.level > 1)
-            exp = Math.pow(exp*(monster.level-1), 1.14)
+            exp = Math.pow(exp*(monster.level-1), 1.15)
 
         return Math.floor(exp)
     }
@@ -203,26 +203,26 @@ class MonsterUtil extends UnitUtil {
         unit.stats.map(e => {
             let statEntry = StatUtil.getStatTableEntry(e.id)
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
-                let statBonus = e.value *
-                    (Math.pow(level, 1.125) *
-                    (1+tierEntry.id*0.2) *
-                    (1+rarity*0.2)) / 10
+                if (statEntry.id !== StatTable.BASE_ATK.id && statEntry.id !== StatTable.BASE_MATK.id) {
+                    let statBonus = e.value + e.value *
+                        (Math.pow(level, 1.12) *
+                        (1+tierEntry.id*0.25) *
+                        (1+rarity*0.25)) / 10
 
-                if (statEntry.id === StatTable.BASE_ATK.id || statEntry.id === StatTable.BASE_MATK.id)
-                    statBonus = tierEntry.id
-
-                StatUtil.setStat(unit.stats, e.id, Math.round(e.value+statBonus))
+                    statBonus = Math.round(statBonus)
+                    StatUtil.setStat(unit.stats, e.id, statBonus)
+                }
             }
         })
 
         // FIXME move to datatable
         let monsterItems = ({
-            [MonsterRarity.COMMON.id]: { min: 1, max: 2},
-            [MonsterRarity.MAGIC.id]: { min: 2, max: 3},
-            [MonsterRarity.RARE.id]: { min: 3, max: 4},
-            [MonsterRarity.UNIQUE.id]: { min: 4, max: 5},
-            [MonsterRarity.BOSS.id]: { min: 5, max: 7},
-            [MonsterRarity.SUPERBOSS.id]: { min: 6, max: 8},
+            [MonsterRarity.COMMON.id]: { min: 2, max: 3},
+            [MonsterRarity.MAGIC.id]: { min: 3, max: 4},
+            [MonsterRarity.RARE.id]: { min: 4, max: 5},
+            [MonsterRarity.UNIQUE.id]: { min: 5, max: 6},
+            [MonsterRarity.BOSS.id]: { min: 6, max: 7},
+            [MonsterRarity.SUPERBOSS.id]: { min: 7, max: 8},
         })[rarity] || null
         if (!monsterItems)
             return null
@@ -281,8 +281,7 @@ class MonsterUtil extends UnitUtil {
         // same item subclass from being selected
         let secondarySelected = false
         for (let i = 0; i < remaining; i++) {
-            let magic = SecureRNG.getRandomInt(monsterRngCtx, 0, remaining)
-            if (!secondarySelected && !isTwoHanded && magic === remaining) {
+            if (!secondarySelected && !isTwoHanded) {
                 // generate a second weapon if the monster can dual wield and the
                 // primary weapon is not two-handed or, generate a shield, quiver or
                 // spellbook for casters based upon the first items type

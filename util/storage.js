@@ -29,6 +29,11 @@ class StorageUtil {
         return storage
     }
 
+    static getNodeName(nodeId) {
+        let entry = Object.values(Storage).find(s => s.id === nodeId)
+        return entry.name
+    }
+
     static getSlotName(slotId) {
         let entry = Object.values(Storage).find(s => s.descriptor.id === slotId)
         return entry.name

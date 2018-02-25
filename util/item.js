@@ -125,7 +125,7 @@ class ItemUtil {
     }
 
     static getAdjustedStat(value, tier, rarity) {
-        return value *= Math.round(1+((rarity-1)*0.25)+((tier-1)*0.25))
+        return value = Math.round(value * (1+((rarity-1)*0.25)+((tier-1)*0.25)))
     }
 
     static rollItemStat(itemRngCtx, min, max) {
@@ -182,15 +182,14 @@ class ItemUtil {
 
         // Add implicit mods on items
         tableEntry.implicit_stats.map(m => {
-            let increased = m
-            increased.min = ItemUtil.getAdjustedStat(m.min, tier, rarity)
-            increased.max = ItemUtil.getAdjustedStat(m.max, tier, rarity)
+            let min = ItemUtil.getAdjustedStat(m.min, tier, rarity)
+            let max = ItemUtil.getAdjustedStat(m.max, tier, rarity)
 
-            let magic = ItemUtil.rollItemStat(itemRngCtx, increased.min, increased.max)
+            let magic = ItemUtil.rollItemStat(itemRngCtx, min, max)
             let stat = StatUtil.createDescriptor(m.id, magic)
 
             item.stats.push(stat)
-            //console.log('added implicit mod', stat)
+            console.log('added implicit stat magic m increased tier rarity', stat.id, magic, m, min, max, tier, rarity)
         })
 
         if (tableEntry.is_starter_item) {
@@ -292,7 +291,7 @@ class ItemUtil {
                 itemEntry.item_sub_class === WeaponClass.CASTING_2H)
     }
 
-    static isWeaponOrShieldType(item) {
+    static isShieldClass(item) {
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -300,10 +299,21 @@ class ItemUtil {
             return false
         }
 
-        return ItemUtil.isWeapon(item) || (itemEntry.item_class === ItemClass.ARMOR &&
+        return itemEntry.item_class === ItemClass.ARMOR &&
                 (itemEntry.item_sub_class === ArmorClass.SHIELD ||
                 itemEntry.item_sub_class === ArmorClass.SPELLBOOK ||
-                itemEntry.item_sub_class === ArmorClass.QUIVER))
+                itemEntry.item_sub_class === ArmorClass.QUIVER)
+    }
+
+    static isWeaponOrShield(item) {
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item table entry')
+            process.exit(1)
+            return false
+        }
+
+        return ItemUtil.isWeapon(item) || ItemUtil.isShieldClass(item)
     }
 }
 

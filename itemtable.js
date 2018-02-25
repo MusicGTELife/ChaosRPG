@@ -76,6 +76,7 @@ ItemTable.FACE_MASK = _(0x0401, "Mask", SF.INVENTORY|SF.HEAD, IC.ARMOR, AC.HELME
     [ CR(ST.DEX.id, 2), CR(ST.STR.id, 3) ], [ CI(ST.DEF.id, 5, 10), CI(ST.MDEF.id, 5, 10) ],
     false
 )
+
 ItemTable.LIGHT_GLOVES = _(0x0500, "Light Gloves", SF.INVENTORY|SF.HANDS, IC.ARMOR, AC.GLOVES,
     [ CR(ST.STR.id, 1), CR(ST.DEX.id, 2) ], [ CI(ST.DEF.id, 5, 10) ],
     false
@@ -84,10 +85,16 @@ ItemTable.CHAIN_GLOVES = _(0x0510, "Chain Gloves", SF.INVENTORY|SF.HANDS, IC.ARM
     [ CR(ST.STR.id, 3), CR(ST.DEX.id, 4) ], [ CI(ST.DEF.id, 10, 15) ],
     false
 )
+
 ItemTable.CHAIN_BOOTS = _(0x0580, "Chain Boots", SF.INVENTORY|SF.FEET, IC.ARMOR, AC.BOOTS,
-    [ CR(ST.STR.id, 3), CR(ST.DEX.id, 4) ], [ CI(ST.DEF.id, 10, 15) ],
+    [ CR(ST.STR.id, 3), CR(ST.DEX.id, 4) ], [ CI(ST.DEF.id, 10, 20) ],
     false
 )
+ItemTable.SILK_BOOTS = _(0x0581, "Silk Boots", SF.INVENTORY|SF.FEET, IC.ARMOR, AC.BOOTS,
+    [ CR(ST.INT.id, 6), CR(ST.DEX.id, 4) ], [ CI(ST.DEF.id, 5, 10), CI(ST.MDEF.id, 5, 10) ],
+    false
+)
+
 ItemTable.CHAINMAIL = _(0x05a0, "Chainmail", SF.INVENTORY|SF.BODY, IC.ARMOR, AC.BODY_ARMOR,
     [ CR(ST.STR.id, 8), CR(ST.DEX.id, 4) ], [ CI(ST.DEF.id, 15, 30) ],
     false
@@ -102,11 +109,11 @@ ItemTable.SMALL_SHIELD = _(0x0600, "Small Shield", SF.INVENTORY|SF.ARM, IC.ARMOR
     false
 )
 ItemTable.APPRENTICE_BOOK = _(0x0700, "Apprentice's Spell Book", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.SPELLBOOK,
-    [ CR(ST.INT.id, 4), CR(ST.VIT.id, 4) ], [ CI(ST.BASE_MATK.id, 2, 3), CI(ST.BLOCK.id, 3, 5) ],
+    [ CR(ST.INT.id, 4), CR(ST.VIT.id, 4) ], [ CI(ST.BASE_MATK.id, 3, 5), CI(ST.BLOCK.id, 3, 5) ],
     false
 )
 ItemTable.QUIVER = _(0x0800, "Quiver", SF.INVENTORY|SF.ARM, IC.ARMOR, AC.QUIVER,
-    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 4) ], [ CI(ST.BASE_ATK.id, 2, 3), CI(ST.ACCURACY.id, 20, 50) ],
+    [ CR(ST.DEX.id, 5), CR(ST.STR.id, 4) ], [ CI(ST.BASE_ATK.id, 3, 5), CI(ST.ACCURACY.id, 20, 50) ],
     false
 )
 

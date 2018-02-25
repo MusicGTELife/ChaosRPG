@@ -1,0 +1,13 @@
+{
+  "parserOptions": {
+    "ecmaVersion": 2017,
+    "ecmaFeatures": {
+      "impliedStrict": true
+    }
+  },
+  "env": {
+    "node": true,
+    "es6": true
+  }
+}
+

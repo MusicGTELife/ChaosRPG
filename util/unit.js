@@ -195,22 +195,24 @@ class UnitUtil {
             return false
         }
 
-        const isWeaponOrShieldType = ItemUtil.isWeaponOrShieldType(item)
-        if (isWeaponOrShieldType) {
+        const isWeaponOrShield = ItemUtil.isWeaponOrShield(item)
+        if (isWeaponOrShield) {
             const currArmRId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_R)
             const currArmLId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_L)
 
             let currArmR = null
+            let currArmREntry = null
             let currArmL = null
+            let currArmLEntry = null
 
             if (currArmRId) {
                 currArmR = items.find(i => i.id === currArmRId)
-                const currArmREntry = ItemUtil.getItemTableEntry(currArmR.code)
+                currArmREntry = ItemUtil.getItemTableEntry(currArmR.code)
             }
 
             if (currArmLId) {
                 currArmL = items.find(i => i.id === currArmLId)
-                const currArmLEntry = ItemUtil.getItemTableEntry(currArmL.code)
+                currArmLEntry = ItemUtil.getItemTableEntry(currArmL.code)
             }
 
             if (ItemUtil.isTwoHanded(item) && (currArmR || currArmL)) {
@@ -294,13 +296,20 @@ class UnitUtil {
                 }
             }
 
-            if (itemEntry.item_class === ItemClass.ARMOR) {
-                if (currArmR && !ItemUtil.isWeapon(currArmR))
-                    return false
+            if (ItemUtil.isShieldClass(item)) {
+                if (itemEntry.item_sub_class === ItemClass.SHIELD) {
+                    if (currArmR && !ItemUtil.isWeapon(currArmR) ||
+                            ItemUtil.isShieldClass(currArmR))
+                        return false
 
-                if (currArmL && !ItemUtil.isWeapon(currArmL))
-                    return false
+                    if (currArmL && !ItemUtil.isWeapon(currArmL) ||
+                            ItemUtil.isShieldClass(currArmL))
+                        return false
+
+                }
             }
+
+            console.log('arm item passed filter', itemEntry, currArmREntry, currArmLEntry)
         }
 
         return StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
@@ -575,7 +584,7 @@ class UnitUtil {
                 SU.getStat(resolved, ST.MDEF.id).value)
 
         SU.setStat(unit.stats, ST.UNIT_BLOCK.id,
-                SU.getStat(resolved, ST.BLOCK.id).value)
+                SU.getStat(stats, ST.BLOCK.id).value)
         SU.setStat(unit.stats, ST.UNIT_ACCURACY.id,
                 SU.getStat(resolved, ST.ACCURACY.id).value)
         SU.setStat(unit.stats, ST.UNIT_REACTION.id,
