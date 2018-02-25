@@ -52,6 +52,33 @@ class CommandHandler {
     }
 }
 
+class TrackedCommand {
+    constructor(tracked, command, timeout) {
+        this.tracked = tracked
+        this.command = command
+        this.timeout = timeout
+        this.response = null
+
+        this.timer = setTimeout(() => { this.deleter() }, timeout)
+    }
+
+    deleter() {
+        console.log('timer expired')
+        if (this.command.response) {
+            this.tracked.delete(this.command.response.id)
+            this.command.response.delete()
+            console.log('response deleted')
+        }
+    }
+
+    refresh(timeout) {
+        this.timeout = timeout
+        clearTimeout(this.timer)
+        this.timer = setTimeout(() => { this.deleter() }, timeout)
+        console.log('timer refreshed')
+    }
+}
+
 class DiscordUtil {
     static getCommandEntry(name) {
         return Object.values(Commands).find(c => c.name === name.toLowerCase())
@@ -102,4 +129,4 @@ class DiscordUtil {
     }
 }
 
-module.exports = { Markdown, DiscordUtil }
+module.exports = { Markdown, DiscordUtil, TrackedCommand }

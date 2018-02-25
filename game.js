@@ -27,7 +27,7 @@ const { Monster, MonsterType } = require('./monster')
 const { Unit: UnitModel } = require('./models')
 
 // utility classes
-const { Markdown, DiscordUtil } = require('./util/discord')
+const { Markdown, TrackedCommand, Command, DiscordUtil } = require('./util/discord')
 const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
 const { ItemUtil } = require('./util/item')
@@ -39,33 +39,6 @@ const DebugLevel = { }
 DebugLevel.NONE = 0x00
 DebugLevel.INFO = 0x01
 DebugLevel.WARN = 0x02
-
-class TrackedCommand {
-    constructor(tracked, command, timeout) {
-        this.tracked = tracked
-        this.command = command
-        this.timeout = timeout
-        this.response = null
-
-        this.timer = setTimeout(() => { this.deleter() }, timeout)
-    }
-
-    deleter() {
-        console.log('timer expired')
-        if (this.command.response) {
-            this.tracked.delete(this.command.response.id)
-            this.command.response.delete()
-            console.log('response deleted')
-        }
-    }
-
-    refresh(timeout) {
-        this.timeout = timeout
-        clearTimeout(this.timer)
-        this.timer = setTimeout(() => { this.deleter() }, timeout)
-        console.log('timer refreshed')
-    }
-}
 
 // TODO move base application parts to their own module
 class Game {
@@ -276,18 +249,12 @@ class Game {
         }
 
         let account = await this.gameDb.getAccount(tracked.command.message.guild.id, tracked.command.message.author.id)
-        if (!account) {
-            reaction.message.channel
-                .send(`<@${tracked.command.message.author.id}> No account found`).then(m => m.delete(10000))
+        if (!account)
             return
-        }
 
         let player = await this.gameDb.getUnitByAccount(account.id)
-        if (!player) {
-            reaction.message.channel
-                .send(`<@${tracked.command.message.author.id}> No character found`).then(m => m.delete(10000))
+        if (!player)
             return
-        }
 
         //console.log(reaction.emoji)
 
