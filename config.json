@@ -1,14 +1,16 @@
 {
     "token": "",
-    "mode": "test",
     "db": {
-        "host": "mongodb://localhost/game",
-        "options": {
-        }
-    },
-    "test_db": {
-        "host": "mongodb://localhost/game-localtest",
-        "options": {
+        "active": "test",
+        "production": {
+            "host": "mongodb://localhost/game",
+            "options": {
+            }
+        },
+        "test": {
+            "host": "mongodb://localhost/game-localtest",
+            "options": {
+            }
         }
     }
 }

@@ -73,10 +73,6 @@ class Game {
         this.token = config.token || ''
 
         this.debugLevel = config.debug_level || DebugLevel.NONE
-        this.isLocalTest = config.mode === "test"
-        this.isProduction = config.mode === "production"
-        if (!this.isLocalTest && !this.isProduction)
-            throw new Error('invalid configurtion mode')
 
         this.discordConnected = false
         this.dbConnected = false
@@ -85,7 +81,9 @@ class Game {
         this.discord = new Discord.Client()
         this.md = new Markdown()
 
-        let db = this.isLocalTest ? config.test_db : config.db
+        let db = config.db[config.db.active]
+        if (!db)
+            throw new Error('Invalid database configuration')
         this.gameDb = new GameDb(db.host, db.options)
 
         this.item = new ItemUtil(this)
