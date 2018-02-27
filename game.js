@@ -126,6 +126,7 @@ class Game {
         DiscordUtil.setCommandHandler('player', this, this.playerInfoHandler)
         DiscordUtil.setCommandHandler('gear', this, this.gearHandler)
         DiscordUtil.setCommandHandler('equip', this, this.equipHandler)
+        DiscordUtil.setCommandHandler('drop', this, this.dropHandler)
 
         const combatRngCtx = new SecureRNGContext('combat secret')
         if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
@@ -645,115 +646,202 @@ class Game {
 
             this.message.channel
                 .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
+        }
+
+        if (this.args.length < 0 | this.args.length > 2) {
+            console.log('bad args', this.args)
+            this.message.channel
+                .send(`<@${this.message.author.id}> Invalid arguments`).then(m => m.delete(10000))
+            return
+        }
+
+        let slotSrc = this.args[0].toLowerCase()
+        let slotDest = this.args[1].toLowerCase()
+
+        // okay, we are dealing with valid slot names, but we need to turn
+        // them into slot descriptors
+        let srcDesc = null
+        let destDesc = null
+
+        Object.values(Storage).map(n => {
+            let src = n.descriptor.find(d => d.name.toLowerCase() === slotSrc)
+            if (src && !srcDesc)
+                srcDesc = { node: n.id, slot: src.id }
+
+            let dest = n.descriptor.find(d => d.name.toLowerCase() === slotDest)
+            if (dest && !destDesc)
+                destDesc = { node: n.id, slot: dest.id }
+        })
+
+        // now it's time to check the slots
+        // first check if the source slot contains an item
+        if (!srcDesc) {
+            console.log('no source item descriptor')
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotSrc} is not a valid slot`).then(m => m.delete(10000))
+            return
+        }
+
+        if (!destDesc) {
+            console.log('no dest item descriptor')
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotDest} is not a valid slot`).then(m => m.delete(10000))
+            return
+        }
+
+        // then check if the destination slot is empty and can contain the
+        // source item
+        let srcItemId = StorageUtil.getSlot(player.storage, srcDesc.node, srcDesc.slot)
+        if (!srcItemId) {
+            console.log(player.storage, srcDesc)
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotSrc} contains no item`).then(m => m.delete(10000))
+            return
+        }
+
+        let destItemId = StorageUtil.getSlot(player.storage, destDesc.node, destDesc.slot)
+        if (destItemId) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotDest} already contains an item, move it first`).then(m => m.delete(10000))
+            return
+        }
+
+        let items = await this.ctx.unit.getItems(player)
+        let item = items.find(i => i.id === srcItemId)
+        if (!item) {
+            console.log(srcItemId, player.storage)
+            console.log('failed looking up src item')
+            process.exit(1)
+        }
+
+        if (!UnitUtil.isItemEquippableInSlot(player, items, item, destDesc.node, destDesc.slot)) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> Unable to equip item in slot due to wielding restrictions ${slotDest}`).then(m => m.delete(10000))
+            return
+        }
+
+        if (!this.ctx.unit.unequipItem(player, items, item, srcDesc.node, srcDesc.slot)) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotDest} failed unequipping item`).then(m => m.delete(10000))
+            return
+        }
+
+        if (!this.ctx.unit.equipItem(player, items, item, destDesc.node, destDesc.slot)) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slotDest} failed equipping item`).then(m => m.delete(10000))
+            return
+        }
+
+        this.message.channel
+            .send(`<@${this.message.author.id}> ${slotDest} item has been equipped`).then(m => m.delete(10000))
+
+        items = await this.ctx.player.getItems(player)
+
+        await UnitUtil.computeBaseStats(player, items)
+        player.markModified('stats')
+        player.markModified('storage')
+        await player.save()
+    }
+
+    async dropHandler() {
+        console.log('dropHandler')
+
+        if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
+            this.message.delete(10000)
+
+        let accountRecords = await this.ctx.getAccountRecords(
+            this.message.guild.id, this.message.author.id
+        )
+
+        if (!accountRecords.account) {
+           this.message.channel
+                .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+            return
+        }
+        if (!accountRecords.unit) {
+           this.message.channel
+                .send(`<@${this.message.author.id}> No character found`).then(m => m.delete(10000))
+            return
+        }
+        const player = accountRecords.unit
+
+        if (this.args.length === 0) {
+            let slotNames = Object.values(Storage).map(s => {
+                return s.descriptor.map(d => d.name)
+            })
+
+            let pos = 0
+            let slotString = ''
+            slotNames.map(s => {
+                slotString += s
+                if (pos != slotNames.length-1)
+                    slotString += ', '
+                else
+                    slotString += '.'
+                pos++
+            })
+
+            this.message.channel
+                .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
         } else {
-            if (this.args.length !== 2) {
+            if (this.args.length !== 1) {
                 console.log('bad args', this.args)
                 return
             }
 
-            let slotSrc = this.args[0].toLowerCase()
-            let slotDest = this.args[1].toLowerCase()
+            let slot = this.args[0].toLowerCase()
 
-            // okay, we are dealing with valid slot names, but we need to turn
-            // them into slot descriptors
-            let srcDesc = null
-            let destDesc = null
+            // okay, we are dealing with a valid slot name, but we need to turn
+            // it into a slot descriptor
+            let slotDesc = null
 
             Object.values(Storage).map(n => {
-                let src = n.descriptor.find(d => d.name.toLowerCase() === slotSrc)
-                if (src && !srcDesc)
-                    srcDesc = { node: n.id, slot: src.id }
-
-                let dest = n.descriptor.find(d => d.name.toLowerCase() === slotDest)
-                if (dest && !destDesc)
-                    destDesc = { node: n.id, slot: dest.id }
+                let slotDescriptor = n.descriptor.find(d => d.name.toLowerCase() === slot)
+                if (slotDescriptor && !slotDesc)
+                    slotDesc = { node: n.id, slot: slotDescriptor.id }
             })
 
             // now it's time to check the slots
             // first check if the source slot contains an item
-            if (!srcDesc) {
+            if (!slotDesc) {
                 console.log('no source item descriptor')
                 this.message.channel
-                    .send(`<@${this.message.author.id}> ${slotSrc} is not a valid slot`).then(m => m.delete(10000))
+                    .send(`<@${this.message.author.id}> ${slot} is not a valid slot`).then(m => m.delete(10000))
                 return
             }
 
-            if (!destDesc && slotDest !== 'ground') {
-                console.log('no dest item descriptor')
+            let slotItemId = StorageUtil.getSlot(player.storage, slotDesc.node, slotDesc.slot)
+            if (!slotItemId) {
+                console.log(player.storage, slotDesc, slotItemId)
                 this.message.channel
-                    .send(`<@${this.message.author.id}> ${slotDest} is not a valid slot`).then(m => m.delete(10000))
+                    .send(`<@${this.message.author.id}> ${slot} contains no item`).then(m => m.delete(10000))
                 return
-            }
-
-            // then check if the destination slot is empty and can contain the
-            // source item
-            let srcItemId = StorageUtil.getSlot(player.storage, srcDesc.node, srcDesc.slot)
-            if (!srcItemId) {
-                console.log(player.storage, srcDesc)
-                this.message.channel
-                    .send(`<@${this.message.author.id}> ${slotSrc} contains no item`).then(m => m.delete(10000))
-                return
-            }
-
-            let destItemId = 0
-            if (slotDest !== 'ground') {
-                destItemId = StorageUtil.getSlot(player.storage, destDesc.node, destDesc.slot)
-
-                if (destItemId) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> ${slotDest} already contains an item, move it first`).then(m => m.delete(10000))
-                    return
-                }
             }
 
             let items = await this.ctx.unit.getItems(player)
-            let item = items.find(i => i.id === srcItemId)
+            let item = items.find(i => i.id === slotItemId)
             if (!item) {
                 console.log(srcItemId, player.storage)
-                console.log('failed looking up src item')
+                console.log('failed looking up item')
                 process.exit(1)
             }
 
-            if (slotDest === 'ground') {
-                if (!this.ctx.unit.unequipItem(player, items, item, srcDesc.node, srcDesc.slot)) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> ${slotDest} failed unequipping item`).then(m => m.delete(10000))
-                    return
-                }
-
-                item.owner = 0
-                await item.remove()
+            if (!this.ctx.unit.unequipItem(player, items, item, slotDesc.node, slotDesc.slot)) {
                 this.message.channel
-                    .send(`<@${this.message.author.id}> ${slotDest} item has been dropped`).then(m => m.delete(10000))
-
-            } else {
-                if (!UnitUtil.isItemEquippableInSlot(player, items, item, destDesc.node, destDesc.slot)) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Unable to equip item in slot due to wielding restrictions ${slotDest}`).then(m => m.delete(10000))
-                    return
-                }
-
-                if (!this.ctx.unit.unequipItem(player, items, item, srcDesc.node, srcDesc.slot)) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> ${slotDest} failed unequipping item`).then(m => m.delete(10000))
-                    return
-                }
-
-                if (!this.ctx.unit.equipItem(player, items, item, destDesc.node, destDesc.slot)) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> ${slotDest} failed equipping item`).then(m => m.delete(10000))
-                    return
-                }
-
-                this.message.channel
-                    .send(`<@${this.message.author.id}> ${slotDest} item has been equipped`).then(m => m.delete(10000))
+                    .send(`<@${this.message.author.id}> ${slot} failed unequipping item`).then(m => m.delete(10000))
+                return
             }
+
+            await item.remove()
             items = await this.ctx.player.getItems(player)
 
             await UnitUtil.computeBaseStats(player, items)
             player.markModified('stats')
             player.markModified('storage')
             await player.save()
+
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slot} item has been dropped`).then(m => m.delete(10000))
         }
     }
 

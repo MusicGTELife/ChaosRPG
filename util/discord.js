@@ -37,7 +37,9 @@ Commands.DELETE_PLAYER = C("delete", 0, 0, false, null, null)
 Commands.PLAYER_INFO = C("player", 0, 2, false, null, null)
 Commands.EQUIPMENT = C("gear", 0, 0, false, null, null)
 Commands.EQUIP = C("equip", 0, 2, false, null, null)
+Commands.DROP = C("drop", 0, 1, false, null, null)
 
+// TODO|FIXME unity command and tracked command
 class CommandHandler {
     constructor(name, ctx, func, args, message) {
         this.name = name
