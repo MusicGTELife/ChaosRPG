@@ -629,29 +629,11 @@ class Game {
         const player = accountRecords.unit
 
         if (this.args.length === 0) {
-            let slotNames = Object.values(Storage).map(s => {
-                return s.descriptor.map(d => d.name)
-            })
-
-            let pos = 0
-            let slotString = ''
-            slotNames.map(s => {
-                slotString += s
-                if (pos != slotNames.length-1)
-                    slotString += ', '
-                else
-                    slotString += '.'
-                pos++
-            })
+            const slotNames = StorageUtil.getSlotNames()
+            const slotString = this.ctx.makeSlotNamesString(slotNames)
 
             this.message.channel
                 .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
-        }
-
-        if (this.args.length < 0 | this.args.length > 2) {
-            console.log('bad args', this.args)
-            this.message.channel
-                .send(`<@${this.message.author.id}> Invalid arguments`).then(m => m.delete(10000))
             return
         }
 
@@ -766,83 +748,87 @@ class Game {
         const player = accountRecords.unit
 
         if (this.args.length === 0) {
-            let slotNames = Object.values(Storage).map(s => {
-                return s.descriptor.map(d => d.name)
-            })
-
-            let pos = 0
-            let slotString = ''
-            slotNames.map(s => {
-                slotString += s
-                if (pos != slotNames.length-1)
-                    slotString += ', '
-                else
-                    slotString += '.'
-                pos++
-            })
+            const slotNames = StorageUtil.getSlotNames()
+            const slotString = this.ctx.makeSlotNamesString(slotNames)
 
             this.message.channel
                 .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
-        } else {
-            if (this.args.length !== 1) {
-                console.log('bad args', this.args)
-                return
-            }
-
-            let slot = this.args[0].toLowerCase()
-
-            // okay, we are dealing with a valid slot name, but we need to turn
-            // it into a slot descriptor
-            let slotDesc = null
-
-            Object.values(Storage).map(n => {
-                let slotDescriptor = n.descriptor.find(d => d.name.toLowerCase() === slot)
-                if (slotDescriptor && !slotDesc)
-                    slotDesc = { node: n.id, slot: slotDescriptor.id }
-            })
-
-            // now it's time to check the slots
-            // first check if the source slot contains an item
-            if (!slotDesc) {
-                console.log('no source item descriptor')
-                this.message.channel
-                    .send(`<@${this.message.author.id}> ${slot} is not a valid slot`).then(m => m.delete(10000))
-                return
-            }
-
-            let slotItemId = StorageUtil.getSlot(player.storage, slotDesc.node, slotDesc.slot)
-            if (!slotItemId) {
-                console.log(player.storage, slotDesc, slotItemId)
-                this.message.channel
-                    .send(`<@${this.message.author.id}> ${slot} contains no item`).then(m => m.delete(10000))
-                return
-            }
-
-            let items = await this.ctx.unit.getItems(player)
-            let item = items.find(i => i.id === slotItemId)
-            if (!item) {
-                console.log(srcItemId, player.storage)
-                console.log('failed looking up item')
-                process.exit(1)
-            }
-
-            if (!this.ctx.unit.unequipItem(player, items, item, slotDesc.node, slotDesc.slot)) {
-                this.message.channel
-                    .send(`<@${this.message.author.id}> ${slot} failed unequipping item`).then(m => m.delete(10000))
-                return
-            }
-
-            await item.remove()
-            items = await this.ctx.player.getItems(player)
-
-            await UnitUtil.computeBaseStats(player, items)
-            player.markModified('stats')
-            player.markModified('storage')
-            await player.save()
-
-            this.message.channel
-                .send(`<@${this.message.author.id}> ${slot} item has been dropped`).then(m => m.delete(10000))
+            return
         }
+
+        if (this.args.length !== 1) {
+            console.log('bad args', this.args)
+            return
+        }
+
+        let slot = this.args[0].toLowerCase()
+
+        // okay, we are dealing with a valid slot name, but we need to turn
+        // it into a slot descriptor
+        let slotDesc = null
+
+        Object.values(Storage).map(n => {
+            let slotDescriptor = n.descriptor.find(d => d.name.toLowerCase() === slot)
+            if (slotDescriptor && !slotDesc)
+                slotDesc = { node: n.id, slot: slotDescriptor.id }
+        })
+
+        // now it's time to check the slots
+        // first check if the source slot contains an item
+        if (!slotDesc) {
+            console.log('no source item descriptor')
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slot} is not a valid slot`).then(m => m.delete(10000))
+            return
+        }
+
+        let slotItemId = StorageUtil.getSlot(player.storage, slotDesc.node, slotDesc.slot)
+        if (!slotItemId) {
+            console.log(player.storage, slotDesc, slotItemId)
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slot} contains no item`).then(m => m.delete(10000))
+            return
+        }
+
+        let items = await this.ctx.unit.getItems(player)
+        let item = items.find(i => i.id === slotItemId)
+        if (!item) {
+            console.log(srcItemId, player.storage)
+            console.log('failed looking up item')
+            process.exit(1)
+        }
+
+        if (!this.ctx.unit.unequipItem(player, items, item, slotDesc.node, slotDesc.slot)) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> ${slot} failed unequipping item`).then(m => m.delete(10000))
+            return
+        }
+
+        await item.remove()
+        items = await this.ctx.player.getItems(player)
+
+        await UnitUtil.computeBaseStats(player, items)
+        player.markModified('stats')
+        player.markModified('storage')
+        await player.save()
+
+        this.message.channel
+            .send(`<@${this.message.author.id}> ${slot} item has been dropped`).then(m => m.delete(10000))
+    }
+
+    makeSlotNamesString(slotNames) {
+        let pos = 0
+        let slotString = ''
+        slotNames.map(s => {
+            slotString += s
+            if (pos != slotNames.length-1)
+                slotString += ', '
+            else
+                slotString += '.'
+            pos++
+        })
+
+        return slotString
     }
 
     async getAccountRecords(guildId, discordUserId) {
