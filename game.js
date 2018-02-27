@@ -351,110 +351,82 @@ class Game {
         if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
             this.message.delete(10000)
 
-        if (this.args.length >= 2) {
-            let subCmd = this.args[0]
-            let guildName = this.args[1]
+        if (this.args.length < 2 || this.args.length > 4)
+            return
 
-            const guild = this.ctx.discord.guilds.find('name', guildName)
-            if (!guild) {
-                console.log(`I am not in ${guildName}`)
-                this.message.channel
+        let subCmd = this.args[0]
+        let guildName = this.args[1]
+
+        const guild = this.ctx.discord.guilds.find('name', guildName)
+        if (!guild) {
+            console.log(`I am not in ${guildName}`)
+            this.message.channel
                     .send(`<@${this.message.author.id}> I am not in guild ${guildName}`).then(m => m.delete(10000))
-                return
-            }
-
-            let settings = await this.ctx.gameDb.getSettings()
-
-            if (subCmd === 'add' && this.args.length <= 4) {
-                console.log('add', guildName)
-
-                if (settings.guilds.find(g => g.guild === guildName)) {
-                    console.log('already exists')
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Settings already exist for ${guildName}`).then(m => m.delete(10000))
-                } else {
-                    let gameChannel = this.args[2] || ''
-                    let debugChannel = this.args[3] || ''
-
-                    let game = null
-                    let debug = null
-
-                    let isChannel = function(channel) {
-                        if (channel === '')
-                            return false
-                        return channel.match(/(<?#?(\d+)>?)/, '$2') !== null
-                    }
-
-                    if (gameChannel !== '') {
-                        if (isChannel(gameChannel)) {
-                            gameChannel = gameChannel.replace(/(<?#?(\d+)>?)/, '$2')
-                            game = guild.channels.get(gameChannel)
-                        }
-                        if (!game)
-                            game = guild.channels.find('name', gameChannel)
-                        if (!game) {
-                            this.message.channel
-                                .send(`<@${this.message.author.id}> Unable to lookup channel ${gameChannel}`).then(m => m.delete(10000))
-                            return
-                        }
-                    }
-
-                    if (debugChannel !== '') {
-                        if (isChannel(debugChannel)) {
-                            debugChannel = debugChannel.replace(/(<?#?(\d+)>?)/, '$2')
-                            debug = guild.channels.get(debugChannel)
-                        }
-                        if (!debug)
-                            debug = guild.channels.find('name', debugChannel)
-                        if (!debug) {
-                            this.message.channel
-                                .send(`<@${this.message.author.id}> Unable to lookup channel ${debugChannel}`).then(m => m.delete(10000))
-                            return
-                        }
-                    }
-
-                    let guildSettings = Guild.createSettings(
-                        guild.id, game ? game.id : '', debug ? debug.id : '', '', 0
-                    )
-                    await this.ctx.gameDb.createGuildSettings(guildSettings)
-                    settings.guilds.push(guild.id)
-                    await settings.save()
-
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
-                }
-
-                return
-            } else if (subCmd === 'remove') {
-                console.log('remove')
-
-                await this.ctx.gameDb.removeGuildSettings(guildName)
-                return
-            } else if (subCmd === 'debug') {
-                if (args.length === 2) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
-                } else {
-                }
-
-                return
-            } else if (subCmd === 'game') {
-                let guildSettings = this.ctx.gameDb.getGuildSettings()
-                if (args.length === 2) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
-
-                } else {
-                }
-
-                return
-            }
-
-            console.log('invalid sub-command')
             return
         }
 
-        console.log(settings)
+        let settings = await this.ctx.gameDb.getSettings()
+
+        if (subCmd === 'add') {
+            console.log('add', guildName)
+
+            if (settings.guilds.find(g => g.guild === guildName)) {
+                console.log('already exists')
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Settings already exist for ${guildName}`).then(m => m.delete(10000))
+            } else {
+                let gameChannel = this.args[2] || ''
+                let debugChannel = this.args[3] || ''
+
+                let game = DiscordUtil.guildHasChannel(guild, gameChannel)
+                if (!game) {
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Unable to lookup channel ${gameChannel}`).then(m => m.delete(10000))
+                    return
+                }
+
+                let debug = DiscordUtil.guildHasChannel(guild, debugChannel)
+                if (!debug) {
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Unable to lookup channel ${debugChannel}`).then(m => m.delete(10000))
+                    return
+                }
+
+                let guildSettings = Guild.createSettings(
+                    guild.id, game ? game.id : '', debug ? debug.id : '', '', 0
+                )
+                await this.ctx.gameDb.createGuildSettings(guildSettings)
+                settings.guilds.push(guild.id)
+                await settings.save()
+
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
+            }
+
+            return
+        } else if (subCmd === 'remove') {
+            console.log('remove')
+
+            await this.ctx.gameDb.removeGuildSettings(guildName)
+            return
+        } else if (subCmd === 'debug') {
+            if (args.length === 2) {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
+            }
+
+            return
+        } else if (subCmd === 'game') {
+            let guildSettings = this.ctx.gameDb.getGuildSettings()
+            if (args.length === 2) {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
+            }
+
+            return
+        }
+
+        console.log(subCmd, 'settings', settings, guildSettings)
     }
 
     // unprivileged command handlers
