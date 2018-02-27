@@ -323,18 +323,18 @@ class Game {
                 console.log('no guild record', g)
                 process.exit(1)
                     return
-                }
+            }
 
-                let guildSettings = await this.gameDb.getGuildSettings(guild.id)
+            let guildSettings = await this.gameDb.getGuildSettings(guild.id)
 
-                let gameChannel = guild.channels.get(guildSettings.game_channel)
-                if (gameChannel && !debugOnly) {
-                    await gameChannel.send(message)
-                }
+            let gameChannel = guild.channels.get(guildSettings.game_channel)
+            if (gameChannel && !debugOnly) {
+                await gameChannel.send(message)
+            }
 
-                let debugChannel = guild.channels.get(guildSettings.debug_channel)
-                if (debugChannel) {
-                    await debugChannel.send(message)
+            let debugChannel = guild.channels.get(guildSettings.debug_channel)
+            if (debugChannel) {
+                await debugChannel.send(message)
             }
         }))
     }
