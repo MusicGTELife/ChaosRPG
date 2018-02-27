@@ -35,7 +35,7 @@ Commands.GUILD = C("guild", 0, 4, true, null, null)
 Commands.CREATE_PLAYER = C("create", 0, 1, false, null, null)
 Commands.DELETE_PLAYER = C("delete", 0, 0, false, null, null)
 Commands.PLAYER_INFO = C("player", 0, 2, false, null, null)
-Commands.EQUIPMENT = C("equipment", 0, 0, false, null, null)
+Commands.EQUIPMENT = C("gear", 0, 0, false, null, null)
 Commands.EQUIP = C("equip", 0, 2, false, null, null)
 
 class CommandHandler {

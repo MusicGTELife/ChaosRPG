@@ -124,7 +124,7 @@ class Game {
         DiscordUtil.setCommandHandler('create', this, this.createPlayerHandler)
         DiscordUtil.setCommandHandler('delete', this, this.deletePlayerHandler)
         DiscordUtil.setCommandHandler('player', this, this.playerInfoHandler)
-        DiscordUtil.setCommandHandler('equipment', this, this.equipmentHandler)
+        DiscordUtil.setCommandHandler('gear', this, this.gearHandler)
         DiscordUtil.setCommandHandler('equip', this, this.equipHandler)
 
         const combatRngCtx = new SecureRNGContext('combat secret')
@@ -255,7 +255,7 @@ class Game {
 
         //console.log(reaction.emoji)
 
-        if (tracked.command.name === 'equipment') {
+        if (tracked.command.name === 'gear') {
             tracked.refresh(tracked.timeout)
 
             if (reaction.emoji.name === '⚔') {
@@ -601,8 +601,8 @@ class Game {
     }
 
     // lexical this is in the context of CommandHandler
-    async equipmentHandler() {
-        console.log('equipmentHandler')
+    async gearHandler() {
+        console.log('gearHandler')
 
         if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
             this.message.delete(10000)
@@ -1143,7 +1143,7 @@ class Game {
                 if (!activeCombat)
                     break
             }
-            await this.sleep(1*5000, async loop => { await this.loop() })
+            await this.sleep(1*10000, async loop => { await this.loop() })
         }
 
         console.log('run loop terminating')

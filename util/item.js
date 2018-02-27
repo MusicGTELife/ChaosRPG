@@ -373,8 +373,8 @@ class ItemUtil {
         if (ItemUtil.isMelee(item))
             return true
 
-        if (entry.item_class === ItemClass.ARMOR &&
-                entry.item_sub_class === ArmorClass.SHIELD)
+        if (itemEntry.item_class === ItemClass.ARMOR &&
+                itemEntry.item_sub_class === ArmorClass.SHIELD)
             return true
 
         return false
@@ -411,9 +411,9 @@ class ItemUtil {
         if (ItemUtil.isCasting(item))
             return true
 
-        if (entry.item_class === ItemClass.ARMOR &&
-                (entry.item_sub_class === ArmorClass.SHIELD ||
-                entry.item_sub_class === ArmorClass.SPELLBOOK))
+        if (itemEntry.item_class === ItemClass.ARMOR &&
+                (itemEntry.item_sub_class === ArmorClass.SHIELD ||
+                itemEntry.item_sub_class === ArmorClass.SPELLBOOK))
             return true
 
         return false
@@ -450,8 +450,8 @@ class ItemUtil {
         if (ItemUtil.isRangedCasting(item))
             return false
 
-        if (entry.item_class === ItemClass.ARMOR &&
-                entry.item_sub_class === ArmorClass.QUIVER)
+        if (itemEntry.item_class === ItemClass.ARMOR &&
+                itemEntry.item_sub_class === ArmorClass.QUIVER)
             return true
 
         return false
