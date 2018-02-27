@@ -440,10 +440,10 @@ class CombatContext {
             let equipSuccess = this.game.unit.equipItem(this.attacker, null, i, slot.id, slot.slot)
             if (!equipSuccess) {
                 console.log('unable to equip item in empty inv slot')
-                this.game.gameDb.removeItem(i)
-                process.exit(1)
 
                 // no storage slot available, the item burns
+                this.game.gameDb.removeItem(i)
+                process.exit(1)
             }
 
             eventType = CombatEventType.MONSTER_ITEM_DROP.id

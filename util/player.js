@@ -172,17 +172,10 @@ class PlayerUtil extends UnitUtil {
 
         unit.markModified('descriptor')
         unit.markModified('stats')
-        await UnitModel.findOneAndUpdate({ id: unit.id },
+        unit = await UnitModel.findOneAndUpdate({ id: unit.id },
             { stats: unit.stats, descriptor: unit.descriptor },
             { new: true }
         )
-
-
-        newVal = StatUtil.getStat(unit.stats, statId)
-        if (newVal.value === current.value) {
-            console.log('no write after update')
-            process.exit(1)
-        }
 
         return unit
     }

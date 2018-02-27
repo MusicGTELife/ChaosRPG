@@ -205,7 +205,7 @@ class MonsterUtil extends UnitUtil {
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
                 if (statEntry.id !== StatTable.BASE_ATK.id && statEntry.id !== StatTable.BASE_MATK.id) {
                     let statBonus = e.value + e.value *
-                        (Math.pow(level, 1.12) *
+                        (Math.pow(level, 1.11) *
                         (1+tierEntry.id*0.25) *
                         (1+rarity*0.25)) / 10
 

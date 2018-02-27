@@ -52,6 +52,7 @@ class CommandHandler {
     }
 }
 
+// TODO|FIXME timer cancellation
 class TrackedCommand {
     constructor(tracked, command, timeout) {
         this.tracked = tracked

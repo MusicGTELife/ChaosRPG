@@ -313,6 +313,112 @@ class ItemUtil {
 
         return ItemUtil.isWeapon(item) || ItemUtil.isShieldClass(item)
     }
+
+    static isMelee1HCompatible(item) {
+        if (!item) {
+            // A null item signifies an empty slot and hence compatibility
+            return true
+        }
+
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item entry')
+            process.exit(1)
+            return false
+        }
+
+        if (!ItemUtil.isWeaponOrShield(item))
+            return false
+
+        if (ItemUtil.isTwoHanded(item))
+            return false
+
+        if (ItemUtil.isMelee(item))
+            return true
+
+        if (entry.item_class === ItemClass.ARMOR &&
+                entry.item_sub_class === ArmorClass.SHIELD)
+            return true
+
+        return false
+    }
+
+    static isMelee2HCompatible(item) {
+        if (!item) {
+            // A null item signifies an empty slot and hence compatibility
+            return true
+        }
+
+        return false
+    }
+
+    static isCasting1HCompatible(item) {
+        if (!item) {
+            // A null item signifies an empty slot and hence compatibility
+            return true
+        }
+
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item entry')
+            process.exit(1)
+            return false
+        }
+
+        if (!ItemUtil.isWeaponOrShield(item))
+            return false
+
+        if (ItemUtil.isTwoHanded(item))
+            return false
+
+        if (ItemUtil.isCasting(item))
+            return true
+
+        if (entry.item_class === ItemClass.ARMOR &&
+                (entry.item_sub_class === ArmorClass.SHIELD ||
+                entry.item_sub_class === ArmorClass.SPELLBOOK))
+            return true
+
+        return false
+    }
+
+    static isCasting2HCompatible(item) {
+        if (!item) {
+            // A null item signifies an empty slot and hence compatibility
+            return true
+        }
+
+        return false
+    }
+
+    static isRangedCompatible(item) {
+        if (!item) {
+            // A null item signifies an empty slot and hence compatibility
+            return true
+        }
+
+        const itemEntry = ItemUtil.getItemTableEntry(item.code)
+        if (!itemEntry) {
+            console.log('no item entry')
+            process.exit(1)
+            return false
+        }
+
+        if (!ItemUtil.isWeaponOrShield(item))
+            return false
+
+        if (ItemUtil.isTwoHanded(item))
+            return false
+
+        if (ItemUtil.isRangedCasting(item))
+            return false
+
+        if (entry.item_class === ItemClass.ARMOR &&
+                entry.item_sub_class === ArmorClass.QUIVER)
+            return true
+
+        return false
+    }
 }
 
 module.exports = { ItemUtil }

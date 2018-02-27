@@ -182,6 +182,16 @@ class UnitUtil {
         return valid
     }
 
+    static getArmItems(unit, items) {
+        const currArmRId = StorageUtil.getSlot(unit.storage, Storage.EQUIPMENT.id, Slots.ARM_R)
+        const currArmLId = StorageUtil.getSlot(unit.storage, Storage.EQUIPMENT.id, Slots.ARM_L)
+
+        return {
+            arm_right: items.find(i => i.d === currArmRId) || null,
+            arm_left: items.find(i => i.d === currArmLId) || null
+        }
+    }
+
     static isItemEquippableInSlot(unit, items, item, node, slot) {
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
@@ -190,129 +200,74 @@ class UnitUtil {
             return false
         }
 
-        if (StorageUtil.isSlotOccupied(unit.storage, node, slot)) {
-            console.log('slotOccupied')
+        let slotInfo = StorageUtil.getItemLocation(unit.storage, item.id)
+        if (!slotInfo) {
+            console.log('no slot info found for item', item)
             return false
         }
 
+        if (slotInfo.node === node && slotInfo.slot === slot) {
+            console.log('item dest is src, no-op')
+            return true
+        }
+
+        const canEquip = StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
+        if (!canEquip) {
+            console.log('unable to equip generally')
+            return false
+        }
+
+        const willSwap = StorageUtil.isSlotOccupied(unit.storage, node, slot)
         const isWeaponOrShield = ItemUtil.isWeaponOrShield(item)
+        if (!isWeaponOrShield)
+            return true
+
         if (isWeaponOrShield) {
-            const currArmRId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_R)
-            const currArmLId = StorageUtil.getSlot(unit.storage, node, Slots.ARM_L)
-
-            let currArmR = null
-            let currArmREntry = null
-            let currArmL = null
-            let currArmLEntry = null
-
-            if (currArmRId) {
-                currArmR = items.find(i => i.id === currArmRId)
-                currArmREntry = ItemUtil.getItemTableEntry(currArmR.code)
+            let armItems = UnitUtil.getArmItems(unit, items)
+            if (!armItems.arm_right && !armItems.arm_left) {
+                return true
             }
 
-            if (currArmLId) {
-                currArmL = items.find(i => i.id === currArmLId)
-                currArmLEntry = ItemUtil.getItemTableEntry(currArmL.code)
+            let rightArmEntry = null
+            let leftArmEntry = null
+            if (armItems.arm_right) {
+                rightArmEntry = ItemUtil.getItemTableEntry(armItems.arm_right.code)
+            }
+            if (armItems.arm_left) {
+                leftArmEntry = ItemUtil.getItemTableEntry(armItems.arm_left.code)
             }
 
-            if (ItemUtil.isTwoHanded(item) && (currArmR || currArmL)) {
+            if (ItemUtil.isTwoHanded(item) && (armItems.arm_right || armItems.arm_left)) {
                 console.log('can\'t dual wield two handed')
                 return false
             }
 
-            if (ItemUtil.isTwoHanded(item) && currArmR && ItemUtil.isTwoHanded(currArmR))
-                return false
-
-            if (ItemUtil.isTwoHanded(item) && currArmL && ItemUtil.isTwoHanded(currArmL))
-                return false
-
             if (ItemUtil.isMelee(item)) {
-                if (currArmR) {
-                    if (ItemUtil.isWeapon(currArmR) && !ItemUtil.isMelee(currArmR)) {
-                        console.log('can\'t mix types')
-                        return false
-                    }
-
-                    const entry = currArmR
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            entry.item_sub_class !== ArmorClass.SHIELD)
-                        return false
-                }
-
-                if (currArmL) {
-                    if (ItemUtil.isWeapon(currArmL) && !ItemUtil.isMelee(currArmL)) {
-                        console.log('can\'t mix types')
-                        return false
-                    }
-
-                    const entry = currArmL
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            entry.item_sub_class !== ArmorClass.SHIELD)
-                        return false
-                }
+                if (!ItemUtil.isMelee1HCompatible(armItems.arm_right) ||
+                        !ItemUtil.isMelee1HCompatible(armItems.arm_left))
+                    return false
             }
 
             if (ItemUtil.isCasting(item)) {
-                if (currArmR) {
-                    if (ItemUtil.isWeapon(currArmR) && !ItemUtil.isCasting(currArmR)) {
-                        console.log('can\'t mix types')
-                        return false
-                    }
-
-                    const entry = currArmR
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            (entry.item_sub_class !== ArmorClass.SHIELD ||
-                            entry.item_sub_class !== ArmorClass.SPELLBOOK))
-                        return false
-                }
-
-                if (currArmL) {
-                    if (ItemUtil.isWeapon(currArmL) && !ItemUtil.isCasting(currArmL)) {
-                        console.log('can\'t mix types')
-                        return false
-                    }
-
-                    const entry = currArmL
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            (entry.item_sub_class !== ArmorClass.SHIELD ||
-                            entry.item_sub_class !== ArmorClass.SPELLBOOK))
-                        return false
-                }
+                if (!ItemUtil.isCasting1HCompatible(armItems.arm_right) ||
+                        !ItemUtil.isCasting1HCompatible(armItems.arm_left))
+                    return false
             }
 
             if (ItemUtil.isRanged(item)) {
-                if (currArmR) {
-                    const entry = currArmR
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            entry.item_sub_class !== ArmorClass.QUIVER)
-                        return false
-                }
-
-                if (currArmL) {
-                    const entry = currArmR
-                    if (entry.item_class === ItemClass.ARMOR &&
-                            entry.item_sub_class !== ArmorClass.QUIVER)
-                        return false
-                }
+                if (!ItemUtil.isRangedCompatible(armItems.arm_right) ||
+                        !ItemUtil.isRangedCompatible(armItems.arm_left))
+                    return false
             }
 
-            if (ItemUtil.isShieldClass(item)) {
-                if (itemEntry.item_sub_class === ItemClass.SHIELD) {
-                    if (currArmR && !ItemUtil.isWeapon(currArmR) ||
-                            ItemUtil.isShieldClass(currArmR))
-                        return false
-
-                    if (currArmL && !ItemUtil.isWeapon(currArmL) ||
-                            ItemUtil.isShieldClass(currArmL))
-                        return false
-
-                }
-            }
-
-            console.log('arm item passed filter', itemEntry, currArmREntry, currArmLEntry)
+            console.log(
+                'arm item passed filter',
+                itemEntry, armItems.arm_right, armItems.arm_left
+            )
+            return true
         }
 
-        return StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
+        return false
     }
 
     static itemRequirementsAreMet(unit, item) {
@@ -589,8 +544,6 @@ class UnitUtil {
                 SU.getStat(resolved, ST.ACCURACY.id).value)
         SU.setStat(unit.stats, ST.UNIT_REACTION.id,
                 SU.getStat(resolved, ST.REACTION.id).value)
-
-        //console.log(stats, itemStats, '->', resolved, unit.stats)
 
         // save else where once things settle a bit
         unit.markModified('stats')

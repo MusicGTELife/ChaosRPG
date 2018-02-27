@@ -51,6 +51,27 @@ class StorageUtil {
         return entry.descriptor.find(sd => sd.id === slotId)
     }
 
+    static getItemLocation(storage, itemId) {
+        let location = null
+
+        storage.map(n => {
+            let entry = StorageUtil.getStorageTableEntry(n.id)
+            let idx = n.buffer.findIndex(si => si === itemId)
+            if (idx !== -1) {
+                console.log('edesc idx', entry.descriptor, idx)
+
+                let slot = entry.descriptor[idx]
+                if (slot) {
+                    location = { node: n.id, slot: slot.id }
+                    console.log('slot found')
+                }
+                console.log('no slot found')
+            }
+        })
+
+        return location
+    }
+
     static isNodeValid(storage, nodeId) {
         if (!storage)
             return false
