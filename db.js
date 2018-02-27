@@ -81,8 +81,8 @@ class GameDb {
         return guildSettings
     }
 
-    async removeGuildSettings(guildSettings) {
-        return await GuildSettings.where('guild', guildSettings.guild).remove()
+    async removeGuildSettings(guild) {
+        return await GuildSettings.where('guild', guild).remove()
     }
 
     async createAccount(accountObj) {
@@ -104,31 +104,6 @@ class GameDb {
         // console.log(guild, name)
 
         return account
-    }
-
-    async createActiveUsers() {
-        console.log('createActiveUsers')
-        const existing = await this.getActiveUsers()
-        if (existing) {
-            console.log(`active users record already exists`)
-
-            return null
-        }
-
-        let activeUsers = new ActiveUsers(activeUsersObj)
-        await activeUsers.save()
-
-        return activeUsers
-    }
-
-    async getActiveUsers() {
-        return await ActiveUsers.findOne()
-    }
-
-    async updateActiveUsers(activeUsers) {
-        console.log('updateActiveUsers')
-
-        return await activeUsers.save()
     }
 
     async createUnit(unitObj) {

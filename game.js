@@ -1035,6 +1035,8 @@ class Game {
         let dmgB = ''
         let output = ''
 
+        const eventCount = results.length
+        let idx = 0
         results.map(r => {
             const atkName = `${UnitUtil.getName(r.attacker)}`
             const defName = `${UnitUtil.getName(r.defender)}`
@@ -1075,6 +1077,11 @@ class Game {
                 let itemEntry = ItemUtil.getItemTableEntry(r.data.code)
                 output += `${defName} has dropped their ${itemEntry.name}.`
             }
+
+            if (idx > 0 && idx < eventCount - 1)
+                output += ' '
+
+            idx++
         })
 
         if (output !== '')
@@ -1084,8 +1091,8 @@ class Game {
         if (output !== '') {
             embed.addField('Combat', output)
         } else {
-            embed.addField(`\`${combatContext.unitA.name}\``, dmgA, true)
-            embed.addField(`\`${combatContext.unitB.name}\``, dmgB, true)
+            embed.addField(`\`${combatContext.unitA.name}\``, dmgA || 'died', true)
+            embed.addField(`\`${combatContext.unitB.name}\``, dmgB || 'died', true)
         }
 
         await combatContext.message.edit(embed)

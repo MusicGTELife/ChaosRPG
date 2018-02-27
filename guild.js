@@ -1,14 +1,16 @@
 class Guild {
-    static createSettings(guild, gameChannel, debugChannel, rngSecret, rngCounter) {
+    static createSettings(
+        guild, gameChannel, debugChannel,
+        itemRngDesc, monsterRngDesc, combatRngDesc) {
+
         return {
             guild,
             'game_channel': gameChannel,
             'debug_channel': debugChannel,
 
-            'base_rng_secret': rngSecret,
-            'base_rng_counter': rngCounter,
-
-            'active_players': [ ]
+            'item_rng_state': itemRngDesc,
+            'monster_rng_state': monsterRngDesc,
+            'combat_rng_state': combatRngDesc
         }
     }
 }

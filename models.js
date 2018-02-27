@@ -2,16 +2,21 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
 // Game schemas
+const SecureRNGStateSchema = new Schema({
+    'rng_secret': String,
+    'rng_counter': Number,
+    'rng_offset': Number
+})
+
 const GuildSettingsSchema = new Schema({
     'guild': String,
     'game_channel': String,
     'debug_channel': String,
 
     // SecureRNG
-    'base_rng_secret': String,
-    'base_rng_counter': Number,
-
-    'active_players': [ Number ]
+    'item_rng_state': SecureRNGStateSchema,
+    'monster_rng_state': SecureRNGStateSchema,
+    'combat_rng_state': SecureRNGStateSchema
 })
 
 const SettingsSchema = new Schema({
@@ -33,15 +38,13 @@ const StorageSchema = new Schema({
     'id': Number,
     'size': Number,
     'buffer': [ Number ]
-},
-{ '_id': false }
+}, { '_id': false }
 )
 
 const StatSchema = new Schema({
     'id': Number,
     'value': Number
-},
-{ '_id': false }
+}, { '_id': false }
 )
 
 const UnitSchema = new Schema({
