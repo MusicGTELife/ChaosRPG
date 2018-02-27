@@ -134,23 +134,24 @@ class DiscordUtil {
     }
 
     static isValidChannelName(name) {
+        console.log('isValidChannelName', name)
         if (name === '')
             return false
 
-        return channel.match(/(<?#?(\d+)>?)/, '$2') !== null
+        return name.match(/(<?#?(\d+)>?)/, '$2') !== null
     }
 
-    static guildHasChannel(name) {
-        if (!DiscordUtil.isValidChannel(gameChannel))
-            return false
+    static guildHasChannel(guild, name) {
+        if (!DiscordUtil.isValidChannelName(name))
+            return null
 
-        let channelId = name.replace(/(<?#?(\d+)>?)/, '$2')
+        let replaced = name
+        let channelId = replaced.replace(/(<?#?(\d+)>?)/, '$2')
         let channel = guild.channels.get(channelId)
-
         if (!channel)
-            channel  = guild.channels.find('name', name)
+            channel = guild.channels.find('name', name)
 
-        return !!channel
+        return channel
     }
 }
 
