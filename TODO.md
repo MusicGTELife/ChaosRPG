@@ -23,26 +23,18 @@
 ## Mechanics
 - implement a resolver system like `StatModified` and `StatResolver` to neatly
   handle combat
-- selection of recently active players
 - decide if item_sub_classes should be merged into a single list for ease of
-  selection during monster/item generation
+  selection during monster/item generation and storage interactions
 
 ## Storage
 - automatic resolution of storage slot when equipping items based upon the
   items sub class
 
 ## Units
-- implement code to check if the unit can equip an item based upon the items
-  stat requirements
-- implement check if an item can be placed in an an equipment node based on
-  the items type (gloves, boots) - DONE
-- split off parts into an account schema
 
 ### Players
 
 ### Monsters
-- implement basic monster tables
-- implement basic generation of monsters
 
 ## Items
 
