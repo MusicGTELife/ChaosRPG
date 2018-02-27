@@ -39,7 +39,7 @@ Storage.EQUIPMENT = _(0x01, 'Equipment',
         { 'id': Slots.ARM_L, 'name': 'LeftArm', 'flags': f.ARM },
         { 'id': Slots.HEAD, 'name': 'Head', 'flags': f.HEAD },
         { 'id': Slots.HANDS, 'name': 'Hands', 'flags': f.HANDS },
-        { 'id': Slots.FEET, 'name': 'feet', 'flags': f.FEET },
+        { 'id': Slots.FEET, 'name': 'Feet', 'flags': f.FEET },
         { 'id': Slots.BODY, 'name': 'Body', 'flags': f.BODY },
         { 'id': Slots.NECK, 'name': 'Neck', 'flags': f.NECK },
         { 'id': Slots.FINGER, 'name': 'Ring', 'flags': f.FINGER }
