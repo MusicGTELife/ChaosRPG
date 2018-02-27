@@ -7,27 +7,18 @@ const { Guild } = require('./guild')
 const { GameDb } = require('./db')
 const { SecureRNG, SecureRNGContext } = require('./rng')
 const { GameState } = require('./gamestate')
-
-const { CombatType, CombatContext, CombatEventType } = require('./combat')
-const { Storage, Slots } = require('./storage')
-const { StatTable, StatFlag } = require('./stattable')
-
-const { Tier, TierStatCount } = require('./tier')
-
-const { ItemClass, ArmorClass, WeaponClass, JewelClass } = require('./itemclass')
-const { ItemRarity } = require('./itemrarity')
-const { ItemTable } = require('./itemtable')
+const { CombatContext, CombatEventType } = require('./combat')
+const { Storage } = require('./storage')
+const { StatTable } = require('./stattable')
 
 const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
-const { PlayerType, Player, Mage, Warrior, Rogue } = require('./player')
-const { Monster, MonsterType } = require('./monster')
 
-const { Unit: UnitModel } = require('./models')
+// const { 'Unit': UnitModel } = require('./models')
 
 // utility classes
-const { Markdown, TrackedCommand, Command, DiscordUtil } = require('./util/discord')
+const { Markdown, TrackedCommand, DiscordUtil } = require('./util/discord')
 const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
 const { ItemUtil } = require('./util/item')
@@ -57,6 +48,7 @@ class Game {
         let db = config.db[config.db.active]
         if (!db)
             throw new Error('Invalid database configuration')
+
         this.gameDb = new GameDb(db.host, db.options)
 
         this.item = new ItemUtil(this)
@@ -93,6 +85,7 @@ class Game {
 
         if (this.token === '') {
             console.log('Discord API token required')
+
             return false
         }
 
@@ -114,7 +107,6 @@ class Game {
         this.discord.on('messageUpdate', (oldMessage, newMessage) => { this.onMessageUpdate(oldMessage, newMessage) })
         this.discord.on('messageReactionAdd', (reaction, user) => { this.onMessageReactionAdd(reaction, user) })
         this.discord.on('messageReactionRemove', (reaction, user) => { this.onMessageReactionRemove(reaction, user) })
-        this.discord.on('typingStart', (channel, user) => { this.onTypingStart(channel, user) })
 
         this.gameDb.db.connection.on('connected', () => { this.onDbConnected() })
         this.gameDb.db.connection.on('disconnect', () => { this.onDbDisconnect() })
@@ -131,18 +123,21 @@ class Game {
         const combatRngCtx = new SecureRNGContext('combat secret')
         if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
             console.log('unable to add combat RNG context')
+
             return false
         }
 
         const itemRngCtx = new SecureRNGContext('item secret')
         if (!this.secureRng.addContext(itemRngCtx, 'item')) {
             console.log('unable to add item RNG context')
+
             return false
         }
 
         const monsterRngCtx = new SecureRNGContext('monster secret')
         if (!this.secureRng.addContext(monsterRngCtx, 'monster')) {
             console.log('unable to add monster RNG context')
+
             return false
         }
 
@@ -150,18 +145,22 @@ class Game {
         let res = await this.discord.login(this.token)
             .catch(e => {
                 console.log('caught', e)
+
                 return false
             })
             .then(await this.gameDb.connect())
             .then(await this.run())
             .catch(e => {
                 console.log('caught', e)
+
                 return false
             })
+
+        return res
     }
 
     syncinit() {
-        return new Promise(resolve => this.init())
+        return new Promise(() => this.init())
     }
 
     timeout(ms) {
@@ -171,6 +170,7 @@ class Game {
     async sleep(ms, fn, ...args) {
         this.timerInterval = this.timeout(ms)
         await this.timerInterval
+
         return fn(...args)
     }
 
@@ -205,13 +205,13 @@ class Game {
 
         this.discordConnected = true
 
-        this.discord.user.setActivity('ChaosRPG', { type: 'PLAYING' })
+        this.discord.user.setActivity('ChaosRPG', { 'type': 'PLAYING' })
 
         await this.broadcastMessage('ChaosRPG is online.')
     }
 
     async onMessage(message) {
-        //console.log(message.content)
+        // console.log(message.content)
         if (message.author.id === this.discord.user.id)
             return
 
@@ -233,20 +233,22 @@ class Game {
         }
     }
 
-    async onMessageReaction(reaction, user, added) {
+    /* eslint no-unused-vars: [ "error", { "argsIgnorePattern": "^_" } ] */
+    async onMessageReaction(reaction, user, _added) {
         if (user.id === this.discord.user.id)
             return
 
         let tracked = this.trackedCommands.get(reaction.message.id)
-        if (!tracked) {
+        if (!tracked)
             return
-        }
 
-        if (tracked.command.message.author.id !== user.id) {
+        if (tracked.command.message.author.id !== user.id)
             return
-        }
 
-        let account = await this.gameDb.getAccount(tracked.command.message.guild.id, tracked.command.message.author.id)
+        let account = await this.gameDb.getAccount(
+            tracked.command.message.guild.id,
+            tracked.command.message.author.id
+        )
         if (!account)
             return
 
@@ -254,38 +256,42 @@ class Game {
         if (!player)
             return
 
-        //console.log(reaction.emoji)
+        // console.log(reaction.emoji)
 
         if (tracked.command.name === 'gear') {
-            tracked.refresh(tracked.timeout)
-
             if (reaction.emoji.name === '⚔') {
                 let embed = await this.createPlayerInventoryEmbed(player, Storage.EQUIPMENT.id)
                 this.response = reaction.message.edit(embed)
             } else if (reaction.emoji.name === '💰') {
                 let embed = await this.createPlayerInventoryEmbed(player, Storage.INVENTORY.id)
                 this.response = reaction.message.edit(embed)
+            } else {
+                return
             }
+            tracked.refresh(tracked.timeout)
         } else if (tracked.command.name === 'player') {
             if (player.descriptor.stat_points_remaining <= 0)
                 return
 
-            tracked.refresh(tracked.timeout)
+            let stat = 0
+            if (reaction.emoji.name === '💪')
+                stat = StatTable.STR.id
+            else if (reaction.emoji.name === '⚡')
+                stat = StatTable.DEX.id
+            else if (reaction.emoji.name === '📚')
+                stat = StatTable.INT.id
+            else if (reaction.emoji.name === '❤')
+                stat = StatTable.VIT.id
+            else
+                return
 
             let items = await this.unit.getItems(player)
-            if (reaction.emoji.name === '💪') {
-                await PlayerUtil.applyStatPoints(player, items, StatTable.STR.id, 1)
-            } else if (reaction.emoji.name === '⚡') {
-                await PlayerUtil.applyStatPoints(player, items, StatTable.DEX.id, 1)
-            } else if (reaction.emoji.name === '📚') {
-                await PlayerUtil.applyStatPoints(player, items, StatTable.INT.id, 1)
-            } else if (reaction.emoji.name === '❤') {
-                await PlayerUtil.applyStatPoints(player, items, StatTable.VIT.id, 1)
-            }
+            await PlayerUtil.applyStatPoints(player, items, stat, 1)
 
             let embed = await this.createPlayerStatsEmbed(player)
             embed.setFooter(`Stat has been applied`)
             this.response = reaction.message.edit(embed)
+            tracked.refresh(tracked.timeout)
         }
     }
 
@@ -295,10 +301,6 @@ class Game {
 
     async onMessageReactionRemove(reaction, user) {
         return await this.onMessageReaction(reaction, user, false)
-    }
-
-    onTypingStart(channel, user) {
-        //console.log(`${user.id} typing on ${channel.id}`)
     }
 
     onDbConnected() {
@@ -322,20 +324,19 @@ class Game {
             if (!guild) {
                 console.log('no guild record', g)
                 process.exit(1)
-                    return
+
+                return
             }
 
             let guildSettings = await this.gameDb.getGuildSettings(guild.id)
 
             let gameChannel = guild.channels.get(guildSettings.game_channel)
-            if (gameChannel && !debugOnly) {
+            if (gameChannel && !debugOnly)
                 await gameChannel.send(message)
-            }
 
             let debugChannel = guild.channels.get(guildSettings.debug_channel)
-            if (debugChannel) {
+            if (debugChannel)
                 await debugChannel.send(message)
-            }
         }))
     }
 
@@ -362,7 +363,8 @@ class Game {
         if (!guild) {
             console.log(`I am not in ${guildName}`)
             this.message.channel
-                    .send(`<@${this.message.author.id}> I am not in guild ${guildName}`).then(m => m.delete(10000))
+                .send(`<@${this.message.author.id}> I am not in guild ${guildName}`).then(m => m.delete(10000))
+
             return
         }
 
@@ -383,6 +385,7 @@ class Game {
                 if (!game) {
                     this.message.channel
                         .send(`<@${this.message.author.id}> Unable to lookup channel ${gameChannel}`).then(m => m.delete(10000))
+
                     return
                 }
 
@@ -390,6 +393,7 @@ class Game {
                 if (!debug) {
                     this.message.channel
                         .send(`<@${this.message.author.id}> Unable to lookup channel ${debugChannel}`).then(m => m.delete(10000))
+
                     return
                 }
 
@@ -409,6 +413,7 @@ class Game {
             console.log('remove')
 
             await this.ctx.gameDb.removeGuildSettings(guildName)
+
             return
         } else if (subCmd === 'debug') {
             if (args.length === 2) {
@@ -418,12 +423,7 @@ class Game {
 
             return
         } else if (subCmd === 'game') {
-            let guildSettings = this.ctx.gameDb.getGuildSettings()
-            if (args.length === 2) {
-                this.message.channel
-                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
-            }
-
+            // TODO|FIXME
             return
         }
 
@@ -444,9 +444,9 @@ class Game {
         let account = await this.ctx.gameDb.getAccount(this.message.guild.id, this.message.author.id)
         if (!account) {
             account = await this.ctx.gameDb.createAccount({
-                id: settings.next_account_id,
-                guild: this.message.guild.id,
-                name: this.message.author.id
+                'id': settings.next_account_id,
+                'guild': this.message.guild.id,
+                'name': this.message.author.id
             })
 
             settings.next_account_id++
@@ -454,12 +454,14 @@ class Game {
         }
         if (!account) {
             console.log('failed to create account')
+
             return null
         }
         let existing = await this.ctx.gameDb.getUnitByAccount(account.id)
         if (existing) {
             this.message.channel
                 .send(`<@${this.message.author.id}> You already have a player, use the delete command if you wish to create a new player`).then(m => m.delete(10000))
+
             return
         }
 
@@ -477,6 +479,7 @@ class Game {
             console.log(`invalid player type ${type}`)
             this.message.channel
                 .send(`<@${this.message.author.id}> Invalid player class ${typeString}, valid types are: \`Mage, Warrior, Rogue, Ranger, Cleric\``).then(m => m.delete(10000))
+
             return
         }
 
@@ -485,6 +488,8 @@ class Game {
         if (!starterItems) {
             console.log('unable to create starter items')
             process.exit(1)
+
+            return
         }
         let playerData = PlayerUtil.create(type, 1, account.id, this.message.author.username, starterItems)
 
@@ -510,8 +515,9 @@ class Game {
         )
 
         if (!accountRecords.account) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+
             return
         }
         if (accountRecords.unit) {
@@ -538,6 +544,9 @@ class Game {
     async playerInfoHandler() {
         console.log('playerInfoHandler')
 
+        if (this.response)
+            return
+
         if (this.message && this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
             this.message.delete(10000)
 
@@ -546,13 +555,15 @@ class Game {
         )
 
         if (!accountRecords.account) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+
             return
         }
         if (!accountRecords.unit) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No character found, use .create to make an account`).then(m => m.delete(10000))
+
             return
         }
 
@@ -577,6 +588,9 @@ class Game {
     async gearHandler() {
         console.log('gearHandler')
 
+        if (this.command && this.command.response)
+            return
+
         if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
             this.message.delete(10000)
 
@@ -585,13 +599,15 @@ class Game {
         )
 
         if (!accountRecords.account) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+
             return
         }
         if (!accountRecords.unit) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No character found`).then(m => m.delete(10000))
+
             return
         }
 
@@ -617,13 +633,15 @@ class Game {
         )
 
         if (!accountRecords.account) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+
             return
         }
         if (!accountRecords.unit) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No character found`).then(m => m.delete(10000))
+
             return
         }
         const player = accountRecords.unit
@@ -634,6 +652,7 @@ class Game {
 
             this.message.channel
                 .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
+
             return
         }
 
@@ -648,11 +667,11 @@ class Game {
         Object.values(Storage).map(n => {
             let src = n.descriptor.find(d => d.name.toLowerCase() === slotSrc)
             if (src && !srcDesc)
-                srcDesc = { node: n.id, slot: src.id }
+                srcDesc = { 'node': n.id, 'slot': src.id }
 
             let dest = n.descriptor.find(d => d.name.toLowerCase() === slotDest)
             if (dest && !destDesc)
-                destDesc = { node: n.id, slot: dest.id }
+                destDesc = { 'node': n.id, 'slot': dest.id }
         })
 
         // now it's time to check the slots
@@ -661,6 +680,7 @@ class Game {
             console.log('no source item descriptor')
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotSrc} is not a valid slot`).then(m => m.delete(10000))
+
             return
         }
 
@@ -668,6 +688,7 @@ class Game {
             console.log('no dest item descriptor')
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotDest} is not a valid slot`).then(m => m.delete(10000))
+
             return
         }
 
@@ -678,6 +699,7 @@ class Game {
             console.log(player.storage, srcDesc)
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotSrc} contains no item`).then(m => m.delete(10000))
+
             return
         }
 
@@ -685,6 +707,7 @@ class Game {
         if (destItemId) {
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotDest} already contains an item, move it first`).then(m => m.delete(10000))
+
             return
         }
 
@@ -699,18 +722,21 @@ class Game {
         if (!UnitUtil.isItemEquippableInSlot(player, items, item, destDesc.node, destDesc.slot)) {
             this.message.channel
                 .send(`<@${this.message.author.id}> Unable to equip item in slot due to wielding restrictions ${slotDest}`).then(m => m.delete(10000))
+
             return
         }
 
         if (!this.ctx.unit.unequipItem(player, items, item, srcDesc.node, srcDesc.slot)) {
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotDest} failed unequipping item`).then(m => m.delete(10000))
+
             return
         }
 
         if (!this.ctx.unit.equipItem(player, items, item, destDesc.node, destDesc.slot)) {
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slotDest} failed equipping item`).then(m => m.delete(10000))
+
             return
         }
 
@@ -736,13 +762,15 @@ class Game {
         )
 
         if (!accountRecords.account) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No account found`).then(m => m.delete(10000))
+
             return
         }
         if (!accountRecords.unit) {
-           this.message.channel
+            this.message.channel
                 .send(`<@${this.message.author.id}> No character found`).then(m => m.delete(10000))
+
             return
         }
         const player = accountRecords.unit
@@ -753,11 +781,13 @@ class Game {
 
             this.message.channel
                 .send(`<@${this.message.author.id}> Valid slots are ${slotString}`).then(m => m.delete(10000))
+
             return
         }
 
         if (this.args.length !== 1) {
             console.log('bad args', this.args)
+
             return
         }
 
@@ -770,7 +800,7 @@ class Game {
         Object.values(Storage).map(n => {
             let slotDescriptor = n.descriptor.find(d => d.name.toLowerCase() === slot)
             if (slotDescriptor && !slotDesc)
-                slotDesc = { node: n.id, slot: slotDescriptor.id }
+                slotDesc = { 'node': n.id, 'slot': slotDescriptor.id }
         })
 
         // now it's time to check the slots
@@ -779,6 +809,7 @@ class Game {
             console.log('no source item descriptor')
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slot} is not a valid slot`).then(m => m.delete(10000))
+
             return
         }
 
@@ -787,6 +818,7 @@ class Game {
             console.log(player.storage, slotDesc, slotItemId)
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slot} contains no item`).then(m => m.delete(10000))
+
             return
         }
 
@@ -801,6 +833,7 @@ class Game {
         if (!this.ctx.unit.unequipItem(player, items, item, slotDesc.node, slotDesc.slot)) {
             this.message.channel
                 .send(`<@${this.message.author.id}> ${slot} failed unequipping item`).then(m => m.delete(10000))
+
             return
         }
 
@@ -821,7 +854,7 @@ class Game {
         let slotString = ''
         slotNames.map(s => {
             slotString += s
-            if (pos != slotNames.length-1)
+            if (pos !== slotNames.length - 1)
                 slotString += ', '
             else
                 slotString += '.'
@@ -832,7 +865,7 @@ class Game {
     }
 
     async getAccountRecords(guildId, discordUserId) {
-        let records = { account: null, unit: null }
+        let records = { 'account': null, 'unit': null }
 
         records.account = await this.gameDb.getAccount(guildId, discordUserId)
         if (records.account)
@@ -862,14 +895,14 @@ class Game {
                     name += '🛑'
                     desc += 'Stat requirements not met, item requires:\n'
                     const entry = ItemUtil.getItemTableEntry(item.code)
-                    entry.requirements.map(s => {
-                        const entry = StatUtil.getStatTableEntry(s.id)
-                        desc += `${s.value} ${entry.name_long}\n`
+                    entry.requirements.map(r => {
+                        const statEntry = StatUtil.getStatTableEntry(r.id)
+                        desc += `${r.value} ${statEntry.name_long}\n`
                     })
                 } else {
-                    item.stats.map(s => {
-                        const entry = StatUtil.getStatTableEntry(s.id)
-                        desc += `(+${s.value}) ${entry.name_long}\n`
+                    item.stats.map(st => {
+                        const entry = StatUtil.getStatTableEntry(st.id)
+                        desc += `(+${st.value}) ${entry.name_long}\n`
                     })
                     if (desc === '')
                         desc = 'No stats'
@@ -884,15 +917,17 @@ class Game {
             slotIdx++
         })
 
-        //console.log(embed)
+        // console.log(embed)
         return embed
     }
 
     async createPlayerStatsEmbed(unit) {
+        /*
         let str = StatUtil.getStat(unit.stats, StatTable.STR.id).value
         let dex = StatUtil.getStat(unit.stats, StatTable.DEX.id).value
         let int = StatUtil.getStat(unit.stats, StatTable.INT.id).value
         let vit = StatUtil.getStat(unit.stats, StatTable.VIT.id).value
+        */
 
         let embed = new Discord.RichEmbed().setColor(7682618)
             .addField(`\`*${unit.name}\`*`, `**${unit.descriptor.stat_points_remaining}** stat points are available`, true)
@@ -900,7 +935,7 @@ class Game {
         let statsBody = this.unitInfoStatsBody(unit, true)
         embed.addField('Character Stats', statsBody)
 
-        //console.log(embed)
+        // console.log(embed)
         return embed
     }
 
@@ -927,7 +962,7 @@ class Game {
         unitInfo += `Level ${unit.level}\n`
         if (isPlayer) {
             unitInfo += `Exp(${SU.getStat(unit.stats, ST.UNIT_EXP.id).value}/` +
-                `${getExperienceForLevel(unit.level+1)})\n\n`
+                `${getExperienceForLevel(unit.level + 1)})\n\n`
         } else {
             unitInfo += '\n\n'
         }
@@ -938,7 +973,7 @@ class Game {
             `Atk(${SU.getStat(unit.stats, ST.UNIT_BASE_ATK.id).value}+${SU.getStat(unit.stats, ST.UNIT_ATK.id).value})` +
             ` MAtk(${SU.getStat(unit.stats, ST.UNIT_BASE_MATK.id).value}+${SU.getStat(unit.stats, ST.UNIT_MATK.id).value})\n` +
             `Def(${SU.getStat(unit.stats, ST.UNIT_DEF.id).value}) MDef(${SU.getStat(unit.stats, ST.UNIT_MDEF.id).value})\n` +
-            `Acc(${SU.getStat(unit.stats, ST.UNIT_ACCURACY.id).value/100}%) ` +
+            `Acc(${SU.getStat(unit.stats, ST.UNIT_ACCURACY.id).value / 100}%) ` +
             `Rct(${SU.getStat(unit.stats, ST.UNIT_REACTION.id).value})\n` +
             `Block(${SU.getStat(unit.stats, ST.UNIT_BLOCK.id).value}%)`
 
@@ -960,7 +995,7 @@ class Game {
         }
 
         let embed = new Discord.RichEmbed()
-            .setColor(7682618)//.setDescription(`\`${unitAName}\` VS. \`${unitBName}\``)
+            .setColor(7682618)
 
         embed.addField(`__\`${unitAName}\`__`, this.unitInfoStatsBody(unitA), true)
         embed.addField(`__\`${unitBName}\`__`, this.unitInfoStatsBody(unitB), true)
@@ -981,6 +1016,7 @@ class Game {
         if (!combatContext) {
             console.log('no combat context in doCombat')
             process.exit(1)
+
             return false
         }
 
@@ -988,14 +1024,12 @@ class Game {
         let results = await combatContext.resolveRound()
         if (!results) {
             console.log('failed to resolve attack')
+
             return false
         }
 
-        const ST = StatTable
-        const SU = StatUtil
-
-        let guild = await combatContext.game.gameDb.getGuildSettings(combatContext.guild)
-        let channel = await combatContext.game.discord.channels.get(guild.game_channel)
+        // let guild = await combatContext.game.gameDb.getGuildSettings(combatContext.guild)
+        // let channel = await combatContext.game.discord.channels.get(guild.game_channel)
 
         let dmgA = ''
         let dmgB = ''
@@ -1014,11 +1048,10 @@ class Game {
                     `(${dmg.physical.damage}${dmg.physical.is_crit ? '*' : ''}` +
                     `|${dmg.magic.damage}${dmg.magic.is_crit ? '*' : ''})\n`
 
-                if (r.attacker.id === combatContext.unitA.id) {
+                if (r.attacker.id === combatContext.unitA.id)
                     dmgB += out
-                } else {
+                else
                     dmgA += out
-                }
             }
 
             if (r.type === CombatEventType.BLOCK.id) {
@@ -1029,17 +1062,14 @@ class Game {
             }
 
             if (r.type === CombatEventType.PLAYER_DEATH.id ||
-                    r.type === CombatEventType.MONSTER_DEATH.id) {
+                    r.type === CombatEventType.MONSTER_DEATH.id)
                 output += `${atkName} has slain ${defName}.`
-            }
 
-            if (r.type === CombatEventType.PLAYER_EXPERIENCE.id) {
+            if (r.type === CombatEventType.PLAYER_EXPERIENCE.id)
                 output += `${atkName} has gained ${r.data} experience.`
-            }
 
-            if (r.type === CombatEventType.PLAYER_LEVEL.id) {
+            if (r.type === CombatEventType.PLAYER_LEVEL.id)
                 output += `${atkName} has reached level ${r.attacker.level}!`
-            }
 
             if (r.type === CombatEventType.MONSTER_ITEM_DROP.id) {
                 let itemEntry = ItemUtil.getItemTableEntry(r.data.code)
@@ -1047,9 +1077,8 @@ class Game {
             }
         })
 
-        let desc = ''
         if (output !== '')
-            Markdown.c(output, "ml")
+            Markdown.c(output, 'ml')
 
         let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB)
         if (output !== '') {
@@ -1076,10 +1105,11 @@ class Game {
             let guildSettings = await this.gameDb.getGuildSettings(guild.id)
             if (!guildSettings) {
                 console.log('expected guild not found')
+
                 return
             }
 
-            //console.log('guild', g, guildSettings)
+            // console.log('guild', g, guildSettings)
             const channel = await this.discord.channels.get(guildSettings.game_channel)
             if (!channel) {
                 if (guildSettings.game_channel !== '') {
@@ -1087,6 +1117,7 @@ class Game {
                     process.exit(1)
                 }
                 console.log('skipping unconfigured guild')
+
                 return
             }
 
@@ -1101,10 +1132,11 @@ class Game {
                 let online = channel.members
                     .filter(m => m.presence.status === 'online' || m.presence.status === 'idle')
                     .map(m => m.id)
-                //console.log('online', online)
+                // console.log('online', online)
 
                 let accounts = await Promise.all(online.map(async m => {
-                    //console.log('mapping accounts', g, m)
+                    // console.log('mapping accounts', g, m)
+
                     return await this.gameDb.getAccount(g, m)
                 }))
                 accounts = accounts.filter(a => a !== null)
@@ -1112,7 +1144,7 @@ class Game {
                 // online has been transformed into a list of accounts
                 // we need to map accounts to characters now
                 accounts = await Promise.all(accounts.map(async a => {
-                    //console.log('account', a)
+                    // console.log('account', a)
                     return await this.gameDb.getUnitByAccount(a.id)
                 }))
                 accounts = accounts.filter(a => a !== null)
@@ -1127,6 +1159,7 @@ class Game {
                 combatCtx.unitA = units[0]
                 combatCtx.unitB = units[1]
                 combatCtx.inCombat = true
+
                 return true
             }
 
@@ -1139,7 +1172,7 @@ class Game {
     async loop() {
         if (!this.dbConnected) {
             this.gameState = GameState.OFFLINE
-            console.log('not connected to the database, skipping combat');
+            console.log('not connected to the database, skipping combat')
         }
 
         if (!this.discordConnected) {
@@ -1148,9 +1181,8 @@ class Game {
         }
 
         if (this.gameState === GameState.OFFLINE &&
-                this.dbConnected && this.discordConnected) {
+                this.dbConnected && this.discordConnected)
             this.gameState = GameState.ONLINE
-        }
 
         switch (this.gameState) {
             case GameState.ONLINE:
@@ -1158,6 +1190,8 @@ class Game {
 
             case GameState.OFFLINE:
                 return await this.doOffline()
+            default:
+                break
         }
 
         return false
@@ -1169,19 +1203,21 @@ class Game {
         if (!settings) {
             console.log('game settings don\'t exist, creating')
             const settingsObj = {
-                next_account_id: 1, next_unit_id: 1, next_item_id: 1, guilds: []
+                'next_account_id': 1, 'next_unit_id': 1, 'next_item_id': 1, 'guilds': []
             }
             settings = await this.gameDb.createSettings(settingsObj)
             if (!settings) {
                 console.log('unable to create game settings')
                 process.exit(1)
+
                 return false
             }
         }
 
+        /* eslint no-constant-condition: ["error", { "checkLoops": false }] */
         while (true) {
             if (this.interrupt && this.dbConnected && this.discordConnected) {
-                let activeCombat = [...this.combatContexts.values()]
+                let activeCombat = [ ...this.combatContexts.values() ]
                     .every(c => {
                         return c.inCombat
                     })
@@ -1189,7 +1225,7 @@ class Game {
                 if (!activeCombat)
                     break
             }
-            await this.sleep(1*10000, async loop => { await this.loop() })
+            await this.sleep(1 * 10000, async () => { await this.loop() })
         }
 
         console.log('run loop terminating')

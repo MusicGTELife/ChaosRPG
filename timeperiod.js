@@ -1,9 +1,7 @@
 class TimePeriod {
-    static getPeriod(timestamp) {
-
+    static getPeriodId(timestamp) {
+        return Math.floor(timestamp / 1000 / 60 / 60)
     }
 }
 
-function getPeriodId(timestamp) {
-   return Math.floor(timestamp/1000/60/60);
-}
+module.exports = { TimePeriod }

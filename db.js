@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('mongoose')
 const { Account, Settings, GuildSettings, Unit, Item } = require('./models')
 const { UnitType } = require('./unit')
 
@@ -14,18 +14,19 @@ class GameDb {
     execCb(err, results) {
         if (err) {
             console.log('err', err)
+
             return null
         }
 
         console.log('results', results)
+
         return results
     }
 
     async connect() {
-        let res = await this.db.connect(this.host, this.options)
+        return await this.db.connect(this.host, this.options)
             .then(() => true)
             .catch(() => false)
-        return res
     }
 
     async disconnect() {
@@ -37,6 +38,7 @@ class GameDb {
         const existing = await this.getSettings()
         if (existing) {
             console.log(`game settings already exist`)
+
             return null
         }
 
@@ -48,17 +50,20 @@ class GameDb {
 
     async getSettings() {
         let settings = await Settings.findOne()
-        //console.log('getSettings', settings)
+        // console.log('getSettings', settings)
+
         return settings
     }
 
     async updateSettings(settings) {
         console.log('updateSettings')
+
         return await settings.save()
     }
 
     async getGuildSettings(guild) {
         let guildSettings = await GuildSettings.where('guild', guild).findOne()
+
         return guildSettings
     }
 
@@ -66,6 +71,7 @@ class GameDb {
         let existing = await this.getGuildSettings(guildSettingsObj.guild)
         if (existing) {
             console.log('guild settings already exist')
+
             return null
         }
 
@@ -83,6 +89,7 @@ class GameDb {
         let existing = await this.getAccount(accountObj.guild, accountObj.name)
         if (existing) {
             console.log('account exists')
+
             return null
         }
 
@@ -94,7 +101,7 @@ class GameDb {
 
     async getAccount(guild, name) {
         let account = await Account.findOne({ guild, name })
-        //console.log(guild, name)
+        // console.log(guild, name)
 
         return account
     }
@@ -104,6 +111,7 @@ class GameDb {
         const existing = await this.getActiveUsers()
         if (existing) {
             console.log(`active users record already exists`)
+
             return null
         }
 
@@ -114,12 +122,12 @@ class GameDb {
     }
 
     async getActiveUsers() {
-        let activeUsers = await ActiveUsers.findOne()
-        return activeUsers
+        return await ActiveUsers.findOne()
     }
 
     async updateActiveUsers(activeUsers) {
         console.log('updateActiveUsers')
+
         return await activeUsers.save()
     }
 
@@ -128,6 +136,7 @@ class GameDb {
             const existing = await this.getUnitByAccount(unitObj.descriptor.account)
             if (existing) {
                 console.log(`cannot create unit for ${unitObj.descriptor.account} which already exists`)
+
                 return null
             }
         }
@@ -139,19 +148,15 @@ class GameDb {
     }
 
     async getUnit(id) {
-        let unit = await Unit.where('id', id).findOne()
-        return unit
+        return await Unit.where('id', id).findOne()
     }
 
     async getUnitByAccount(account) {
-        let unit = await Unit.where('descriptor.account', account).findOne()
-        //console.log(unit, account)
-        return unit
+        return await Unit.where('descriptor.account', account).findOne()
     }
 
     async getUnits(ids) {
-        let units = await Unit.where('id').in(ids).find()
-        return items
+        return await Unit.where('id').in(ids).find()
     }
 
     async updateUnit(unit) {
@@ -166,7 +171,7 @@ class GameDb {
         return await unit.remove()
     }
 
-    async removeUnits(units) {
+    async removeUnits(ids) {
         return await Unit.where('id').in(ids).remove()
     }
 
@@ -174,6 +179,7 @@ class GameDb {
         let existing = await this.getItem(itemObj.id)
         if (existing) {
             console.log(`cannot create item for ${itemObj.id} which already exists`)
+
             return null
         }
 
@@ -184,25 +190,22 @@ class GameDb {
     }
 
     async getItem(id) {
-        let item = await Item.where('id', id).findOne()
-        return item
+        return await Item.where('id', id).findOne()
     }
 
     async getItems(ids) {
-        let items = await Item.where('id').in(ids).find()
-        return items
+        return await Item.where('id').in(ids).find()
     }
 
     async getUnitItems(id) {
-        let items = await Item.where('owner', id).find()
-        return items
+        return await Item.where('owner', id).find()
     }
 
     async updateItem(item) {
         return await item.save()
     }
 
-    async updateItems(items) {
+    async updateItems(ids) {
         return await Item.where('id').in(ids).update()
     }
 

@@ -1,5 +1,3 @@
-'use strict'
-
 const { test } = require('ava')
 
 const { SecureRNG, SecureRNGContext } = require('./rng')
@@ -7,7 +5,7 @@ const { SecureRNG, SecureRNGContext } = require('./rng')
 const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
 const { UnitUtil } = require('./util/unit')
-const { PlayerUtil } = require('./util/player')
+// const { PlayerUtil } = require('./util/player')
 const { MonsterUtil } = require('./util/monster')
 const { ItemUtil } = require('./util/item')
 
@@ -17,12 +15,12 @@ const { Storage, Slots } = require('./storage')
 const { StatModifier } = require('./statmodifier')
 const { StatResolver } = require('./statresolver')
 const { StatTable } = require('./stattable')
-const { UnitType, Unit } = require('./unit')
-const { Player } = require('./player')
-const { Monster } = require('./monster')
+const { UnitType } = require('./unit')
+// const { Player } = require('./player')
+// const { Monster } = require('./monster')
 const { MonsterTable } = require('./monstertable')
 const { ItemTable } = require('./itemtable')
-const { ItemClass, ArmorClass, WeaponClass, JewelClass } = require('./itemclass')
+const { ItemClass, WeaponClass /* ArmorClass, JewelClass */ } = require('./itemclass')
 
 test('rng', t => {
     const RNG = SecureRNG
@@ -57,44 +55,42 @@ test('rng', t => {
     t.throws(() => SecureRNG.getRandomInt(ctx, 1, 0), RangeError)
 
     let val = RNG.getRandomInt(ctx, -9, 9)
-    t.is(val >= -9 && val <= 9, true);
+    t.is(val >= -9 && val <= 9, true)
 
     t.true(rng.removeContext('sauce'))
 })
 
 test('stats', async t => {
-    let stats = [ { id: StatTable.HP.id, value: 2 } ]
+    let stats = [ { 'id': StatTable.HP.id, 'value': 2 } ]
 
     let stat = StatUtil.getStat(stats, StatTable.HP.id)
-    t.deepEqual(stat, { id :StatTable.HP.id, value: 2 })
+    t.deepEqual(stat, { 'id': StatTable.HP.id, 'value': 2 })
 
     stat = StatResolver.add(StatUtil.getStat(stats, StatTable.HP.id), 3)
-    t.deepEqual(stat, { id: StatTable.HP.id, value: 5 })
+    t.deepEqual(stat, { 'id': StatTable.HP.id, 'value': 5 })
 
     stat = StatResolver.mult(StatUtil.getStat(stats, StatTable.HP.id), 3)
-    t.deepEqual(stat, { id: StatTable.HP.id, value: 6 })
+    t.deepEqual(stat, { 'id': StatTable.HP.id, 'value': 6 })
 
-    stats.push({ id: StatTable.VIT.id, value: 3})
+    stats.push({ 'id': StatTable.VIT.id, 'value': 3 })
 
     let resolved = StatUtil.resolveModifier(stats, StatModifier.HP_PER_VIT)
-    console.log(resolved)
-
-    t.deepEqual(resolved, [ { id: StatTable.HP.id, value: 14 } ])
+    t.deepEqual(resolved, [ { 'id': StatTable.HP.id, 'value': 14 } ])
 
     stats = [
-        { id: StatTable.ALL_ATTR.id, value: 2 },
-        { id: StatTable.STR.id, value: 1 },
-        { id: StatTable.DEX.id, value: 2 },
-        { id: StatTable.INT.id, value: 3 },
-        { id: StatTable.VIT.id, value: 4 }
+        { 'id': StatTable.ALL_ATTR.id, 'value': 2 },
+        { 'id': StatTable.STR.id, 'value': 1 },
+        { 'id': StatTable.DEX.id, 'value': 2 },
+        { 'id': StatTable.INT.id, 'value': 3 },
+        { 'id': StatTable.VIT.id, 'value': 4 }
     ]
 
     resolved = StatUtil.resolveModifier(stats, StatModifier.ALL_ATTR)
     t.deepEqual(resolved, [
-        { id: StatTable.STR.id, value: 3 },
-        { id: StatTable.DEX.id, value: 4 },
-        { id: StatTable.INT.id, value: 5 },
-        { id: StatTable.VIT.id, value: 6 }
+        { 'id': StatTable.STR.id, 'value': 3 },
+        { 'id': StatTable.DEX.id, 'value': 4 },
+        { 'id': StatTable.INT.id, 'value': 5 },
+        { 'id': StatTable.VIT.id, 'value': 6 }
     ])
 })
 
@@ -116,10 +112,10 @@ test('monsters', async t => {
 
 test('items', async t => {
     // okay, this should select all entries in the item table and match it
-    let entries = ItemUtil.getItemClassEntries([ItemClass.WEAPON, ItemClass.ARMOR, ItemClass.JEWEL])
+    let entries = ItemUtil.getItemClassEntries([ ItemClass.WEAPON, ItemClass.ARMOR, ItemClass.JEWEL ])
     t.deepEqual(entries, Object.values(ItemTable))
 
-    entries = ItemUtil.getItemSubClassEntries(ItemClass.WEAPON, [WeaponClass.MELEE_2H, WeaponClass.MELEE_1H])
+    entries = ItemUtil.getItemSubClassEntries(ItemClass.WEAPON, [ WeaponClass.MELEE_2H, WeaponClass.MELEE_1H ])
 
 })
 
@@ -129,24 +125,23 @@ test('db', async t => {
 
     let item = await gameDb.getUnit()
     t.is(item, null)
-    item = await gameDb.getUnit("a string").catch(() => null)
+    item = await gameDb.getUnit('a string').catch(() => null)
     t.is(item, null)
 
     await gameDb.disconnect()
 })
 
 test('storage', t => {
-    const buffer = [ 0, 0, 0, 0, 0, 0, 0, 0 ]
     const storage = [
         {
-            id: Storage.EQUIPMENT.id,
-            size: Storage.EQUIPMENT.size,
-            buffer: [ 0, 0, 0, 0, 0, 0, 0, 0 ]
+            'id': Storage.EQUIPMENT.id,
+            'size': Storage.EQUIPMENT.size,
+            'buffer': [ 0, 0, 0, 0, 0, 0, 0, 0 ]
         },
         {
-            id: Storage.INVENTORY.id,
-            size: Storage.INVENTORY.size,
-            buffer: [ 0, 0, 0, 0, 0, 0, 0, 0 ]
+            'id': Storage.INVENTORY.id,
+            'size': Storage.INVENTORY.size,
+            'buffer': [ 0, 0, 0, 0, 0, 0, 0, 0 ]
         }
     ]
 
@@ -175,16 +170,16 @@ test('storage', t => {
     t.false(StorageUtil.isNodeValid(storage, 0))
 
     t.true(StorageUtil.isSlotValid(
-        storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size-1
+        storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size - 1
     ))
 
     t.false(StorageUtil.isSlotValid(storage, Storage.EQUIPMENT.id, 0xff))
     t.false(StorageUtil.isSlotValid(storage, -1, Storage.EQUIPMENT.size))
 
     t.false(StorageUtil.isSlotOccupied(
-        storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size-1
+        storage, Storage.EQUIPMENT.id, Storage.EQUIPMENT.size - 1
     ))
-    t.is(StorageUtil.getNode(storage, Storage.EQUIPMENT.id-1), null)
+    t.is(StorageUtil.getNode(storage, Storage.EQUIPMENT.id - 1), null)
 
     t.false(StorageUtil.setSlot(storage, Storage.EQUIPMENT.id, Slots.HEAD, -1))
     t.true(StorageUtil.setSlot(storage, Storage.EQUIPMENT.id, Slots.HEAD, 1))
@@ -193,9 +188,9 @@ test('storage', t => {
 
     t.deepEqual(StorageUtil.getNode(storage, Storage.EQUIPMENT.id),
         {
-            id: Storage.EQUIPMENT.id,
-            size: Storage.EQUIPMENT.size,
-            buffer: [ 0, 0, 1, 0, 0, 0, 0, 0 ]
+            'id': Storage.EQUIPMENT.id,
+            'size': Storage.EQUIPMENT.size,
+            'buffer': [ 0, 0, 1, 0, 0, 0, 0, 0 ]
         })
 
     t.is(StorageUtil.getSlot(storage, Storage.EQUIPMENT.id, 0), 0)
@@ -203,4 +198,3 @@ test('storage', t => {
     t.false(StorageUtil.setSlot(storage, Storage.EQUIPMENT.id, Slots.HEAD, 1111))
     t.true(StorageUtil.setSlot(storage, Storage.EQUIPMENT.id, Slots.FEET, 1111))
 })
-

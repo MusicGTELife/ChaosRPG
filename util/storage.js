@@ -1,14 +1,13 @@
 const { ItemUtil } = require('./item')
 
-const { Storage, Slots } = require('../storage')
-const { StorageFlag } = require('../storageflags')
+const { Storage } = require('../storage')
 const { UnitType } = require('../unit')
 
 class StorageUtil {
     static createStorage(unitType) {
         let valid = ({
             [UnitType.PLAYER.id]: true,
-            [UnitType.MONSTER.id]: true,
+            [UnitType.MONSTER.id]: true
         })[unitType] || false
 
         if (!valid)
@@ -16,13 +15,13 @@ class StorageUtil {
 
         let storage = [
             {
-                id: Storage.EQUIPMENT.id,
-                size: Storage.EQUIPMENT.size,
-                buffer: new Array(Storage.EQUIPMENT.size).fill(0)
+                'id': Storage.EQUIPMENT.id,
+                'size': Storage.EQUIPMENT.size,
+                'buffer': new Array(Storage.EQUIPMENT.size).fill(0)
             }, {
-                id: Storage.INVENTORY.id,
-                size: Storage.INVENTORY.size,
-                buffer: new Array(Storage.INVENTORY.size).fill(0)
+                'id': Storage.INVENTORY.id,
+                'size': Storage.INVENTORY.size,
+                'buffer': new Array(Storage.INVENTORY.size).fill(0)
             }
         ]
 
@@ -40,12 +39,18 @@ class StorageUtil {
 
     static getNodeName(nodeId) {
         let entry = Object.values(Storage).find(s => s.id === nodeId)
-        return entry.name
+        if (entry)
+            return entry.name
+
+        return 'invalid'
     }
 
     static getSlotName(slotId) {
         let entry = Object.values(Storage).find(s => s.descriptor.id === slotId)
-        return entry.name
+        if (entry)
+            return entry.name
+
+        return 'invalid'
     }
 
     static getStorageTableEntry(id) {
@@ -71,7 +76,7 @@ class StorageUtil {
 
                 let slot = entry.descriptor[idx]
                 if (slot) {
-                    location = { node: n.id, slot: slot.id }
+                    location = { 'node': n.id, 'slot': slot.id }
                     console.log('slot found')
                 }
                 console.log('no slot found')
@@ -111,18 +116,20 @@ class StorageUtil {
             return -1
 
         const slot = entry.descriptor.findIndex(sd => sd.id === slotId)
+
         return slot
     }
 
     static isSlotValid(storage, nodeId, slotId) {
         if (!StorageUtil.isNodeValid(storage, nodeId)) {
             console.log('invalid node')
+
             return false
         }
 
         const node = StorageUtil.getNode(storage, nodeId)
         const slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
-        if (slot < 0 || slot > node.size-1)
+        if (slot < 0 || slot > node.size - 1)
             return false
 
         return true
@@ -161,26 +168,31 @@ class StorageUtil {
         let node = StorageUtil.getNode(storage, nodeId)
         if (!node) {
             console.log('setSlot unable to get node')
+
             return false
         }
 
         if (!node.buffer) {
             console.log('setSlot unable to get buffer')
+
             return false
         }
 
         let slot = StorageUtil.getSlotIndexFromId(nodeId, slotId)
         if (slot < 0) {
             console.log('setSlot bad slotIdx')
+
             return false
         }
 
         if (itemId !== 0 && node.buffer[slot] !== 0) {
             console.log('setSlot slot not empty', node.buffer[slot])
+
             return false
         }
 
         node.buffer[slot] = itemId
+
         return true
     }
 
@@ -196,12 +208,11 @@ class StorageUtil {
         Object.values(Storage).map(e => {
             let slots = e.descriptor
                 .filter(d => (d.flags & item.storage_flag) !== 0)
-                .map(d => ({ id: e.id, slot: d.id}))
+                .map(d => ({ 'id': e.id, 'slot': d.id }))
 
             out = out.concat(slots)
         })
-
-        //console.log('slots', out)
+        // console.log('slots', out)
 
         return out
     }
@@ -209,6 +220,7 @@ class StorageUtil {
     static canEquipItemTypeInSlot(storage, nodeId, slotId, itemCode) {
         if (!StorageUtil.isSlotValid(storage, nodeId, slotId)) {
             console.log('invalid slot')
+
             return false
         }
 
@@ -220,6 +232,7 @@ class StorageUtil {
         if (!slotDesc) {
             console.log('no slot descriptor found')
             process.exit(1)
+
             return false
         }
 

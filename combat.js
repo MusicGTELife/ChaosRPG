@@ -4,7 +4,7 @@ const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
 const { StatTable } = require('./stattable')
-const { Unit: UnitModel } = require('./models')
+const { 'Unit': UnitModel } = require('./models')
 const { Storage } = require('./storage')
 const { MonsterRarity } = require('./monsterrarity.js')
 const { MonsterTable } = require('./monstertable')
@@ -19,23 +19,23 @@ const SU = StatUtil
 const ST = StatTable
 
 const CombatType = { }
-CombatType.RANGED = { id: 0x10, name: "Ranged" }
-CombatType.MELEE = { id: 0x20, name: "Hand to hand"}
-CombatType.SPELL = { id: 0x30, name: "Spell"}
+CombatType.RANGED = { 'id': 0x10, 'name': 'Ranged' }
+CombatType.MELEE = { 'id': 0x20, 'name': 'Hand to hand' }
+CombatType.SPELL = { 'id': 0x30, 'name': 'Spell' }
 
 const CombatEventType = { }
-CombatEventType.MONSTER_DAMAGE = { id: 0x01, name: "Monster Damaged" }
-CombatEventType.MONSTER_DEATH = { id: 0x02, name: "Monster Death" }
-CombatEventType.MONSTER_ITEM_DROP = { id: 0x03, name: "Player Dropped Item" }
+CombatEventType.MONSTER_DAMAGE = { 'id': 0x01, 'name': 'Monster Damaged' }
+CombatEventType.MONSTER_DEATH = { 'id': 0x02, 'name': 'Monster Death' }
+CombatEventType.MONSTER_ITEM_DROP = { 'id': 0x03, 'name': 'Player Dropped Item' }
 
-CombatEventType.PLAYER_DAMAGE = { id: 0x10, name: "Player Damaged" }
-CombatEventType.PLAYER_DEATH = { id: 0x11, name: "Player Death" }
-CombatEventType.PLAYER_ITEM_DROP = { id: 0x12, name: "Monster Dropped Item" }
+CombatEventType.PLAYER_DAMAGE = { 'id': 0x10, 'name': 'Player Damaged' }
+CombatEventType.PLAYER_DEATH = { 'id': 0x11, 'name': 'Player Death' }
+CombatEventType.PLAYER_ITEM_DROP = { 'id': 0x12, 'name': 'Monster Dropped Item' }
 
-CombatEventType.PLAYER_LEVEL = { id: 0x13, name: "Player Leveled" }
-CombatEventType.PLAYER_EXPERIENCE = { id: 0x14, name: "Player Gained Experience" }
+CombatEventType.PLAYER_LEVEL = { 'id': 0x13, 'name': 'Player Leveled' }
+CombatEventType.PLAYER_EXPERIENCE = { 'id': 0x14, 'name': 'Player Gained Experience' }
 
-CombatEventType.BLOCK = { id: 0x20, name: "Blocked" }
+CombatEventType.BLOCK = { 'id': 0x20, 'name': 'Blocked' }
 
 const DamageType = { }
 DamageType.PHYSICAL =       0x01
@@ -49,7 +49,7 @@ class Damage {
 
     getDamage() {
         return {
-            physical: this.physical, magic: this.magic
+            'physical': this.physical, 'magic': this.magic
         }
     }
 }
@@ -84,9 +84,8 @@ class CombatContext {
         this.message = null
 
         this.rngCtx = this.game.secureRng.getContext('combat')
-        if (!this.rngCtx) {
+        if (!this.rngCtx)
             throw new Error('Unable to get combat RNG context')
-        }
     }
 
     // returns true if successfully
@@ -135,11 +134,10 @@ class CombatContext {
         let magicA = SecureRNG.getRandomInt(this.rngCtx, 0, reactA.value)
         let magicB = SecureRNG.getRandomInt(this.rngCtx, 0, reactB.value)
 
-        if (magicA > magicB) {
+        if (magicA > magicB)
             this.setAttacker(this.unitA.id)
-        } else {
+        else
             this.setAttacker(this.unitB.id)
-        }
 
         return true
     }
@@ -164,41 +162,44 @@ class CombatContext {
         let rngCtx = this.game.secureRng.getContext('combat')
         if (!rngCtx) {
             console.log('unable to get combat RNG context')
+
             return null
         }
 
         if (!online || online.length < 1) {
             console.log('not enough online players, skipping combat')
+
             return null
         }
 
+        let shuffled = online
         if (online.length > 1)
-            online = SecureRNG.shuffleSequence(rngCtx, online)
+            shuffled = SecureRNG.shuffleSequence(rngCtx, shuffled)
 
-        await Promise.all(online.map(async u => {
-            //if (!UnitUtil.isAlive(u)) {
-                // NOTE just temporary
-                console.log('resurrecting player unit')
-                StatUtil.setStat(u.stats, StatTable.UNIT_HP.id,
-                    StatUtil.getStat(u.stats, StatTable.UNIT_HP_MAX.id).value)
+        await Promise.all(shuffled.map(async u => {
+            // if (!UnitUtil.isAlive(u)) {
 
-                u = await UnitModel.findOneAndUpdate(
-                    { id: u.id },
-                    { stats: u.stats },
-                    { new: true }
-                )
-            //}
+            // NOTE just temporary
+            console.log('resurrecting player unit')
+            StatUtil.setStat(u.stats, StatTable.UNIT_HP.id,
+                StatUtil.getStat(u.stats, StatTable.UNIT_HP_MAX.id).value)
+
+            await UnitModel.findOneAndUpdate(
+                { 'id': u.id },
+                { 'stats': u.stats },
+            )
+            // }
         }))
 
         let units = []
-        units.push(online.pop())
+        units.push(shuffled.pop())
 
         let pvp = false
         const wantPvp = SecureRNG.getRandomInt(rngCtx, 0, 127) === 127
         if (wantPvp) {
             online.map(o => {
-                const diff = Math.abs(o.level-units[0].level)
-                const range = Math.round(units[0].level * 0.1)+1
+                const diff = Math.abs(o.level - units[0].level)
+                const range = Math.round(1 + units[0].level * 0.1)
                 if (!pvp && diff <= range) {
                     pvp = true
                     units.push(o)
@@ -215,6 +216,7 @@ class CombatContext {
             const monsterRngCtx = this.game.secureRng.getContext('monster')
             if (!monsterRngCtx) {
                 console.log('unable to get monster RNG context')
+
                 return null
             }
 
@@ -226,14 +228,15 @@ class CombatContext {
             // generate a monster
             const range = 1 + Math.round(units[0].level * 0.1)
             const code = shuffledTable.shift().code
-            const diff = SecureRNG.getRandomInt(rngCtx, -(range*2), range)
-            const level = Math.max(1, units[0].level+diff)
+            const diff = SecureRNG.getRandomInt(rngCtx, -(range * 2), range)
+            const level = Math.max(1, units[0].level + diff)
 
             console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
 
             const monsterData = this.game.monster.generate(monsterRngCtx, code, level, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
+
                 return null
             }
             const monster = await this.game.unit.prepareGeneratedUnit(monsterData, settings)
@@ -246,11 +249,13 @@ class CombatContext {
     async resolveRound() {
         if (!UnitUtil.isAlive(this.unitA)) {
             console.log('unit is dead, but was expected to be alive')
+
             return null
         }
 
         if (!UnitUtil.isAlive(this.unitB)) {
             console.log('unit is dead, but was expected to be alive')
+
             return null
         }
 
@@ -261,15 +266,13 @@ class CombatContext {
         let result = await this.resolveAttack()
         if (!result) {
             console.log('failed to resolve attack')
+
             return results
         }
         events = events.concat(result)
-        if (events.find(e =>
-                e.type === CombatEventType.PLAYER_DEATH.id ||
-                e.type === CombatEventType.MONSTER_DEATH.id)) {
-
+        if (events.find(e => e.type === CombatEventType.PLAYER_DEATH.id ||
+                e.type === CombatEventType.MONSTER_DEATH.id))
             return events
-        }
 
         // toggle attacker
         this.swapAttacker()
@@ -278,6 +281,7 @@ class CombatContext {
         result = await this.resolveAttack()
         if (!result) {
             console.log('failed to resolve counter-attack')
+
             return results
         }
         events = events.concat(result)
@@ -298,64 +302,66 @@ class CombatContext {
         let atk = SU.getStat(this.attacker.stats, ST.UNIT_ATK.id)
         let matk = SU.getStat(this.attacker.stats, ST.UNIT_MATK.id)
         let acc = SU.getStat(this.attacker.stats, ST.UNIT_ACCURACY.id)
-        let attackReact = SU.getStat(this.attacker.stats, ST.UNIT_REACTION.id)
+        // let attackReact = SU.getStat(this.attacker.stats, ST.UNIT_REACTION.id)
 
         let def = SU.getStat(this.defender.stats, ST.UNIT_DEF.id)
         let mdef = SU.getStat(this.defender.stats, ST.UNIT_MDEF.id)
         let block = SU.getStat(this.defender.stats, ST.UNIT_BLOCK.id)
-        let defendReact = SU.getStat(this.defender.stats, ST.UNIT_REACTION.id)
+        // let defendReact = SU.getStat(this.defender.stats, ST.UNIT_REACTION.id)
 
         // Unsure if I'll do dodge yet, but is so, it will be based on reaction
-        let attackReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, attackReact.value)
-        let defendReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, defendReact.value)
+        // let attackReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, attackReact.value)
+        // let defendReactRoll = SecureRNG.getRandomInt(this.rngCtx, 0, defendReact.value)
 
         let blocked = false
         if (block.value) {
-            let magic  = SecureRNG.getRandomInt(this.rngCtx, 0, 100)
+            let magic = SecureRNG.getRandomInt(this.rngCtx, 0, 100)
             if (magic <= block.value)
                 blocked = true
         }
 
         if (blocked) {
-            //console.log('blocked', this.attacker.name, this.defender.name)
+            // console.log('blocked', this.attacker.name, this.defender.name)
 
             eventType = CombatEventType.BLOCK.id
             let event = new CombatEvent(this.attacker, this.defender, eventType)
             events.push(event)
+
             return events
         }
 
         // Resolve damage dealt, we scale each attack type down according to the
         // units accuracy roll
-        let pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
-        atk.value = Math.ceil((baseAtk.value + baseAtk.value*atk.value/100)*pAcc)
+        let pAcc = this.getHitAccuracyRoll(this.attacker, acc.value) / 100
+        atk.value = Math.ceil((baseAtk.value + baseAtk.value * atk.value / 100) * pAcc)
         let pCrit = false
         if (atk.value && pAcc > 0.99) {
             pCrit = true
             const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
-            atk.value = Math.round(atk.value*(1+roll/10000))
+            atk.value = Math.round(atk.value * (1 + roll / 10000))
         }
 
-        pAcc = this.getHitAccuracyRoll(this.attacker, acc.value)/100
-        matk.value = Math.ceil((baseMAtk.value + baseMAtk.value*matk.value/100)*pAcc)
+        pAcc = this.getHitAccuracyRoll(this.attacker, acc.value) / 100
+        matk.value = Math.ceil((baseMAtk.value + baseMAtk.value * matk.value / 100) * pAcc)
         let mCrit = false
         if (matk.value && pAcc > 0.99) {
             mCrit = true
             const roll = SecureRNG.getRandomInt(this.rngCtx, acc.value, 10000)
-            matk.value = Math.round(matk.value*(1+roll/10000))
+            matk.value = Math.round(matk.value * (1 + roll / 10000))
         }
 
         let physDmg = this.resolveDamageDealt(atk, def)
         let magicDmg = this.resolveDamageDealt(matk, mdef)
         let dmg = new Damage(
-            { damage: physDmg, is_crit: pCrit },
-            { damage: magicDmg, is_crit: mCrit }
+            { 'damage': physDmg, 'is_crit': pCrit },
+            { 'damage': magicDmg, 'is_crit': mCrit }
         )
 
-        UnitUtil.applyDamage(this.defender, physDmg+magicDmg)
-        this.defender = await UnitModel.findOneAndUpdate({ id: this.defender.id },
-            { stats: this.defender.stats },
-            { new: true }
+        UnitUtil.applyDamage(this.defender, physDmg + magicDmg)
+        this.defender = await UnitModel.findOneAndUpdate(
+            { 'id': this.defender.id },
+            { 'stats': this.defender.stats },
+            { 'new': true }
         )
 
         eventType = CombatEventType.MONSTER_DAMAGE.id
@@ -367,7 +373,7 @@ class CombatContext {
 
         if (!UnitUtil.isAlive(this.defender))
             events = events.concat(await this.resolveDeath())
-        //console.log(`attacker did ${physDmg+magicDmg} (${physDmg}:${magicDmg}) damage`)
+        // console.log(`attacker did ${physDmg+magicDmg} (${physDmg}:${magicDmg}) damage`)
 
         return events
     }
@@ -389,11 +395,12 @@ class CombatContext {
             // TODO add experience deduction on player and a small chance of
             // item loss on death
             this.inCombat = false
+
             return events
         }
 
         // okay, a monster has died, give experience and drop items
-        let nextLevelXp = getExperienceForLevel(this.attacker.level+1)
+        let nextLevelXp = getExperienceForLevel(this.attacker.level + 1)
         let currXp = PlayerUtil.getExperience(this.attacker)
         let exp = MonsterUtil.getExperienceReward(this.defender)
 
@@ -401,7 +408,7 @@ class CombatContext {
         event = new CombatEvent(this.attacker, this.defender, CombatEventType.PLAYER_EXPERIENCE.id, exp)
         events.push(event)
 
-        if (currXp+exp >= nextLevelXp) {
+        if (currXp + exp >= nextLevelXp) {
             PlayerUtil.applyLevelGain(this.attacker)
 
             eventType = CombatEventType.PLAYER_LEVEL.id
@@ -412,27 +419,25 @@ class CombatContext {
         let monsterItems = await this.game.unit.getItems(this.defender)
         if (!monsterItems) {
             this.inCombat = false
+
             return events
         }
 
         // Drop items
-        let equipped = false
+        // TODO|FIXME move drop rate to data table
         await Promise.all(monsterItems.map(async i => {
             let magic = SecureRNG.getRandomInt(this.rngCtx, 0, 9)
-            if (magic !== 9) {
+            if (magic >= 8)
                 return this.game.gameDb.removeItem(i)
-            }
 
             let slots = StorageUtil.getValidSlotsForItem(this.attacker.storage, i)
                 .filter(st => StorageUtil.canEquipInSlot(this.attacker.storage, st.id, st.slot))
-            if (!slots) {
+            if (!slots)
                 return this.game.gameDb.removeItem(i)
-            }
 
             let slot = slots.find(st => st.id === Storage.INVENTORY.id)
-            if (!slot) {
+            if (!slot)
                 return this.game.gameDb.removeItem(i)
-            }
 
             console.log('will drop item', i)
 
@@ -450,7 +455,7 @@ class CombatContext {
             event = new CombatEvent(this.attacker, this.defender, eventType, i)
             events.push(event)
 
-            //console.log('saving item to player')
+            // console.log('saving item to player')
 
             return i.save()
         }))
@@ -467,16 +472,17 @@ class CombatContext {
     }
 
     resolveDamageDealt(attack, defense) {
-        //const pDef = defense.value/100
-        let dmg = Math.ceil(attack.value * attack.value/(attack.value+defense.value*0.1))
+        // const pDef = defense.value/100
+        let dmg = Math.ceil(attack.value * attack.value / (attack.value + defense.value * 0.1))
         if (dmg < 0) {
             console.log('negative damage', dmg, attack, defense)
             process.exit()
-        }
 
-        if (attack.value === 0 && defense.value === 0) {
             return 0
         }
+
+        if (attack.value === 0 && defense.value === 0)
+            return 0
 
         return dmg
     }
@@ -484,9 +490,9 @@ class CombatContext {
     getHitAccuracyRoll(unit, accuracy) {
         // Scale attack down according to accuracy roll
         let pAcc = SecureRNG.getRandomInt(this.rngCtx, accuracy, 10000)
-        let acc = Math.max(1, pAcc/100)
+        let acc = Math.max(1, pAcc / 100)
 
-        //console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${acc}`)
+        // console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${acc}`)
         return acc
     }
 }

@@ -14,32 +14,32 @@ Markdown.c = Markdown.code
 function createCommand(name, argsMin, argsMax, confirm) {
     return {
         name,
-        args_min: argsMin,
-        args_max: argsMax,
+        'args_min': argsMin,
+        'args_max': argsMax,
         confirm,
-        func: null,
-        ctx: null
+        'func': null,
+        'ctx': null
     }
 }
 
 const Command = { }
 Command.trigger = '.'
 
-const C = createCommand
+const cc = createCommand
 
 const Commands = { }
 // Administrative command
-Commands.GUILD = C("guild", 0, 4, true, null, null)
+Commands.GUILD = cc('guild', 0, 4, true, null, null)
 
 // User commands
-Commands.CREATE_PLAYER = C("create", 0, 1, false, null, null)
-Commands.DELETE_PLAYER = C("delete", 0, 0, false, null, null)
-Commands.PLAYER_INFO = C("player", 0, 2, false, null, null)
-Commands.EQUIPMENT = C("gear", 0, 0, false, null, null)
-Commands.EQUIP = C("equip", 0, 2, false, null, null)
-Commands.DROP = C("drop", 0, 1, false, null, null)
+Commands.CREATE_PLAYER = cc('create', 0, 1, false, null, null)
+Commands.DELETE_PLAYER = cc('delete', 0, 0, false, null, null)
+Commands.PLAYER_INFO = cc('player', 0, 2, false, null, null)
+Commands.EQUIPMENT = cc('gear', 0, 0, false, null, null)
+Commands.EQUIP = cc('equip', 0, 2, false, null, null)
+Commands.DROP = cc('drop', 0, 1, false, null, null)
 
-// TODO|FIXME unity command and tracked command
+// TODO|FIXME unify command and tracked command
 class CommandHandler {
     constructor(name, ctx, func, args, message) {
         this.name = name
@@ -60,7 +60,6 @@ class TrackedCommand {
         this.tracked = tracked
         this.command = command
         this.timeout = timeout
-        this.response = null
 
         this.timer = setTimeout(() => { this.deleter() }, timeout)
     }
@@ -100,12 +99,14 @@ class DiscordUtil {
         let args = message.content.substring(1).split(/\s* \s*/)
         if (!args.length) {
             console.log('invalid command format')
+
             return null
         }
 
         let command = DiscordUtil.getCommandEntry(args[0])
         if (!command) {
             console.log('unable to parse as command', args[0])
+
             return null
         }
 
@@ -115,6 +116,7 @@ class DiscordUtil {
 
         if (args.length > command.args_max || args.length < command.args_min) {
             console.log('invalid number of args', command)
+
             return null
         }
 
@@ -126,7 +128,7 @@ class DiscordUtil {
     }
 
     static async processCommand(command) {
-        //console.log('processCommand', command)
+        // console.log('processCommand', command)
         if (command && command.func)
             await command.func()
     }
@@ -134,6 +136,7 @@ class DiscordUtil {
     static isValidChannelName(name) {
         if (name === '')
             return false
+
         return channel.match(/(<?#?(\d+)>?)/, '$2') !== null
     }
 

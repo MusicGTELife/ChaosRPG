@@ -14,10 +14,10 @@ function createEntry(id, name, flag) {
 const MaterialClass = { }
 const _ = createEntry
 
-MaterialClass.CLOTH = _(0x01, "Cloth", Flag.ARMOR)
-MaterialClass.LEATHER = _(0x02, "Leather", Flag.ARMOR)
-MaterialClass.CRYSTAL = _(0x03, "Crystal", Flag.WEAPON|Flag.JEWEL)
-MaterialClass.METAL = _(0x04, "Metal", Flag.ARMOR|Flag.WEAPON|Flag.JEWEL)
-MaterialClass.ETHEREAL = _(0x05, "Ethereal", Flag.ARMOR|Flag.WEAPON|Flag.JEWEL)
+MaterialClass.CLOTH = _(0x01, 'Cloth', Flag.ARMOR)
+MaterialClass.LEATHER = _(0x02, 'Leather', Flag.ARMOR)
+MaterialClass.CRYSTAL = _(0x03, 'Crystal', Flag.WEAPON | Flag.JEWEL)
+MaterialClass.METAL = _(0x04, 'Metal', Flag.ARMOR | Flag.WEAPON | Flag.JEWEL)
+MaterialClass.ETHEREAL = _(0x05, 'Ethereal', Flag.ARMOR | Flag.WEAPON | Flag.JEWEL)
 
-module.exports = { MaterialFlag: Flag, MaterialClass }
+module.exports = { 'MaterialFlag': Flag, MaterialClass }

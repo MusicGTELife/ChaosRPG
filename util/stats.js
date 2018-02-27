@@ -1,4 +1,3 @@
-const { StatResolver } = require('../statresolver')
 const { StatModifier } = require('../statmodifier')
 const { StatTable } = require('../stattable')
 
@@ -15,11 +14,11 @@ class StatUtil {
         overrides.map(stat => {
             let base = stats.find(s => s.id === stat.id)
             if (base) {
-                //console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
+                // console.log(`applying override ${base.id} ${base.value} => ${stat.value}`)
                 base.value = stat.value
             } else {
                 console.log('adding new stat in apply')
-                stats.push({ id: stat.id, value: stat.value })
+                stats.push({ 'id': stat.id, 'value': stat.value })
             }
         })
     }
@@ -27,11 +26,10 @@ class StatUtil {
     static getReducedStats(stats) {
         // reduce into a map with a single summed value per stat id
         let reducedMap = stats.reduce((prev, curr) => {
-            prev.set(curr.id, curr.value + (prev.has(curr.id) ? prev.get(curr.id) : 0))
-            return prev
+            return prev.set(curr.id, curr.value + (prev.has(curr.id) ? prev.get(curr.id) : 0))
         }, new Map())
 
-        return Array.from(reducedMap, ([id, value]) => ({ id, value }))
+        return Array.from(reducedMap, ([ id, value ]) => ({ id, value }))
     }
 
     static getSortedStats(stats) {
@@ -40,8 +38,7 @@ class StatUtil {
 
     static getStat(stats, id) {
         const value = stats.reduce((v, stat) =>
-            stat.id === id ? v+stat.value : v
-        , 0)
+            stat.id === id ? v + stat.value : v, 0)
 
         return { id, value }
     }
@@ -62,25 +59,24 @@ class StatUtil {
     }
 
     static getModifiers() {
-        let mods = Object.values(StatModifier).sort((a, b) => a.id-b.id)
-        return mods
+        return Object.values(StatModifier).sort((a, b) => a.id - b.id)
     }
 
     static getModifier(id) {
         const mods = StatUtil.getModifiers()
+
         return mods.find(m => m.id === id)
     }
 
     static resolveModifier(stats, mod) {
         let inputs = mod.inputs.map(i => ({
-            id: i,
-            value: StatUtil.getStat(stats, i).value*mod.value
+            'id': i, 'value': StatUtil.getStat(stats, i).value * mod.value
         }))
 
         let outputs = mod.outputs.map(i => StatUtil.getStat(stats, i))
 
-        //console.log(`inputs ${JSON.stringify(inputs)} inputs end`)
-        //console.log(`outputs ${JSON.stringify(outputs)} outputs end`)
+        // console.log(`inputs ${JSON.stringify(inputs)} inputs end`)
+        // console.log(`outputs ${JSON.stringify(outputs)} outputs end`)
 
         let resolved = []
         inputs.map(i => {

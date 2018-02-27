@@ -1,5 +1,5 @@
 const crypto = require('crypto')
-const assert = require('assert')
+// const assert = require('assert')
 
 class SecureRNGContext {
     constructor(secret, counter) {
@@ -63,7 +63,7 @@ class SecureRNG {
             if (!(ctx.hmac instanceof Buffer))
                 throw new TypeError('invalid hmac')
 
-            if (ctx.hmac.length*8 !== ctx.hmacBits)
+            if (ctx.hmac.length * 8 !== ctx.hmacBits)
                 throw new Error(`invalid digest length ${ctx.hmac.length}`)
         } catch (e) {
             return false
@@ -72,30 +72,35 @@ class SecureRNG {
         return true
     }
 
-    // TODO
+    /*
     static getIntSequence(ctx, count, range, unique = false) {
 
     }
+    */
 
-    static shuffleSequence(ctx, sequence, shuffles) {
+    static shuffleSequence(ctx, sequence, numShuffles) {
         if (!SecureRNG.validateContext(ctx))
             throw new Error('invalid context')
 
         if (sequence.length < 2)
             throw new RangeError('sequence length must be greater than 1')
 
-        if (sequence.length === 2) {
-            let magic = SecureRNG.getRandomInt(ctx, 0, 1)
-            console.log('magic', magic)
-            if (magic === 0)
-                return [ sequence[1], sequence[0] ]
-            else
-                return sequence
+        const shuffles = numShuffles || 1
+        let shuffled = sequence
+        for (let i = 0; i < shuffles; ++i) {
+            if (sequence.length === 2) {
+                let magic = SecureRNG.getRandomInt(ctx, 0, 1)
+                console.log('magic', magic)
+                if (magic === 0)
+                    return [ shuffled[1], shuffled[0] ]
+            } else {
+                shuffled = shuffled.map(a => [ SecureRNG.getRandomInt(ctx, -127, 128), a ])
+                    .sort((a, b) => a[0] - b[0])
+                    .map(a => a[1])
+            }
         }
 
-        return sequence.map(a => [SecureRNG.getRandomInt(ctx, -127, 128), a])
-            .sort((a, b) => a[0] - b[0])
-            .map((a) => a[1])
+        return shuffled
     }
 
     static getRandomInt(ctx, min, max) {
@@ -105,20 +110,20 @@ class SecureRNG {
         if (min >= max)
             throw new RangeError('min >= max')
 
-        const range = max-min
-        const bitsRequired = Math.ceil(Math.log2(range+1))
+        const range = max - min
+        const bitsRequired = Math.ceil(Math.log2(range + 1))
 
         let val = SecureRNG.getBits(ctx, bitsRequired)
         do {
-            //console.log('out of range, reading next chunk', val.bits, range, ctx.currentOffset)
+            // console.log('out of range, reading next chunk', val.bits, range, ctx.currentOffset)
             ctx.currentOffset += 8
             val = SecureRNG.getBits(ctx, bitsRequired)
 
-        } while(val.bits > range)
+        } while (val.bits > range)
 
         ctx.currentOffset += val.read
 
-        return max-range+val.bits
+        return max - range + val.bits
     }
 
     static getBits(ctx, num) {
@@ -131,19 +136,19 @@ class SecureRNG {
         if (num < 1)
             throw new RangeError('You must parse at least 1 bit at a time')
 
-        const bytesToRead = Math.ceil(num/8)
-        if (ctx.currentOffset + bytesToRead*8 > ctx.hmacBits)
+        const bytesToRead = Math.ceil(num / 8)
+        if (ctx.currentOffset + bytesToRead * 8 > ctx.hmacBits)
             SecureRNG.getNextHmac(ctx)
 
         // currently using byte level granularity reads, if the result exceeds
         // the requested range we simplytaking the first N characters and parsing the result
-        const bitsRead = ctx.hmac.readUIntLE(ctx.currentOffset/8, bytesToRead)
+        const bitsRead = ctx.hmac.readUIntLE(ctx.currentOffset / 8, bytesToRead)
 
-        ctx.currentOffset += bytesToRead*8
+        ctx.currentOffset += bytesToRead * 8
 
-        //console.log(`requested ${num}, read ${bytesToRead*8}`)
+        // console.log(`requested ${num}, read ${bytesToRead * 8}`)
 
-        return { requested: num, read: bytesToRead*8, bits: bitsRead }
+        return { 'requested': num, 'read': bytesToRead * 8, 'bits': bitsRead }
     }
 
     static getNextHmac(ctx) {
@@ -160,7 +165,7 @@ class SecureRNG {
         if (!SecureRNG.validateContext(ctx))
             throw new Error('invalid context')
 
-        //console.log(`${ctx.hmac.toString()}-${ctx.counter}`)
+        // console.log(`${ctx.hmac.toString()}-${ctx.counter}`)
 
         return ctx.hmac
     }

@@ -3,13 +3,11 @@ const { StorageUtil } = require('./storage')
 const { ItemUtil } = require('./item')
 
 const { Storage, Slots } = require('../storage')
-const { StatModifier } = require('../statmodifier')
 const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
 const { Player } = require('../player')
 const { Monster } = require('../monster')
-const { ItemClass, WeaponClass, ArmorClass, JewelClass } = require('../itemclass')
-const { ItemTable } = require('../itemtable')
+const { ItemClass, ArmorClass, JewelClass } = require('../itemclass')
 
 const SU = StatUtil
 const ST = StatTable
@@ -24,6 +22,7 @@ class UnitUtil {
             [UnitType.PLAYER.id]: true,
             [UnitType.MONSTER.id]: true
         })[type] || false
+
         return valid
     }
 
@@ -36,15 +35,15 @@ class UnitUtil {
             [UnitType.MONSTER.id]: Monster.descriptor
         })[type]
 
-        //console.log(`create ${JSON.stringify(descriptor)}`)
+        // console.log(`create ${JSON.stringify(descriptor)}`)
 
         return {
-            id: 0,
+            'id': 0,
             type,
             level,
-            name: name,
-            stats: UnitUtil.createBaseStats(type),
-            storage: StorageUtil.createStorage(type),
+            name,
+            'stats': UnitUtil.createBaseStats(type),
+            'storage': StorageUtil.createStorage(type),
             descriptor
         }
     }
@@ -55,12 +54,12 @@ class UnitUtil {
 
         let stats = Object.values(ST).filter(e => {
             if (type === UnitType.PLAYER.id && (e.flags & StatFlag.PLAYER) !== 0)
-                return { id: e.id, value: 0 }
+                return { 'id': e.id, 'value': 0 }
             else if (type === UnitType.MONSTER.id && (e.flags & StatFlag.MONSTER) !== 0)
-                return { id: e.id, value: 0 }
+                return { 'id': e.id, 'value': 0 }
             else if ((e.flags & StatFlag.BASE) !== 0 || (e.flags & StatFlag.UNIT) !== 0)
-                return { id: e.id, value: 0 }
-        }).map(e => ({ id: e.id, value: 0}))
+                return { 'id': e.id, 'value': 0 }
+        }).map(e => ({ 'id': e.id, 'value': 0 }))
 
         return stats
     }
@@ -69,6 +68,7 @@ class UnitUtil {
         if (!settings) {
             console.log('prepareGeneratedUnit no settings')
             process.exit(1)
+
             return null
         }
 
@@ -133,10 +133,12 @@ class UnitUtil {
     // This is only to be used after final damage is calculated
     static applyDamage(unit, amount) {
         const curr = SU.getStat(unit.stats, ST.UNIT_HP.id)
-        if (curr.value-amount < 0)
-            amount = curr.value
 
-        SU.setStat(unit.stats, ST.UNIT_HP.id, curr.value-amount)
+        let cappedAmount = amount
+        if (curr.value - cappedAmount < 0)
+            cappedAmount = curr.value
+
+        SU.setStat(unit.stats, ST.UNIT_HP.id, curr.value - cappedAmount)
         unit.markModified('stats')
     }
 
@@ -157,7 +159,7 @@ class UnitUtil {
             }
         })
 
-        //console.log(stats)
+        // console.log(stats)
 
         return stats
     }
@@ -177,6 +179,7 @@ class UnitUtil {
 
         if (!valid) {
             console.log(unit.storage)
+            process.exit(1)
         }
 
         return valid
@@ -187,8 +190,8 @@ class UnitUtil {
         const currArmLId = StorageUtil.getSlot(unit.storage, Storage.EQUIPMENT.id, Slots.ARM_L)
 
         return {
-            arm_right: items.find(i => i.id === currArmRId) || null,
-            arm_left: items.find(i => i.id === currArmLId) || null
+            'arm_right': items.find(i => i.id === currArmRId) || null,
+            'arm_left': items.find(i => i.id === currArmLId) || null
         }
     }
 
@@ -197,6 +200,7 @@ class UnitUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
 
@@ -204,40 +208,41 @@ class UnitUtil {
         if (!slotInfo) {
             console.log('no slot info found for item', item)
             process.exit(1)
+
             return false
         }
 
         if (slotInfo.node === node && slotInfo.slot === slot) {
-            //console.log('item dest is src, no-op')
+            // console.log('item dest is src, no-op')
             return true
         }
 
         const canEquip = StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
         if (!canEquip) {
-            //console.log('unable to equip generally')
+            // console.log('unable to equip generally')
             return false
         }
 
         const isWeaponOrShield = ItemUtil.isWeaponOrShield(item)
         if (!isWeaponOrShield) {
-            //console.log('non-arm item')
+            // console.log('non-arm item')
             return true
         }
 
         if (node === Storage.INVENTORY.id) {
-            //console.log('dest in inv')
+            // console.log('dest in inv')
             return true
         }
 
         if (isWeaponOrShield) {
             let armItems = UnitUtil.getArmItems(unit, items)
             if (!armItems.arm_right && !armItems.arm_left) {
-                //console.log('early exit, no weapon or shield equipped')
+                // console.log('early exit, no weapon or shield equipped')
                 return true
             }
 
             if (ItemUtil.isTwoHanded(item) && (armItems.arm_right || armItems.arm_left)) {
-                //console.log('can\'t dual wield two handed')
+                // console.log('can\'t dual wield two handed')
                 return false
             }
 
@@ -268,13 +273,12 @@ class UnitUtil {
                             ItemUtil.isRanged(armItems.arm_left)
                 }
             }
+
+            console.log('arm item evaded filter', itemEntry, armItems)
+            // process.exit(1)
         }
 
-        console.log(
-            'arm item evaded filter',
-            itemEntry, armItems.arm_right, armItems.arm_left
-        )
-        process.exit(1)
+        console.log('non-arm item evaded filter', itemEntry, item)
 
         return false
     }
@@ -287,7 +291,7 @@ class UnitUtil {
         if (!entry)
             return false
 
-        //console.log(entry.requirements)
+        // console.log(entry.requirements)
 
         const met = entry.requirements.every(i => {
             const unitStat = SU.getStat(unit.stats, i.id)
@@ -295,6 +299,7 @@ class UnitUtil {
                 return true
 
             console.log('didn\'t meet stat', unitStat, i.value)
+
             return false
         })
 
@@ -305,47 +310,51 @@ class UnitUtil {
         if (!unit) {
             console.log('no unit')
             process.exit(1)
+
             return false
         }
 
         if (!item) {
             console.log('no unit')
             process.exit(1)
+
             return false
         }
 
         if (!StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)) {
             console.log('unable to equip type in slot', node, slot, item.code)
+
             return false
         }
 
-        //console.log('can equip type in slot')
+        // console.log('can equip type in slot')
 
         if (!StorageUtil.canEquipInSlot(unit.storage, node, slot)) {
             console.log('unable to equip an item in slot', node, slot, item.code)
             process.exit(1)
+
             return false
         }
 
-        //console.log('can equip in slot')
+        // console.log('can equip in slot')
 
         // Special case to allow monsters to equip items regardless of the items
         // stat requirements
         if (unit.type === UnitType.PLAYER.id && node === Storage.EQUIPMENT.id && !UnitUtil.itemRequirementsAreMet(unit, item)) {
             console.log('player didn\'t meet item requirements', item.code)
+
             return false
         }
 
         if (!StorageUtil.setSlot(unit.storage, node, slot, item.id)) {
             console.log('failed setting item slot', node, slot, item.code)
             process.exit(1)
+
             return false
         }
 
-        if (unit.type === UnitType.PLAYER.id) {
+        if (unit.type === UnitType.PLAYER.id)
             console.log('equipped', unit.storage, node, slot, item.code)
-            //process.exit(1)
-        }
 
         return true
     }
@@ -357,6 +366,7 @@ class UnitUtil {
         const found = items.find(i => i.id === item.id)
         if (!found) {
             console.log(`item ${item.id} is not equipped`)
+
             return false
         }
 
@@ -364,6 +374,7 @@ class UnitUtil {
 
         if (!StorageUtil.setSlot(unit.storage, nodeId, slotId, 0)) {
             console.log('failed setting item slot')
+
             return false
         }
 
@@ -381,12 +392,12 @@ class UnitUtil {
 
         // FIXME sanity checks to ensure unit is owner
 
-        //console.log('equipItemByType', ItemUtil.getName(item.code))
+        // console.log('equipItemByType', ItemUtil.getName(item.code))
 
         let slotTypes = StorageUtil.getValidSlotsForItem(unit.storage, item)
             .filter(st => StorageUtil.canEquipInSlot(unit.storage, st.id, st.slot))
 
-        //console.log('slottypes', slotTypes)
+        // console.log('slottypes', slotTypes)
 
         // Pick the first location in the filtered slot list, if the item
         // can be placed in both the equipment and the inventory, the equipment
@@ -394,32 +405,32 @@ class UnitUtil {
         // be selected
 
         let entry = slotTypes.find(st => st.id === Storage.EQUIPMENT.id)
-        if (!entry) {
+        if (!entry)
             entry = slotTypes.find(st => st.id === Storage.INVENTORY.id)
-        }
 
         if (!entry) {
             console.log('no slot entry found', item)
             process.exit(1)
+
             return false
         }
 
         // The unit is able to store the item according to the items type
         // and storage flags, time to call the real equipItem
 
-        //console.log('equipItemByType found slot', entry)
+        // console.log('equipItemByType found slot', entry)
 
         return this.equipItem(unit, items, item, entry.id, entry.slot)
     }
 
     async getItems(unit) {
-        let items = await this.game.gameDb.getUnitItems(unit.id)
-        return items
+        return await this.game.gameDb.getUnitItems(unit.id)
     }
 
     static async getEquippedItems(unit, items) {
         if (!unit) {
             process.exit(1)
+
             return null
         }
 
@@ -433,16 +444,15 @@ class UnitUtil {
             let found = false
             unit.storage.map(s => {
                 if (s.buffer.find(si => si === i.id)) {
-                    //console.log('found', i, s)
+                    // console.log('found', i, s)
                     if (s.id === Storage.EQUIPMENT.id)
                         found = true
 
                     if (s.id === Storage.INVENTORY.id) {
                         let itemEntry = ItemUtil.getItemTableEntry(i.code)
                         if (itemEntry.item_class === ItemClass.JEWEL &&
-                                itemEntry.item_sub_class == JewelClass.CHARM) {
+                                itemEntry.item_sub_class === JewelClass.CHARM)
                             found = true
-                        }
                     }
                 }
             })
@@ -461,6 +471,7 @@ class UnitUtil {
         if (!unit) {
             console.log('no unit')
             process.exit(1)
+
             return null
         }
 
@@ -468,28 +479,25 @@ class UnitUtil {
         if (!valid) {
             console.log('unit storage is invalid')
             process.exit(1)
+
             return null
         }
 
-        items = await UnitUtil.getEquippedItems(unit, items)
-
-        let itemStats = await UnitUtil.getAllItemStats(unit, items)
+        let equipped = await UnitUtil.getEquippedItems(unit, items)
+        let itemStats = await UnitUtil.getAllItemStats(unit, equipped)
         itemStats = SU.getReducedStats(itemStats)
 
         // filter stat types in seperate lists
         let baseStats = unit.stats.filter(e => {
             let entry = SU.getStatTableEntry(e.id)
+
             return entry && entry.flags & StatFlag.BASE
         })
 
         let unitStats = unit.stats.filter(e => {
             let entry = SU.getStatTableEntry(e.id)
-            return entry && entry.flags & StatFlag.UNIT
-        })
 
-        let playerStats = unit.stats.filter(e => {
-            let entry = SU.getStatTableEntry(e.id)
-            return entry && entry.flags & StatFlag.PLAYER
+            return entry && entry.flags & StatFlag.UNIT
         })
 
         let stats = itemStats.concat(baseStats)
@@ -498,20 +506,18 @@ class UnitUtil {
         // Okay, first we need to get the base_atk stat from equipped items
         // FIXME, this should only consider actually equipped items
         SU.setStat(unit.stats, ST.UNIT_BASE_ATK.id,
-                SU.getStat(stats, ST.BASE_ATK.id).value)
+            SU.getStat(stats, ST.BASE_ATK.id).value)
         SU.setStat(unit.stats, ST.UNIT_BASE_MATK.id,
-                SU.getStat(stats, ST.BASE_MATK.id).value)
+            SU.getStat(stats, ST.BASE_MATK.id).value)
 
         // process each base stat which needs to be resolved by a formula
         let resolved = SU.resolve(stats, SU.getModifiers())
         resolved = SU.getReducedStats(resolved)
-        //console.log('resolved', resolved, stats, 'end resolved')
+        // console.log('resolved', resolved, stats, 'end resolved')
 
         // recalculate unit special stats based on resolved base stats
         let currHp = SU.getStat(unitStats, ST.UNIT_HP.id)
         let currHpMax = SU.getStat(unitStats, ST.UNIT_HP_MAX.id)
-
-        let currHpPercent = currHpMax === 0 ? 0 : currHp/currHpMax
 
         let resolvedHp = SU.getStat(resolved, ST.HP.id)
 
@@ -529,34 +535,34 @@ class UnitUtil {
         }
 
         SU.setStat(unit.stats, ST.UNIT_STR.id,
-                SU.getStat(stats, ST.STR.id).value)
+            SU.getStat(stats, ST.STR.id).value)
         SU.setStat(unit.stats, ST.UNIT_DEX.id,
-                SU.getStat(stats, ST.DEX.id).value)
+            SU.getStat(stats, ST.DEX.id).value)
         SU.setStat(unit.stats, ST.UNIT_INT.id,
-                SU.getStat(stats, ST.INT.id).value)
+            SU.getStat(stats, ST.INT.id).value)
         SU.setStat(unit.stats, ST.UNIT_VIT.id,
-                SU.getStat(stats, ST.VIT.id).value)
+            SU.getStat(stats, ST.VIT.id).value)
 
         SU.setStat(unit.stats, ST.UNIT_ATK.id,
-                SU.getStat(resolved, ST.ATK.id).value)
+            SU.getStat(resolved, ST.ATK.id).value)
         SU.setStat(unit.stats, ST.UNIT_MATK.id,
-                SU.getStat(resolved, ST.MATK.id).value)
+            SU.getStat(resolved, ST.MATK.id).value)
 
         SU.setStat(unit.stats, ST.UNIT_DEF.id,
-                SU.getStat(resolved, ST.DEF.id).value)
+            SU.getStat(resolved, ST.DEF.id).value)
         SU.setStat(unit.stats, ST.UNIT_MDEF.id,
-                SU.getStat(resolved, ST.MDEF.id).value)
+            SU.getStat(resolved, ST.MDEF.id).value)
 
         SU.setStat(unit.stats, ST.UNIT_BLOCK.id,
-                SU.getStat(stats, ST.BLOCK.id).value)
+            SU.getStat(stats, ST.BLOCK.id).value)
         SU.setStat(unit.stats, ST.UNIT_ACCURACY.id,
-                SU.getStat(resolved, ST.ACCURACY.id).value)
+            SU.getStat(resolved, ST.ACCURACY.id).value)
         SU.setStat(unit.stats, ST.UNIT_REACTION.id,
-                SU.getStat(resolved, ST.REACTION.id).value)
+            SU.getStat(resolved, ST.REACTION.id).value)
 
         // save else where once things settle a bit
         unit.markModified('stats')
-        //await unit.save()
+        // await unit.save()
 
         return unit.stats
     }

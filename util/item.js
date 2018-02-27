@@ -1,11 +1,9 @@
-const { SecureRNG, SecureRNGContext, getRandomShuffle } = require('../rng') // FIXME getrandomshuffle
+const { SecureRNG, SecureRNGContext } = require('../rng')
 const { StatUtil } = require('./stats')
-
-const { StatTable } = require('../stattable')
 
 const { Tier } = require('../tier')
 
-const { ItemClass, WeaponClass, ArmorClass, JewelClass, WeaponFlags } = require('../itemclass')
+const { ItemClass, WeaponClass, ArmorClass } = require('../itemclass')
 const { ItemModTable, ItemModClass } = require('../itemmod')
 const { ItemTable } = require('../itemtable')
 const { ItemRarity } = require('../itemrarity')
@@ -45,7 +43,7 @@ class ItemUtil {
             return entries[0]
 
         let itemRngCtx = this.game.secureRng.getContext('item')
-        let magic = SecureRNG.getRandomInt(itemRngCtx, 0, entries.length-1)
+        let magic = SecureRNG.getRandomInt(itemRngCtx, 0, entries.length - 1)
         let choice = entries[magic]
 
         return choice
@@ -73,9 +71,9 @@ class ItemUtil {
 
     static createWeaponDescriptor() {
         return {
-            can_duel_wield: false,
-            is_2h: false,
-            is_ranged: false
+            'can_duel_wield': false,
+            'is_2h': false,
+            'is_ranged': false
         }
     }
 
@@ -86,22 +84,22 @@ class ItemUtil {
 
     static createJewelDescriptor() {
         return {
-            is_charm: false
+            'is_charm': false
         }
     }
 
     static createBaseDescriptor() {
         return {
-            id: 0,
-            ilvl: 0,
-            owner: 0,
-            code: 0,
-            item_class: 0,
-            item_sub_class: 0,
-            tier: 0,
-            rarity: 0,
-            descriptor: { },
-            stats: [ ]
+            'id': 0,
+            'ilvl': 0,
+            'owner': 0,
+            'code': 0,
+            'item_class': 0,
+            'item_sub_class': 0,
+            'tier': 0,
+            'rarity': 0,
+            'descriptor': { },
+            'stats': [ ]
         }
     }
 
@@ -123,13 +121,15 @@ class ItemUtil {
     }
 
     static getAdjustedStat(value, tier, rarity) {
-        return value = Math.round(value * (1+((rarity-1)*0.25)+((tier-1)*0.25)))
+        return Math.round(value *
+            (1 + ((rarity - 1) * 0.25) + ((tier - 1) * 0.25)))
     }
 
     static rollItemStat(itemRngCtx, min, max) {
         let magic = min
         if (min !== max)
             magic = SecureRNG.getRandomInt(itemRngCtx, min, max)
+
         return magic
     }
 
@@ -142,17 +142,17 @@ class ItemUtil {
 
         const itemMods = Object.keys(ItemModTable).filter(i => i.mod_class !== ItemModClass.IMPLICIT)
         const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
-        //console.log('shuffled', shuffled)
+        // console.log('shuffled', shuffled)
 
-        const stats = [...Array(modCount)]
-        stats.map((_,i) => {
+        const stats = [ ...Array(modCount) ]
+        stats.map((_, i) => {
             const mod = ItemModTable[shuffled[i]]
-            //console.log(`mod ${JSON.stringify(mod)}`)
+            // console.log(`mod ${JSON.stringify(mod)}`)
 
             Object.values(mod.stat_descriptor).map(desc => {
-                //console.log(`stat desc ${JSON.stringify(desc)}`)
+                // console.log(`stat desc ${JSON.stringify(desc)}`)
 
-                let increased = { min: desc.min_value, max: desc.max_value }
+                let increased = { 'min': desc.min_value, 'max': desc.max_value }
                 increased.min = ItemUtil.getAdjustedStat(desc.min_value, tier, rarity)
                 increased.max = ItemUtil.getAdjustedStat(desc.max_value, tier, rarity)
 
@@ -161,7 +161,7 @@ class ItemUtil {
                 console.log('stat', tier, rarity, magic)
 
                 const stat = StatUtil.createDescriptor(desc.id, magic)
-                //console.log(`adding stat ${JSON.stringify(stat)}`)
+                // console.log(`adding stat ${JSON.stringify(stat)}`)
                 item.stats.push(stat)
             })
         })
@@ -174,6 +174,7 @@ class ItemUtil {
         if (!tableEntry) {
             console.log('unable to get item table entry')
             process.exit(1)
+
             return null
         }
 
@@ -184,6 +185,7 @@ class ItemUtil {
         if (!item) {
             console.log(`unable to create item descriptor for item_class ${itemClass}`)
             process.exit(1)
+
             return null
         }
 
@@ -191,6 +193,7 @@ class ItemUtil {
         if (!tierEntry) {
             console.log('unable to get item tier entry')
             process.exit(1)
+
             return null
         }
 
@@ -226,15 +229,15 @@ class ItemUtil {
             console.log('added implicit stat magic m increased tier rarity', stat.id, magic, m, min, max, tier, rarity)
         })
 
-        if (tableEntry.is_starter_item) {
+        if (tableEntry.is_starter_item)
             return item
-        }
 
         const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
             if (!ItemUtil.rollItemMods(itemRngCtx, item, tier, rarity, count)) {
                 console.log('failed to roll item mods')
                 process.exit(1)
+
                 return null
             }
         }
@@ -254,6 +257,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
 
@@ -268,8 +272,10 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
+
         return ItemUtil.isWeapon(item) &&
                 itemEntry.item_sub_class === WeaponClass.RANGED
     }
@@ -282,8 +288,10 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
+
         return ItemUtil.isWeapon(item) &&
                 (itemEntry.item_sub_class === WeaponClass.MELEE_1H ||
                 itemEntry.item_sub_class === WeaponClass.MELEE_2H)
@@ -297,8 +305,10 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
+
         return ItemUtil.isWeapon(item) &&
                 (itemEntry.item_sub_class === WeaponClass.CASTING_1H ||
                 itemEntry.item_sub_class === WeaponClass.CASTING_2H)
@@ -312,6 +322,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
 
@@ -328,6 +339,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
 
@@ -345,6 +357,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item table entry')
             process.exit(1)
+
             return false
         }
 
@@ -361,6 +374,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item entry')
             process.exit(1)
+
             return false
         }
 
@@ -399,6 +413,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item entry')
             process.exit(1)
+
             return false
         }
 
@@ -438,6 +453,7 @@ class ItemUtil {
         if (!itemEntry) {
             console.log('no item entry')
             process.exit(1)
+
             return false
         }
 
@@ -447,7 +463,7 @@ class ItemUtil {
         if (ItemUtil.isTwoHanded(item))
             return false
 
-        if (ItemUtil.isRangedCasting(item))
+        if (ItemUtil.isRanged(item))
             return false
 
         if (itemEntry.item_class === ItemClass.ARMOR &&
