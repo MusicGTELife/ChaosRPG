@@ -68,16 +68,4 @@ ItemModTable.REACTION = _(
     [ { id: StatTable.REACTION.id, min_value: 1, max_value: 10 } ]
 )
 
-/* Not sure if these should be added yet
-ItemModTable.BASE_ATK = _(
-    0x0180, "base attack", ItemModClass.IMPLICIT.id,
-    [ { id: StatTable.BASE_ATK.id, min_value: 1, max_value: 5} ]
-)
-
-ItemModTable.BASE_ATK = _(
-    0x0181, "base magic attack", ItemModClass.IMPLICIT.id,
-    [ { id: StatTable.BASE_MATK.id, min_value: 1, max_value: 5} ]
-)
-*/
-
 module.exports = { ItemModClass, ItemModTable }

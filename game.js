@@ -457,7 +457,7 @@ class Game {
         console.log(settings)
     }
 
-    // user handlers
+    // unprivileged command handlers
 
     // lexical this is in the context of CommandHandler
     async createPlayerHandler() {
