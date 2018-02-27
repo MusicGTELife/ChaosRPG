@@ -203,41 +203,41 @@ class UnitUtil {
         let slotInfo = StorageUtil.getItemLocation(unit.storage, item.id)
         if (!slotInfo) {
             console.log('no slot info found for item', item)
+            process.exit(1)
             return false
         }
 
         if (slotInfo.node === node && slotInfo.slot === slot) {
-            console.log('item dest is src, no-op')
+            //console.log('item dest is src, no-op')
             return true
         }
 
         const canEquip = StorageUtil.canEquipItemTypeInSlot(unit.storage, node, slot, item.code)
         if (!canEquip) {
-            console.log('unable to equip generally')
+            //console.log('unable to equip generally')
             return false
         }
 
-        const willSwap = StorageUtil.isSlotOccupied(unit.storage, node, slot)
         const isWeaponOrShield = ItemUtil.isWeaponOrShield(item)
         if (!isWeaponOrShield) {
-            console.log('non-arm item')
+            //console.log('non-arm item')
             return true
         }
 
         if (node === Storage.INVENTORY.id) {
-            console.log('dest in inv')
+            //console.log('dest in inv')
             return true
         }
 
         if (isWeaponOrShield) {
             let armItems = UnitUtil.getArmItems(unit, items)
             if (!armItems.arm_right && !armItems.arm_left) {
-                console.log('early exit, no weapon or shield equipped')
+                //console.log('early exit, no weapon or shield equipped')
                 return true
             }
 
             if (ItemUtil.isTwoHanded(item) && (armItems.arm_right || armItems.arm_left)) {
-                console.log('can\'t dual wield two handed')
+                //console.log('can\'t dual wield two handed')
                 return false
             }
 
@@ -257,21 +257,16 @@ class UnitUtil {
             }
 
             if (ItemUtil.isShieldClass(item)) {
-                console.log('wtffffffffffffff1', armItems.arm_right, ItemUtil.isMelee(armItems.arm_right))
                 if (itemEntry.item_sub_class === ArmorClass.SHIELD) {
                     return !ItemUtil.isRanged(armItems.arm_right) &&
                             !ItemUtil.isRanged(armItems.arm_left)
                 } else if (itemEntry.item_sub_class === ArmorClass.SPELLBOOK) {
-                    console.log('wtffffffffffffff22222', armItems.arm_right, ItemUtil.isMelee(armItems.arm_right))
                     return !ItemUtil.isMelee(armItems.arm_right) &&
                             !ItemUtil.isMelee(armItems.arm_left)
                 } else if (itemEntry.item_sub_class === ArmorClass.QUIVER) {
                     return ItemUtil.isRanged(armItems.arm_right) ||
                             ItemUtil.isRanged(armItems.arm_left)
                 }
-            } else {
-                console.log('unknown item', item)
-                process.exit(1)
             }
         }
 
@@ -279,6 +274,7 @@ class UnitUtil {
             'arm item evaded filter',
             itemEntry, armItems.arm_right, armItems.arm_left
         )
+        process.exit(1)
 
         return false
     }
