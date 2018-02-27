@@ -133,6 +133,42 @@ class ItemUtil {
         return magic
     }
 
+    static rollItemMods(itemRngCtx, item, tier, rarity, modCount) {
+        if (!item)
+            return false
+
+        if (modCount <= 0)
+            return false
+
+        const itemMods = Object.keys(ItemModTable).filter(i => i.mod_class !== ItemModClass.IMPLICIT)
+        const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
+        //console.log('shuffled', shuffled)
+
+        const stats = [...Array(modCount)]
+        stats.map((_,i) => {
+            const mod = ItemModTable[shuffled[i]]
+            //console.log(`mod ${JSON.stringify(mod)}`)
+
+            Object.values(mod.stat_descriptor).map(desc => {
+                //console.log(`stat desc ${JSON.stringify(desc)}`)
+
+                let increased = { min: desc.min_value, max: desc.max_value }
+                increased.min = ItemUtil.getAdjustedStat(desc.min_value, tier, rarity)
+                increased.max = ItemUtil.getAdjustedStat(desc.max_value, tier, rarity)
+
+                const magic = ItemUtil.rollItemStat(itemRngCtx, increased.min, increased.max)
+
+                console.log('stat', tier, rarity, magic)
+
+                const stat = StatUtil.createDescriptor(desc.id, magic)
+                //console.log(`adding stat ${JSON.stringify(stat)}`)
+                item.stats.push(stat)
+            })
+        })
+
+        return true
+    }
+
     static generate(itemRngCtx, code, itemClass, itemSubClass, tier, rarity) {
         const tableEntry = ItemUtil.getItemTableEntry(code)
         if (!tableEntry) {
@@ -196,31 +232,11 @@ class ItemUtil {
 
         const count = tierEntry.stat_counts[2] // FIXME once tiers are worked out
         if (count > 0) {
-            let itemMods = Object.keys(ItemModTable).filter(i => i.mod_class !== ItemModClass.IMPLICIT)
-            const shuffled = SecureRNG.shuffleSequence(itemRngCtx, itemMods)
-            //console.log('shuffled', shuffled)
-
-            let stats = [...Array(count)]
-            stats.map((_,i) => {
-                let mod = ItemModTable[shuffled[i]]
-                //console.log(`mod ${JSON.stringify(mod)}`)
-
-                Object.values(mod.stat_descriptor).map(desc => {
-                    //console.log(`stat desc ${JSON.stringify(desc)}`)
-
-                    let increased = { min: desc.min_value, max: desc.max_value }
-                    increased.min = ItemUtil.getAdjustedStat(desc.min_value, tier, rarity)
-                    increased.max = ItemUtil.getAdjustedStat(desc.max_value, tier, rarity)
-
-                    let magic = ItemUtil.rollItemStat(itemRngCtx, increased.min, increased.max)
-
-                    console.log('stat', tier, rarity, magic)
-
-                    let stat = StatUtil.createDescriptor(desc.id, magic)
-                    //console.log(`adding stat ${JSON.stringify(stat)}`)
-                    item.stats.push(stat)
-                })
-            })
+            if (!ItemUtil.rollItemMods(itemRngCtx, item, tier, rarity, count)) {
+                console.log('failed to roll item mods')
+                process.exit(1)
+                return null
+            }
         }
 
         return item
@@ -231,6 +247,9 @@ class ItemUtil {
     }
 
     static isWeapon(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -242,6 +261,9 @@ class ItemUtil {
     }
 
     static isRanged(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -253,6 +275,9 @@ class ItemUtil {
     }
 
     static isMelee(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -265,6 +290,9 @@ class ItemUtil {
     }
 
     static isCasting(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -277,6 +305,9 @@ class ItemUtil {
     }
 
     static isTwoHanded(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -290,6 +321,9 @@ class ItemUtil {
     }
 
     static isShieldClass(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')
@@ -304,6 +338,9 @@ class ItemUtil {
     }
 
     static isWeaponOrShield(item) {
+        if (!item)
+            return false
+
         const itemEntry = ItemUtil.getItemTableEntry(item.code)
         if (!itemEntry) {
             console.log('no item table entry')

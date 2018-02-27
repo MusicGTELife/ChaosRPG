@@ -187,8 +187,8 @@ class UnitUtil {
         const currArmLId = StorageUtil.getSlot(unit.storage, Storage.EQUIPMENT.id, Slots.ARM_L)
 
         return {
-            arm_right: items.find(i => i.d === currArmRId) || null,
-            arm_left: items.find(i => i.d === currArmLId) || null
+            arm_right: items.find(i => i.id === currArmRId) || null,
+            arm_left: items.find(i => i.id === currArmLId) || null
         }
     }
 
@@ -219,22 +219,21 @@ class UnitUtil {
 
         const willSwap = StorageUtil.isSlotOccupied(unit.storage, node, slot)
         const isWeaponOrShield = ItemUtil.isWeaponOrShield(item)
-        if (!isWeaponOrShield)
+        if (!isWeaponOrShield) {
+            console.log('non-arm item')
             return true
+        }
+
+        if (node === Storage.INVENTORY.id) {
+            console.log('dest in inv')
+            return true
+        }
 
         if (isWeaponOrShield) {
             let armItems = UnitUtil.getArmItems(unit, items)
             if (!armItems.arm_right && !armItems.arm_left) {
+                console.log('early exit, no weapon or shield equipped')
                 return true
-            }
-
-            let rightArmEntry = null
-            let leftArmEntry = null
-            if (armItems.arm_right) {
-                rightArmEntry = ItemUtil.getItemTableEntry(armItems.arm_right.code)
-            }
-            if (armItems.arm_left) {
-                leftArmEntry = ItemUtil.getItemTableEntry(armItems.arm_left.code)
             }
 
             if (ItemUtil.isTwoHanded(item) && (armItems.arm_right || armItems.arm_left)) {
@@ -243,29 +242,43 @@ class UnitUtil {
             }
 
             if (ItemUtil.isMelee(item)) {
-                if (!ItemUtil.isMelee1HCompatible(armItems.arm_right) ||
-                        !ItemUtil.isMelee1HCompatible(armItems.arm_left))
-                    return false
+                return ItemUtil.isMelee1HCompatible(armItems.arm_right) &&
+                        ItemUtil.isMelee1HCompatible(armItems.arm_left)
             }
 
             if (ItemUtil.isCasting(item)) {
-                if (!ItemUtil.isCasting1HCompatible(armItems.arm_right) ||
-                        !ItemUtil.isCasting1HCompatible(armItems.arm_left))
-                    return false
+                return ItemUtil.isCasting1HCompatible(armItems.arm_right) &&
+                        ItemUtil.isCasting1HCompatible(armItems.arm_left)
             }
 
             if (ItemUtil.isRanged(item)) {
-                if (!ItemUtil.isRangedCompatible(armItems.arm_right) ||
-                        !ItemUtil.isRangedCompatible(armItems.arm_left))
-                    return false
+                return ItemUtil.isRangedCompatible(armItems.arm_right) &&
+                        ItemUtil.isRangedCompatible(armItems.arm_left)
             }
 
-            console.log(
-                'arm item passed filter',
-                itemEntry, armItems.arm_right, armItems.arm_left
-            )
-            return true
+            if (ItemUtil.isShieldClass(item)) {
+                console.log('wtffffffffffffff1', armItems.arm_right, ItemUtil.isMelee(armItems.arm_right))
+                if (itemEntry.item_sub_class === ArmorClass.SHIELD) {
+                    return !ItemUtil.isRanged(armItems.arm_right) &&
+                            !ItemUtil.isRanged(armItems.arm_left)
+                } else if (itemEntry.item_sub_class === ArmorClass.SPELLBOOK) {
+                    console.log('wtffffffffffffff22222', armItems.arm_right, ItemUtil.isMelee(armItems.arm_right))
+                    return !ItemUtil.isMelee(armItems.arm_right) &&
+                            !ItemUtil.isMelee(armItems.arm_left)
+                } else if (itemEntry.item_sub_class === ArmorClass.QUIVER) {
+                    return ItemUtil.isRanged(armItems.arm_right) ||
+                            ItemUtil.isRanged(armItems.arm_left)
+                }
+            } else {
+                console.log('unknown item', item)
+                process.exit(1)
+            }
         }
+
+        console.log(
+            'arm item evaded filter',
+            itemEntry, armItems.arm_right, armItems.arm_left
+        )
 
         return false
     }

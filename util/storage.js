@@ -175,43 +175,6 @@ class StorageUtil {
         return true
     }
 
-    static getSlotTypeForItem(storage, item) {
-        if ((item.storage_flag & StorageFlag.HEAD) !== 0)
-            return StorageFlag.HEAD
-
-        if ((item.storage_flag & StorageFlag.BODY) !== 0)
-            return StorageFlag.BODY
-
-        if ((item.storage_flag & StorageFlag.HANDS) !== 0)
-            return StorageFlag.HANDS
-
-        if ((item.storage_flag & StorageFlag.FEET) !== 0)
-            return StorageFlag.FEET
-
-        if ((item.storage_flag & StorageFlag.ARM_R) !== 0)
-            return StorageFlag.ARM_R
-
-        if ((item.storage_flag & StorageFlag.ARM_L) !== 0)
-            return StorageFlag.ARM_L
-
-        if ((item.storage_flag & StorageFlag.NECK) !== 0)
-            return StorageFlag.NECK
-
-        if ((item.storage_flag & StorageFlag.WRIST) !== 0)
-            return StorageFlag.WRIST
-
-        if ((item.storage_flag & StorageFlag.FINGER) !== 0)
-            return StorageFlag.FINGER
-
-        if ((item.storage_flag & StorageFlag.INVENTORY) !== 0)
-            return StorageFlag.INVENTORY
-
-        console.log('unable to match flag', ItemUtil.getName(item.code))
-        process.exit(1)
-
-        return StorageFlag.INVALID
-    }
-
     static getValidSlotsForItem(storage, item) {
         if (!storage)
             return []
