@@ -128,6 +128,25 @@ class DiscordUtil {
         if (command && command.func)
             await command.func()
     }
+
+    static isValidChannelName(name) {
+        if (name === '')
+            return false
+        return channel.match(/(<?#?(\d+)>?)/, '$2') !== null
+    }
+
+    static guildHasChannel(name) {
+        if (!DiscordUtil.isValidChannel(gameChannel))
+            return false
+
+        let channelId = name.replace(/(<?#?(\d+)>?)/, '$2')
+        let channel = guild.channels.get(channelId)
+
+        if (!channel)
+            channel  = guild.channels.find('name', name)
+
+        return !!channel
+    }
 }
 
 module.exports = { Markdown, DiscordUtil, Command, TrackedCommand }
