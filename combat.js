@@ -323,7 +323,7 @@ class CombatContext {
         let pCrit = false
         if (atk.value && pAcc > 0.99) {
             pCrit = true
-            const roll = SecureRNG.getRandomInt(this.comatRngCtx, acc.value, 10000)
+            const roll = SecureRNG.getRandomInt(this.combatRngCtx, acc.value, 10000)
             atk.value = Math.round(atk.value * (1 + roll / 10000))
         }
 
