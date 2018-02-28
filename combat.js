@@ -233,14 +233,33 @@ class CombatContext {
     }
 
     async resolveRound() {
+        this.unitA = await this.game.gameDb.getUnit(this.unitA.id)
+        this.unitB = await this.game.gameDb.getUnit(this.unitB.id)
+
+        if (!this.unitA) {
+            this.inCombat = false
+            console.log('unitA not found in combat')
+
+            return null
+        }
+
+        if (!this.unitB) {
+            this.inCombat = false
+            console.log('unitB not found in combat')
+
+            return null
+        }
+
         if (!UnitUtil.isAlive(this.unitA)) {
-            console.log('unit is dead, but was expected to be alive')
+            this.inCombat = false
+            console.log('unitA is dead, but was expected to be alive', this.unitA)
 
             return null
         }
 
         if (!UnitUtil.isAlive(this.unitB)) {
-            console.log('unit is dead, but was expected to be alive')
+            this.inCombat = false
+            console.log('unitB is dead, but was expected to be alive', this.unitB)
 
             return null
         }
@@ -278,9 +297,6 @@ class CombatContext {
     async resolveAttack() {
         if (!this.isAttackerSet())
             return null
-
-        this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
-        this.defender = await this.game.gameDb.getUnit(this.defender.id)
 
         const defIsPlayer = this.defender.type === UnitType.PLAYER.id
         let events = [ ]
@@ -416,7 +432,7 @@ class CombatContext {
         // TODO|FIXME move drop rate to data table
         await Promise.all(monsterItems.map(async i => {
             let magic = SecureRNG.getRandomInt(this.combatRngCtx, 0, 9)
-            if (magic >= 8)
+            if (magic < 8)
                 return this.game.gameDb.removeItem(i)
 
             let slots = StorageUtil.getValidSlotsForItem(this.attacker.storage, i)
