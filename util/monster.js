@@ -118,7 +118,7 @@ class MonsterUtil extends UnitUtil {
         return Math.floor(exp)
     }
 
-    getSecondaryWeaponChoice(monsterRngCtx, monsterCode, primaryChoice) {
+    getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, monsterCode, primaryChoice) {
         const entry = MonsterUtil.getMonsterTableEntry(monsterCode)
         let choices = MonsterUtil.getMonsterWeaponChoices(entry.code, false)
         let choice = null
@@ -291,7 +291,7 @@ class MonsterUtil extends UnitUtil {
                 // primary weapon is not two-handed or, generate a shield, quiver or
                 // spellbook for casters based upon the first items type
 
-                choice = this.getSecondaryWeaponChoice(monsterRngCtx, code, primaryChoice)
+                choice = this.getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, code, primaryChoice)
                 if (!choice) {
                     console.log('unable to get item choice generating monster')
                     process.exit(1)
