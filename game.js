@@ -253,7 +253,7 @@ class Game {
                 return
 
             let stat = 0
-            console.log(reaction.emoji)
+            // console.log(reaction.emoji.id, reaction.emoji.name)
             if (reaction.emoji.name === 'str')
                 stat = StatTable.STR.id
             else if (reaction.emoji.name === 'dex')
