@@ -513,7 +513,7 @@ class Game {
             this.message.delete(10000)
 
         let settings = await this.ctx.gameDb.getSettings()
-        let guildSettings = await this.ctx.gambeDb.getGuildSettings(this.message.guild.id)
+        let guildSettings = await this.ctx.gameDb.getGuildSettings(this.message.guild.id)
         if (!guildSettings) {
             this.message.channel
                 .send(`<@${this.message.author.id}> Unable to find settings for this guild`).then(m => m.delete(10000))
