@@ -193,7 +193,7 @@ class CombatContext {
             online.map(o => {
                 const diff = Math.abs(o.level - units[0].level)
                 const range = Math.round(1 + units[0].level * 0.1)
-                if (!pvp && diff <= range) {
+                if (!pvp && diff <= range && o.id !== units[0].id) {
                     pvp = true
                     units.push(o)
                 }
