@@ -253,13 +253,14 @@ class Game {
                 return
 
             let stat = 0
-            if (reaction.emoji.name === '<:str:416835539166035968>')
+            console.log(reaction.emoji)
+            if (reaction.emoji.name === 'str')
                 stat = StatTable.STR.id
-            else if (reaction.emoji.name === '<:dex:416835539237470208>')
+            else if (reaction.emoji.name === 'dex')
                 stat = StatTable.DEX.id
-            else if (reaction.emoji.name === '<:int:416835539157909504>')
+            else if (reaction.emoji.name === 'int')
                 stat = StatTable.INT.id
-            else if (reaction.emoji.name === '<:vit:416835538901794827>')
+            else if (reaction.emoji.name === 'vit')
                 stat = StatTable.VIT.id
             else
                 return
@@ -1199,7 +1200,6 @@ class Game {
             }
 
             let combatRngCtx = this.secureRng.getContext(`${guildSettings.guild}-combat_rng`)
-            console.log(combatRngCtx, guildSettings)
             if (!combatRngCtx) {
                 combatRngCtx = new SecureRNGContext(guildSettings.combat_rng_state.rng_secret)
                 if (!this.secureRng.addContext(combatRngCtx, `${guildSettings.guild}-combat_rng`)) {
@@ -1220,7 +1220,6 @@ class Game {
             }
 
             let monsterRngCtx = this.secureRng.getContext(`${guildSettings.guild}-monster_rng`)
-            console.log(monsterRngCtx, guildSettings)
             if (!monsterRngCtx) {
                 monsterRngCtx = new SecureRNGContext(guildSettings.monster_rng_state.rng_secret)
                 if (!this.secureRng.addContext(monsterRngCtx, `${guildSettings.guild}-monster_rng`)) {
@@ -1229,8 +1228,6 @@ class Game {
                     return
                 }
             }
-
-            console.log(combatRngCtx, itemRngCtx, monsterRngCtx, guildSettings)
 
             // okay, look for this guilds combat context
             let combatCtx = this.combatContexts.get(guild.id)
