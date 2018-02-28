@@ -279,6 +279,9 @@ class CombatContext {
         if (!this.isAttackerSet())
             return null
 
+        this.attacker = await this.game.gameDb.getUnit(this.attacker.id)
+        this.defender = await this.game.gameDb.getUnit(this.defender.id)
+
         const defIsPlayer = this.defender.type === UnitType.PLAYER.id
         let events = [ ]
         let eventType = null
