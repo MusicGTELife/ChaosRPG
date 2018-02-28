@@ -17,7 +17,7 @@ const { UnitType } = require('./unit')
 const { PlayerType } = require('./player')
 
 // utility classes
-const { Markdown, TrackedCommand, DiscordUtil } = require('./util/discord')
+const { Markdown, CommandHandler, TrackedCommand, DiscordUtil } = require('./util/discord')
 const { StorageUtil } = require('./util/storage')
 const { StatUtil } = require('./util/stats')
 const { ItemUtil } = require('./util/item')
@@ -110,14 +110,14 @@ class Game {
         this.gameDb.db.connection.on('connected', () => { this.onDbConnected() })
         this.gameDb.db.connection.on('disconnect', () => { this.onDbDisconnect() })
 
-        DiscordUtil.setCommandHandler('guild', this, this.guildSettingsHandler)
+        CommandHandler.setHandler('guild', this, this.guildSettingsHandler)
 
-        DiscordUtil.setCommandHandler('create', this, this.createPlayerHandler)
-        DiscordUtil.setCommandHandler('delete', this, this.deletePlayerHandler)
-        DiscordUtil.setCommandHandler('player', this, this.playerInfoHandler)
-        DiscordUtil.setCommandHandler('gear', this, this.gearHandler)
-        DiscordUtil.setCommandHandler('equip', this, this.equipHandler)
-        DiscordUtil.setCommandHandler('drop', this, this.dropHandler)
+        CommandHandler.setHandler('create', this, this.createPlayerHandler)
+        CommandHandler.setHandler('delete', this, this.deletePlayerHandler)
+        CommandHandler.setHandler('player', this, this.playerInfoHandler, this.onPlayerReaction)
+        CommandHandler.setHandler('gear', this, this.gearHandler, this.onGearReaction)
+        CommandHandler.setHandler('equip', this, this.equipHandler)
+        CommandHandler.setHandler('drop', this, this.dropHandler)
 
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
@@ -193,7 +193,7 @@ class Game {
         if (message.author.id === this.discord.user.id)
             return
 
-        let command = DiscordUtil.parseCommand(message)
+        let command = CommandHandler.parseCommand(message)
         if (command) {
             console.log(`processing command ${command.name}`)
             await command.run()
@@ -204,7 +204,7 @@ class Game {
         if (newMessage.author.id === this.discord.user.id)
             return
 
-        let command = DiscordUtil.parseCommand(newMessage)
+        let command = CommandHandler.parseCommand(newMessage)
         if (command) {
             console.log(`processing command ${command.name}`)
             await command.run()
@@ -230,48 +230,9 @@ class Game {
         if (!account)
             return
 
-        let player = await this.gameDb.getUnitByAccount(account.id)
-        if (!player)
-            return
-
         // console.log(reaction.emoji)
 
-        if (tracked.command.name === 'gear') {
-            if (reaction.emoji.name === '⚔') {
-                let embed = await this.createPlayerInventoryEmbed(player, Storage.EQUIPMENT.id)
-                this.response = reaction.message.edit(embed)
-            } else if (reaction.emoji.name === '💰') {
-                let embed = await this.createPlayerInventoryEmbed(player, Storage.INVENTORY.id)
-                this.response = reaction.message.edit(embed)
-            } else {
-                return
-            }
-            tracked.refresh(tracked.timeout)
-        } else if (tracked.command.name === 'player') {
-            if (player.descriptor.stat_points_remaining <= 0)
-                return
-
-            let stat = 0
-            // console.log(reaction.emoji.id, reaction.emoji.name)
-            if (reaction.emoji.name === 'str')
-                stat = StatTable.STR.id
-            else if (reaction.emoji.name === 'dex')
-                stat = StatTable.DEX.id
-            else if (reaction.emoji.name === 'int')
-                stat = StatTable.INT.id
-            else if (reaction.emoji.name === 'vit')
-                stat = StatTable.VIT.id
-            else
-                return
-
-            let items = await this.unit.getItems(player)
-            player = await PlayerUtil.applyStatPoints(player, items, stat, 1)
-
-            let embed = this.createPlayerStatsEmbed(player)
-            embed.setFooter(`Stat has been applied`)
-            this.response = reaction.message.edit(embed)
-            tracked.refresh(tracked.timeout)
-        }
+        tracked.command.onReaction(tracked, account, reaction)
     }
 
     async onMessageReactionAdd(reaction, user) {
@@ -695,7 +656,6 @@ class Game {
 
         this.response = sent
         let trackedCommand = new TrackedCommand(this.ctx.trackedCommands, this, 60000)
-
         this.ctx.trackedCommands.set(sent.id, trackedCommand)
     }
 
@@ -924,6 +884,65 @@ class Game {
 
         this.message.channel
             .send(`<@${this.message.author.id}> ${slot} item has been dropped`).then(m => m.delete(10000))
+    }
+
+    async onGearReaction(tracked, account, reaction) {
+        if (tracked.command.name !== 'gear') {
+            console.log('command tracked bad command type')
+            process.exit(1)
+        }
+
+        let player = await this.ctx.gameDb.getUnitByAccount(account.id)
+        if (!player)
+            return
+
+        if (reaction.emoji.name === '⚔') {
+            let embed = await this.ctx.createPlayerInventoryEmbed(player, Storage.EQUIPMENT.id)
+            this.response = reaction.message.edit(embed)
+        } else if (reaction.emoji.name === '💰') {
+            let embed = await this.ctx.createPlayerInventoryEmbed(player, Storage.INVENTORY.id)
+            this.response = reaction.message.edit(embed)
+        } else {
+            return
+        }
+
+        tracked.refresh(tracked.timeout)
+        // }
+    }
+
+    async onPlayerReaction(tracked, account, reaction) {
+        if (tracked.command.name !== 'player') {
+            console.log('command tracked bad command type')
+            process.exit(1)
+        }
+
+        let player = await this.gameDb.getUnitByAccount(account.id)
+        if (!player)
+            return
+
+        if (player.descriptor.stat_points_remaining <= 0)
+            return
+
+        let stat = 0
+        // console.log(reaction.emoji.id, reaction.emoji.name)
+        if (reaction.emoji.name === 'str')
+            stat = StatTable.STR.id
+        else if (reaction.emoji.name === 'dex')
+            stat = StatTable.DEX.id
+        else if (reaction.emoji.name === 'int')
+            stat = StatTable.INT.id
+        else if (reaction.emoji.name === 'vit')
+            stat = StatTable.VIT.id
+        else
+            return
+
+        let items = await this.unit.getItems(player)
+        player = await PlayerUtil.applyStatPoints(player, items, stat, 1)
+
+        let embed = this.ctx.createPlayerStatsEmbed(player)
+        embed.setFooter(`Stat has been applied`)
+        this.response = reaction.message.edit(embed)
+        tracked.refresh(tracked.timeout)
     }
 
     makeSlotNamesString(slotNames) {
