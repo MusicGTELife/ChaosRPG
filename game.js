@@ -645,10 +645,10 @@ class Game {
         let embed = await this.ctx.createPlayerStatsEmbed(player)
         let sent = await this.message.channel.send(embed)
         if (player.descriptor.stat_points_remaining) {
-            await sent.react('<:str:416835539166035968>')
-            await sent.react('<:dex:416835539237470208>')
-            await sent.react('<:int:416835539157909504>')
-            await sent.react('<:vit:416835538901794827>')
+            await sent.react('416835539166035968')
+            await sent.react('416835539237470208')
+            await sent.react('416835539157909504')
+            await sent.react('416835538901794827')
         }
 
         this.response = sent
@@ -1063,11 +1063,11 @@ class Game {
 
         if (isPreCombat) {
             embed.setDescription(`\`\`\`ml\n${unitAClass} and ${unitBClass} have been seleced for combat.\`\`\``)
-            embed.addField(`"\`${unitAName}\`"`, this.unitInfoStatsBody(unitA), true)
-            embed.addField(`"\`${unitBName}\`"`, this.unitInfoStatsBody(unitB), true)
+            embed.addField(`\`${unitAName}\``, this.unitInfoStatsBody(unitA), true)
+            embed.addField(`\`${unitBName}\``, this.unitInfoStatsBody(unitB), true)
         } else {
-            embed.addField(`"\`${unitAName}\` ${unitAClass}"`, this.unitInfoStatsBody(unitA), true)
-            embed.addField(`"\`${unitBName}\` ${unitBClass}"`, this.unitInfoStatsBody(unitB), true)
+            embed.addField(`\`${unitAName}\` ${unitAClass}`, this.unitInfoStatsBody(unitA), true)
+            embed.addField(`\`${unitBName}\` ${unitBClass}`, this.unitInfoStatsBody(unitB), true)
         }
 
         return embed
