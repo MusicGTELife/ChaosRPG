@@ -127,12 +127,6 @@ class DiscordUtil {
         return handler
     }
 
-    static async processCommand(command) {
-        // console.log('processCommand', command)
-        if (command && command.func)
-            await command.func()
-    }
-
     static isValidChannelName(name) {
         console.log('isValidChannelName', name)
         if (name === '')

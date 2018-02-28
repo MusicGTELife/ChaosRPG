@@ -14,8 +14,7 @@ const { StatTable } = require('./stattable')
 const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
-
-// const { 'Unit': UnitModel } = require('./models')
+const { PlayerType } = require('./player')
 
 // utility classes
 const { Markdown, TrackedCommand, DiscordUtil } = require('./util/discord')
@@ -197,7 +196,7 @@ class Game {
         let command = DiscordUtil.parseCommand(message)
         if (command) {
             console.log(`processing command ${command.name}`)
-            await DiscordUtil.processCommand(command)
+            await command.run()
         }
     }
 
@@ -208,7 +207,7 @@ class Game {
         let command = DiscordUtil.parseCommand(newMessage)
         if (command) {
             console.log(`processing command ${command.name}`)
-            await DiscordUtil.processCommand(command)
+            await command.run()
         }
     }
 
