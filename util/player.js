@@ -165,14 +165,9 @@ class PlayerUtil extends UnitUtil {
 
         unit.stats = await UnitUtil.computeBaseStats(unit, items)
 
-        let newVal = StatUtil.getStat(unit.stats, statId)
-        if (newVal.value === current.value) {
-            console.log('no write')
-            process.exit(1)
-        }
-
         unit.markModified('descriptor')
         unit.markModified('stats')
+
         let updated = await UnitModel.findOneAndUpdate({ 'id': unit.id },
             { 'stats': unit.stats, 'descriptor': unit.descriptor },
             { 'new': true }
@@ -244,7 +239,7 @@ class PlayerUtil extends UnitUtil {
             { 'id': unit.id }, { 'stats': unit.stats }, { 'new': true }
         )
         // await unit.save()
-                
+
         return updated
     }
 }

@@ -266,9 +266,9 @@ class Game {
                 return
 
             let items = await this.unit.getItems(player)
-            await PlayerUtil.applyStatPoints(player, items, stat, 1)
+            player = await PlayerUtil.applyStatPoints(player, items, stat, 1)
 
-            let embed = await this.createPlayerStatsEmbed(player)
+            let embed = this.createPlayerStatsEmbed(player)
             embed.setFooter(`Stat has been applied`)
             this.response = reaction.message.edit(embed)
             tracked.refresh(tracked.timeout)
@@ -648,7 +648,7 @@ class Game {
 
         let player = accountRecords.unit
 
-        let embed = await this.ctx.createPlayerStatsEmbed(player)
+        let embed = this.ctx.createPlayerStatsEmbed(player)
         let sent = await this.message.channel.send(embed)
         if (player.descriptor.stat_points_remaining) {
             await sent.react('416835539166035968')
@@ -999,12 +999,11 @@ class Game {
         return embed
     }
 
-    async createPlayerStatsEmbed(unit) {
+    createPlayerStatsEmbed(unit) {
+        const statsBody = this.unitInfoStatsBody(unit, true)
         let embed = new Discord.RichEmbed().setColor(7682618)
             .addField(`\`*${unit.name}\`*`, `**${unit.descriptor.stat_points_remaining}** stat points are available`, true)
-
-        let statsBody = this.unitInfoStatsBody(unit, true)
-        embed.addField('Character Stats', statsBody)
+            .addField('Character Stats', statsBody)
 
         // console.log(embed)
         return embed
