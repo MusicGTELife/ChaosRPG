@@ -497,7 +497,6 @@ class Game {
 
                 return
             }
-
         } else if (subCmd === 'game') {
             // TODO|FIXME
             return
@@ -514,7 +513,13 @@ class Game {
             this.message.delete(10000)
 
         let settings = await this.ctx.gameDb.getSettings()
+        let guildSettings = await this.ctx.gambeDb.getGuildSettings(this.message.guild.id)
+        if (!guildSettings) {
+            this.message.channel
+                .send(`<@${this.message.author.id}> Unable to find settings for this guild`).then(m => m.delete(10000))
 
+            return
+        }
         let account = await this.ctx.gameDb.getAccount(this.message.guild.id, this.message.author.id)
         if (!account) {
             account = await this.ctx.gameDb.createAccount({
@@ -557,7 +562,7 @@ class Game {
             return
         }
 
-        let itemRngCtx = this.ctx.secureRng.getContext('item')
+        let itemRngCtx = this.ctx.secureRng.getContext(`${this.message.guild.id}-item_rng`)
         let starterItems = PlayerUtil.createStarterItems(itemRngCtx, type)
         if (!starterItems) {
             console.log('unable to create starter items')
@@ -654,7 +659,6 @@ class Game {
 
         this.response = sent
         let trackedCommand = new TrackedCommand(this.ctx.trackedCommands, this, 60000)
-
         this.ctx.trackedCommands.set(sent.id, trackedCommand)
     }
 
