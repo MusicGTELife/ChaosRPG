@@ -120,27 +120,6 @@ class Game {
         DiscordUtil.setCommandHandler('equip', this, this.equipHandler)
         DiscordUtil.setCommandHandler('drop', this, this.dropHandler)
 
-        const combatRngCtx = new SecureRNGContext('combat secret')
-        if (!this.secureRng.addContext(combatRngCtx, 'combat')) {
-            console.log('unable to add combat RNG context')
-
-            return false
-        }
-
-        const itemRngCtx = new SecureRNGContext('item secret')
-        if (!this.secureRng.addContext(itemRngCtx, 'item')) {
-            console.log('unable to add item RNG context')
-
-            return false
-        }
-
-        const monsterRngCtx = new SecureRNGContext('monster secret')
-        if (!this.secureRng.addContext(monsterRngCtx, 'monster')) {
-            console.log('unable to add monster RNG context')
-
-            return false
-        }
-
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
             .catch(e => {
@@ -274,13 +253,13 @@ class Game {
                 return
 
             let stat = 0
-            if (reaction.emoji.name === '💪')
+            if (reaction.emoji.name === '<:str:416835539166035968>')
                 stat = StatTable.STR.id
-            else if (reaction.emoji.name === '⚡')
+            else if (reaction.emoji.name === '<:dex:416835539237470208>')
                 stat = StatTable.DEX.id
-            else if (reaction.emoji.name === '📚')
+            else if (reaction.emoji.name === '<:int:416835539157909504>')
                 stat = StatTable.INT.id
-            else if (reaction.emoji.name === '❤')
+            else if (reaction.emoji.name === '<:vit:416835538901794827>')
                 stat = StatTable.VIT.id
             else
                 return
@@ -329,6 +308,8 @@ class Game {
             }
 
             let guildSettings = await this.gameDb.getGuildSettings(guild.id)
+            if (!guildSettings)
+                return
 
             let gameChannel = guild.channels.get(guildSettings.game_channel)
             if (gameChannel && !debugOnly)
@@ -353,41 +334,151 @@ class Game {
         if (this.message.channel.permissionsFor(this.ctx.discord.user).has('MANAGE_MESSAGES'))
             this.message.delete(10000)
 
-        if (this.args.length < 2 || this.args.length > 4)
+        if (this.args.length < 1 || this.args.length > 4)
             return
 
         let subCmd = this.args[0]
-        let guildName = this.args[1]
-
-        const guild = this.ctx.discord.guilds.find('name', guildName)
-        if (!guild) {
-            console.log(`I am not in ${guildName}`)
-            this.message.channel
-                .send(`<@${this.message.author.id}> I am not in guild ${guildName}`).then(m => m.delete(10000))
-
-            return
-        }
-
         let settings = await this.ctx.gameDb.getSettings()
 
-        if (subCmd === 'add') {
-            console.log('add', guildName)
+        if (subCmd === 'purge') {
+            console.log('purge')
 
-            if (settings.guilds.find(g => g.guild === guildName)) {
+            settings.guilds = []
+            settings.markModified('guilds')
+            await settings.save()
+
+            this.message.channel
+                .send(`<@${this.message.author.id}> Active guilds purged`).then(m => m.delete(10000))
+
+            return
+        } else if (subCmd === 'add') {
+            console.log('add')
+
+            const guild = this.ctx.discord.guilds.get(this.message.guild.id)
+            if (!guild) {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> I am not in guild ${guild.name}`).then(m => m.delete(10000))
+
+                return
+            }
+
+            if (settings.guilds.find(g => g.guild === guild.name)) {
                 console.log('already exists')
                 this.message.channel
-                    .send(`<@${this.message.author.id}> Settings already exist for ${guildName}`).then(m => m.delete(10000))
-            } else {
-                let gameChannel = this.args[2] || ''
-                let debugChannel = this.args[3] || ''
+                    .send(`<@${this.message.author.id}> Settings already exist for ${guild.name}`).then(m => m.delete(10000))
 
-                let game = DiscordUtil.guildHasChannel(guild, gameChannel)
-                if (!game) {
-                    this.message.channel
-                        .send(`<@${this.message.author.id}> Unable to lookup channel ${gameChannel}`).then(m => m.delete(10000))
+                return
+            }
+
+            let guildSettings = await this.ctx.gameDb.getGuildSettings(guild.id)
+            if (guildSettings) {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Guild settings already exist for ${guild.name}`).then(m => m.delete(10000))
+
+                return
+            }
+
+            let gameChannel = this.args[1] || ''
+            let debugChannel = this.args[2] || ''
+
+            let game = DiscordUtil.guildHasChannel(guild, gameChannel)
+            if (!game && gameChannel !== '') {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Unable to lookup channel ${gameChannel}`).then(m => m.delete(10000))
+
+                return
+            }
+
+            let debug = DiscordUtil.guildHasChannel(guild, debugChannel)
+            if (!debug && debugChannel !== '') {
+                this.message.channel
+                    .send(`<@${this.message.author.id}> Unable to lookup channel ${debugChannel}`).then(m => m.delete(10000))
+
+                return
+            }
+
+            guildSettings = Guild.createSettings(
+                guild.id, game ? game.id : '', debug ? debug.id : '',
+                { 'rng_secret': 'test', 'rng_counter': 0, 'rng_offset': 0 },
+                { 'rng_secret': 'test1', 'rng_counter': 0, 'rng_offset': 0 },
+                { 'rng_secret': 'test2', 'rng_counter': 0, 'rng_offset': 0 }
+            )
+            await this.ctx.gameDb.createGuildSettings(guildSettings)
+            console.log(guildSettings)
+
+            settings.guilds.push(guild.id)
+            settings.markModified('guilds')
+            await settings.save()
+
+            this.message.channel
+                .send(`<@${this.message.author.id}> Added guild ${guild.name}`).then(m => m.delete(10000))
+
+            return
+        } else if (subCmd === 'remove') {
+            console.log('remove')
+
+            if (this.args.length === 1) {
+                const guild = this.ctx.discord.guilds.get(this.message.guild.id)
+                if (!guild) {
+                    console.log('unable to get guild')
 
                     return
                 }
+
+                const idx = settings.guilds.findIndex(g => g.guild === this.message.guild.id)
+                if (idx >= 0) {
+                    settings.guilds.splice(idx, 1)
+                    settings.markModified('guilds')
+                    await settings.save()
+                }
+
+                let guildSettings = await this.ctx.gameDb.getGuildSettings(this.message.guild.id)
+                if (guildSettings) {
+                    await this.ctx.gameDb.removeGuildSettings(this.message.guild.id)
+
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Guild ${guild.name} removed`).then(m => m.delete(10000))
+
+                    return
+                }
+            }
+        } else if (subCmd === 'debug') {
+            console.log('debug')
+            if (this.args.length === 1) {
+                const guild = this.ctx.discord.guilds.get(this.message.guild.id)
+                if (!guild) {
+                    console.log('unable to lookup guild')
+
+                    return
+                }
+                let guildSettings = await this.ctx.gameDb.getGuildSettings(this.message.guild.id)
+                if (guildSettings) {
+                    guildSettings.debug_channel = ''
+                    await guildSettings.save()
+
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Removed debug channel`).then(m => m.delete(10000))
+
+                    return
+                }
+            }
+
+            if (this.args.length === 2) {
+                const guild = this.ctx.discord.guilds.get(this.message.guild.id)
+                if (!guild) {
+                    console.log('unable to lookup guild')
+
+                    return
+                }
+                let guildSettings = await this.ctx.gameDb.getGuildSettings(this.message.guild.id)
+                if (!guildSettings) {
+                    this.message.channel
+                        .send(`<@${this.message.author.id}> Unable to lookup guild settings`).then(m => m.delete(10000))
+
+                    return
+                }
+
+                let debugChannel = this.args[1] || ''
 
                 let debug = DiscordUtil.guildHasChannel(guild, debugChannel)
                 if (!debug) {
@@ -397,37 +488,19 @@ class Game {
                     return
                 }
 
-                let guildSettings = Guild.createSettings(
-                    guild.id, game ? game.id : '', debug ? debug.id : '', '', 0
-                )
-                await this.ctx.gameDb.createGuildSettings(guildSettings)
-                settings.guilds.push(guild.id)
-                await settings.save()
+                guildSettings.debug_channel = debugChannel
+                await guildSettings.save()
 
                 this.message.channel
-                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
+                    .send(`<@${this.message.author.id}> Set debug channel ${debugChannel}`).then(m => m.delete(10000))
+
+                return
             }
 
-            return
-        } else if (subCmd === 'remove') {
-            console.log('remove')
-
-            await this.ctx.gameDb.removeGuildSettings(guildName)
-
-            return
-        } else if (subCmd === 'debug') {
-            if (args.length === 2) {
-                this.message.channel
-                    .send(`<@${this.message.author.id}> Added guild ${guildName}`).then(m => m.delete(10000))
-            }
-
-            return
         } else if (subCmd === 'game') {
             // TODO|FIXME
             return
         }
-
-        console.log(subCmd, 'settings', settings, guildSettings)
     }
 
     // unprivileged command handlers
@@ -572,10 +645,10 @@ class Game {
         let embed = await this.ctx.createPlayerStatsEmbed(player)
         let sent = await this.message.channel.send(embed)
         if (player.descriptor.stat_points_remaining) {
-            await sent.react('💪')
-            await sent.react('⚡')
-            await sent.react('📚')
-            await sent.react('❤')
+            await sent.react('<:str:416835539166035968>')
+            await sent.react('<:dex:416835539237470208>')
+            await sent.react('<:int:416835539157909504>')
+            await sent.react('<:vit:416835538901794827>')
         }
 
         this.response = sent
@@ -922,13 +995,6 @@ class Game {
     }
 
     async createPlayerStatsEmbed(unit) {
-        /*
-        let str = StatUtil.getStat(unit.stats, StatTable.STR.id).value
-        let dex = StatUtil.getStat(unit.stats, StatTable.DEX.id).value
-        let int = StatUtil.getStat(unit.stats, StatTable.INT.id).value
-        let vit = StatUtil.getStat(unit.stats, StatTable.VIT.id).value
-        */
-
         let embed = new Discord.RichEmbed().setColor(7682618)
             .addField(`\`*${unit.name}\`*`, `**${unit.descriptor.stat_points_remaining}** stat points are available`, true)
 
@@ -969,7 +1035,7 @@ class Game {
 
         unitInfo += `HP (${SU.getStat(unit.stats, ST.UNIT_HP.id).value}/` +
             `${SU.getStat(unit.stats, ST.UNIT_HP_MAX.id).value})\n` +
-            `${showEmoji ? '💪 ' : ''}Str(${str}) ${showEmoji ? '⚡ ' : ''}Dex(${dex}) ${showEmoji ? '📚 ' : ''}Int(${int}) ${showEmoji ? '❤ ' : ''}Vit(${vit})\n` +
+            `${showEmoji ? '<:str:416835539166035968> ' : ''}Str(${str}) ${showEmoji ? '<:dex:416835539237470208> ' : ''}Dex(${dex}) ${showEmoji ? '<:int:416835539157909504> ' : ''}Int(${int}) ${showEmoji ? '<:vit:416835538901794827> ' : ''}Vit(${vit})\n` +
             `Atk(${SU.getStat(unit.stats, ST.UNIT_BASE_ATK.id).value}+${SU.getStat(unit.stats, ST.UNIT_ATK.id).value})` +
             ` MAtk(${SU.getStat(unit.stats, ST.UNIT_BASE_MATK.id).value}+${SU.getStat(unit.stats, ST.UNIT_MATK.id).value})\n` +
             `Def(${SU.getStat(unit.stats, ST.UNIT_DEF.id).value}) MDef(${SU.getStat(unit.stats, ST.UNIT_MDEF.id).value})\n` +
@@ -980,26 +1046,29 @@ class Game {
         return unitInfo
     }
 
-    createCombatInfoEmbed(unitA, unitB) {
+    createCombatInfoEmbed(unitA, unitB, isPreCombat) {
         let unitAName = unitA.name
         let unitBName = unitB.name
+        let unitAClass = 'Monster'
+        let unitBClass = 'Monster'
 
-        if (unitA.type === UnitType.PLAYER.id) {
-            let className = PlayerUtil.getClass(unitA)
-            unitAName += ` ${className}`
-        }
+        if (unitA.type === UnitType.PLAYER.id)
+            unitAClass = PlayerUtil.getClass(unitA)
 
-        if (unitB.type === UnitType.PLAYER.id) {
-            let className = PlayerUtil.getClass(unitB)
-            unitBName += ` ${className}`
-        }
+        if (unitB.type === UnitType.PLAYER.id)
+            unitBClass = PlayerUtil.getClass(unitB)
 
         let embed = new Discord.RichEmbed()
             .setColor(7682618)
 
-        embed.addField(`__\`${unitAName}\`__`, this.unitInfoStatsBody(unitA), true)
-        embed.addField(`__\`${unitBName}\`__`, this.unitInfoStatsBody(unitB), true)
-        embed.addBlankField()
+        if (isPreCombat) {
+            embed.setDescription(`\`\`\`ml\n${unitAClass} and ${unitBClass} have been seleced for combat.\`\`\``)
+            embed.addField(`"\`${unitAName}\`"`, this.unitInfoStatsBody(unitA), true)
+            embed.addField(`"\`${unitBName}\`"`, this.unitInfoStatsBody(unitB), true)
+        } else {
+            embed.addField(`"\`${unitAName}\` ${unitAClass}"`, this.unitInfoStatsBody(unitA), true)
+            embed.addField(`"\`${unitBName}\` ${unitBClass}"`, this.unitInfoStatsBody(unitB), true)
+        }
 
         return embed
     }
@@ -1046,9 +1115,17 @@ class Game {
                 let dmg = r.data.getDamage()
                 let total = dmg.physical.damage + dmg.magic.damage
 
-                let out = `took ${total} ` +
-                    `(${dmg.physical.damage}${dmg.physical.is_crit ? '*' : ''}` +
-                    `|${dmg.magic.damage}${dmg.magic.is_crit ? '*' : ''})\n`
+                let physString = dmg.physical.damage.toString()
+                const physCrit = dmg.physical.is_crit
+                if (physCrit)
+                    physString = `**${physString}**`
+
+                let magicString = dmg.magic.damage.toString()
+                const magicCrit = dmg.magic.is_crit
+                if (magicCrit)
+                    magicString = `**${magicString}**`
+
+                let out = `took ${total} (${physString}:${magicString})\n`
 
                 if (r.attacker.id === combatContext.unitA.id)
                     dmgB += out
@@ -1065,17 +1142,17 @@ class Game {
 
             if (r.type === CombatEventType.PLAYER_DEATH.id ||
                     r.type === CombatEventType.MONSTER_DEATH.id)
-                output += `${atkName} has slain ${defName}.`
+                output += `**\`${atkName}\`** has slain **\`${defName}\`**.`
 
             if (r.type === CombatEventType.PLAYER_EXPERIENCE.id)
-                output += `${atkName} has gained ${r.data} experience.`
+                output += `**\`${atkName}\`** has gained **${r.data}** experience.`
 
             if (r.type === CombatEventType.PLAYER_LEVEL.id)
-                output += `${atkName} has reached level ${r.attacker.level}!`
+                output += `**\`${atkName}\`** has reached level **${r.attacker.level}**!`
 
             if (r.type === CombatEventType.MONSTER_ITEM_DROP.id) {
                 let itemEntry = ItemUtil.getItemTableEntry(r.data.code)
-                output += `${defName} has dropped their ${itemEntry.name}.`
+                output += `**\`${defName}\`** has dropped their **${itemEntry.name}**.`
             }
 
             if (idx > 0 && idx < eventCount - 1)
@@ -1107,31 +1184,58 @@ class Game {
         // check the current game state of that guild
         let settings = await this.gameDb.getSettings()
         await Promise.all(settings.guilds.map(async g => {
-            console.log(g)
             let guild = await this.discord.guilds.get(g)
             let guildSettings = await this.gameDb.getGuildSettings(guild.id)
-            if (!guildSettings) {
-                console.log('expected guild not found')
-
+            if (!guildSettings)
                 return
-            }
 
             // console.log('guild', g, guildSettings)
             const channel = await this.discord.channels.get(guildSettings.game_channel)
-            if (!channel) {
-                if (guildSettings.game_channel !== '') {
-                    console.log('could not get configured channel', guildSettings.game_channel)
-                    process.exit(1)
-                }
-                console.log('skipping unconfigured guild')
+            if (guildSettings && guildSettings.game_channel !== '' && !channel) {
+                console.log('could not get configured channel', guildSettings)
+                process.exit(1)
 
                 return
             }
+
+            let combatRngCtx = this.secureRng.getContext(`${guildSettings.guild}-combat_rng`)
+            console.log(combatRngCtx, guildSettings)
+            if (!combatRngCtx) {
+                combatRngCtx = new SecureRNGContext(guildSettings.combat_rng_state.rng_secret)
+                if (!this.secureRng.addContext(combatRngCtx, `${guildSettings.guild}-combat_rng`)) {
+                    console.log('unable to add combat RNG context')
+
+                    return
+                }
+            }
+
+            let itemRngCtx = this.secureRng.getContext(`${guildSettings.guild}-item_rng`)
+            if (!itemRngCtx) {
+                itemRngCtx = new SecureRNGContext(guildSettings.item_rng_state.rng_secret)
+                if (!this.secureRng.addContext(itemRngCtx, `${guildSettings.guild}-item_rng`)) {
+                    console.log('unable to add item RNG context')
+
+                    return
+                }
+            }
+
+            let monsterRngCtx = this.secureRng.getContext(`${guildSettings.guild}-monster_rng`)
+            console.log(monsterRngCtx, guildSettings)
+            if (!monsterRngCtx) {
+                monsterRngCtx = new SecureRNGContext(guildSettings.monster_rng_state.rng_secret)
+                if (!this.secureRng.addContext(monsterRngCtx, `${guildSettings.guild}-monster_rng`)) {
+                    console.log('unable to add monster RNG context')
+
+                    return
+                }
+            }
+
+            console.log(combatRngCtx, itemRngCtx, monsterRngCtx, guildSettings)
 
             // okay, look for this guilds combat context
             let combatCtx = this.combatContexts.get(guild.id)
             if (!combatCtx) {
-                combatCtx = new CombatContext(this, guild.id)
+                combatCtx = new CombatContext(this, guild.id, combatRngCtx, itemRngCtx, monsterRngCtx)
                 this.combatContexts.set(guild.id, combatCtx)
             }
 
@@ -1161,7 +1265,8 @@ class Game {
                 if (!units || units.length !== 2)
                     return false
 
-                let embed = this.createCombatInfoEmbed(units[0], units[1])
+                let embed = this.createCombatInfoEmbed(units[0], units[1], true)
+
                 combatCtx.message = await channel.send(embed)
                 combatCtx.unitA = units[0]
                 combatCtx.unitB = units[1]

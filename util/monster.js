@@ -142,7 +142,7 @@ class MonsterUtil extends UnitUtil {
                     c.item_sub_class !== WeaponClass.CASTING_2H
             })
 
-            choice = this.game.item.getRandomItemTableEntry(choices)
+            choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
             console.log('monster is dual-wielding', primaryChoice, choices, choice)
         } else {
             // generate a shield, quiver or a spell book for the second hand
@@ -156,7 +156,7 @@ class MonsterUtil extends UnitUtil {
                 choiceTypes.push(ArmorClass.QUIVER)
 
             choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, choiceTypes)
-            choice = this.game.item.getRandomItemTableEntry(choices)
+            choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
             console.log('monster gets shield type', choices, choice)
         }
 
@@ -184,7 +184,7 @@ class MonsterUtil extends UnitUtil {
 
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
-    generate(monsterRngCtx, code, level, rarity) {
+    generate(monsterRngCtx, itemRngCtx, code, level, rarity) {
         const tierEntry = Object.values(Tier).find(t => t.level_min <= level && t.level_max >= level)
         if (!tierEntry)
             return null
@@ -235,11 +235,9 @@ class MonsterUtil extends UnitUtil {
         // filtered but low monster can spawn without enough stats, perhaps
         // a fallback starter item could be used in that case
 
-        let itemRngCtx = this.game.secureRng.getContext('item')
-        let items = []
-
         // TODO|FIXME account for newly added monster types ie. check against
         // WeaponFlags.*_UNARMED
+        let items = []
 
         // First, generate a primary weapon
         let choices = MonsterUtil.getMonsterWeaponChoices(code, true)
@@ -249,7 +247,7 @@ class MonsterUtil extends UnitUtil {
             return null
         }
 
-        let choice = this.game.item.getRandomItemTableEntry(choices)
+        let choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
         if (!choice) {
             console.log('unable to get primary weapon choice entry', code)
 
@@ -313,7 +311,7 @@ class MonsterUtil extends UnitUtil {
                     return null
                 }
                 choices = choices.concat(ItemUtil.getItemClassEntries([ ItemClass.JEWEL ]))
-                choice = this.game.item.getRandomItemTableEntry(choices)
+                choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
                 if (!choice) {
                     console.log('unable to get armor choice')
 

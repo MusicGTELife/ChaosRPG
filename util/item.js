@@ -35,14 +35,13 @@ class ItemUtil {
     }
 
     // entries an array of item table entries already read from the item tables
-    getRandomItemTableEntry(entries) {
+    getRandomItemTableEntry(itemRngCtx, entries) {
         if (entries.length === 0)
             return null
 
         if (entries.length === 1)
             return entries[0]
 
-        let itemRngCtx = this.game.secureRng.getContext('item')
         let magic = SecureRNG.getRandomInt(itemRngCtx, 0, entries.length - 1)
         let choice = entries[magic]
 
