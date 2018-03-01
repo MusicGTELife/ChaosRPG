@@ -10,7 +10,7 @@ const { GameState } = require('./gamestate')
 const { CombatContext, CombatEventType } = require('./combat')
 const { Storage } = require('./storage')
 const { StatTable } = require('./stattable')
-
+const { GameCommands } = require('./gamecommands')
 const { getExperienceForLevel } = require('./experience')
 
 const { UnitType } = require('./unit')
@@ -110,14 +110,14 @@ class Game {
         this.gameDb.db.connection.on('connected', () => { this.onDbConnected() })
         this.gameDb.db.connection.on('disconnect', () => { this.onDbDisconnect() })
 
-        CommandHandler.setHandler('guild', this, this.guildSettingsHandler)
+        CommandHandler.setHandler(GameCommands, 'guild', this, this.guildSettingsHandler)
 
-        CommandHandler.setHandler('create', this, this.createPlayerHandler)
-        CommandHandler.setHandler('delete', this, this.deletePlayerHandler)
-        CommandHandler.setHandler('player', this, this.playerInfoHandler, this.onPlayerReaction)
-        CommandHandler.setHandler('gear', this, this.gearHandler, this.onGearReaction)
-        CommandHandler.setHandler('equip', this, this.equipHandler)
-        CommandHandler.setHandler('drop', this, this.dropHandler)
+        CommandHandler.setHandler(GameCommands, 'create', this, this.createPlayerHandler)
+        CommandHandler.setHandler(GameCommands, 'delete', this, this.deletePlayerHandler)
+        CommandHandler.setHandler(GameCommands, 'player', this, this.playerInfoHandler, this.onPlayerReaction)
+        CommandHandler.setHandler(GameCommands, 'gear', this, this.gearHandler, this.onGearReaction)
+        CommandHandler.setHandler(GameCommands, 'equip', this, this.equipHandler)
+        CommandHandler.setHandler(GameCommands, 'drop', this, this.dropHandler)
 
         console.log('logging in to discord')
         let res = await this.discord.login(this.token)
@@ -193,7 +193,7 @@ class Game {
         if (message.author.id === this.discord.user.id)
             return
 
-        let command = CommandHandler.parseCommand(message)
+        let command = CommandHandler.parseCommand(GameCommands, message)
         if (command) {
             console.log(`processing command ${command.name}`)
             await command.run()
@@ -204,7 +204,7 @@ class Game {
         if (newMessage.author.id === this.discord.user.id)
             return
 
-        let command = CommandHandler.parseCommand(newMessage)
+        let command = CommandHandler.parseCommand(GameCommands, newMessage)
         if (command) {
             console.log(`processing command ${command.name}`)
             await command.run()
@@ -232,7 +232,7 @@ class Game {
 
         // console.log(reaction.emoji)
 
-        tracked.command.onReaction(tracked, account, reaction)
+        await tracked.command.onReaction(tracked, account, reaction)
     }
 
     async onMessageReactionAdd(reaction, user) {
@@ -898,10 +898,10 @@ class Game {
 
         if (reaction.emoji.name === '⚔') {
             let embed = await this.ctx.createPlayerInventoryEmbed(player, Storage.EQUIPMENT.id)
-            this.response = reaction.message.edit(embed)
+            this.response = await reaction.message.edit(embed)
         } else if (reaction.emoji.name === '💰') {
             let embed = await this.ctx.createPlayerInventoryEmbed(player, Storage.INVENTORY.id)
-            this.response = reaction.message.edit(embed)
+            this.response = await reaction.message.edit(embed)
         } else {
             return
         }

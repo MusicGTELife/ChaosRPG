@@ -46,18 +46,23 @@ class CommandHandler {
         return await this.func()
     }
 
-    static getCommandEntry(name) {
-        return Object.values(Commands).find(c => c.name === name.toLowerCase())
+    static getCommandEntry(commands, name) {
+        return Object.values(commands).find(c => c.name === name.toLowerCase())
     }
 
-    static setHandler(name, ctx, func, onReaction) {
-        let command = CommandHandler.getCommandEntry(name)
+    static setHandler(commands, name, ctx, func, onReaction) {
+        let command = CommandHandler.getCommandEntry(commands, name)
+        if (!command)
+            return null
+
         command.ctx = ctx
         command.func = func
         command.onReaction = onReaction || null
+
+        return command
     }
 
-    static parseCommand(message) {
+    static parseCommand(commands, message) {
         if (message.content.charAt(0) !== CommandTrigger)
             return null
 
@@ -68,7 +73,7 @@ class CommandHandler {
             return null
         }
 
-        let command = CommandHandler.getCommandEntry(args[0])
+        let command = CommandHandler.getCommandEntry(commands, args[0])
         if (!command) {
             console.log('unable to parse as command', args[0])
 
@@ -107,8 +112,8 @@ class TrackedCommand {
     deleter() {
         console.log('timer expired')
         if (this.command.response) {
-            this.tracked.delete(this.command.response.id)
             this.command.response.delete()
+            this.tracked.delete(this.command.response.id)
             console.log('response deleted')
         }
     }
