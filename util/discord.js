@@ -30,8 +30,10 @@ class Command {
 
     deleter() {
         if (this.response) {
-            // console.log('response deleted')
+            // console.log('response deleted', this.response.id)
+            this.commandHandler.trackedCommands.delete(this.response.id)
             this.response.delete()
+            this.response = null
         }
     }
 

@@ -387,7 +387,7 @@ class PlayerInfo extends Command {
 
         let embed = this.ctx.createPlayerStatsEmbed(player)
         embed.setFooter(`Stat has been applied`)
-        this.response = reaction.message.edit(embed)
+        this.response = await reaction.message.edit(embed)
         this.refresh(this.timeout)
     }
 }

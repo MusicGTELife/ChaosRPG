@@ -175,12 +175,20 @@ class Game {
     }
 
     onMessage(message) {
-        // console.log(message.content)
         if (message.author.id === this.discord.user.id)
             return
 
         let command = this.commandHandler.parseCommand(message)
         if (command) {
+            let tracked = [ ...this.commandHandler.trackedCommands.values() ]
+            tracked = tracked.find(t => t.message.author.id === message.author.id)
+            if (tracked && tracked.name === command.name) {
+                console.log('tracked command exists')
+                message.delete(10000)
+
+                return
+            }
+
             console.log(`processing command ${command.name}`)
             command.run()
         }
@@ -192,6 +200,15 @@ class Game {
 
         let command = this.commandHandler.parseCommand(newMessage)
         if (command) {
+            let tracked = [ ...this.commandHandler.trackedCommands.values() ]
+            tracked = tracked.find(t => t.message.author.id === newMessage.author.id)
+            if (tracked && tracked.name === command.name) {
+                console.log('tracked command exists')
+                message.delete(10000)
+
+                return
+            }
+
             console.log(`processing command ${command.name}`)
             command.run()
         }
@@ -464,7 +481,7 @@ class Game {
             guildSettings.item_rng_state.rng_offset = itemRngCtx.currentOffset
         }
 
-        console.log('gsettings', guildSettings)
+        // console.log('gsettings', guildSettings)
         await guildSettings.save()
     }
 
@@ -560,7 +577,7 @@ class Game {
             Markdown.c(output, 'ml')
 
         let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB, dmgA, dmgB, output)
-        await combatContext.message.edit(embed)
+        combatContext.message.edit(embed)
 
         return true
     }
@@ -739,7 +756,7 @@ class Game {
                 if (!activeCombat)
                     break
             }
-            await this.sleep(1 * 7500, async () => { await this.loop() })
+            await this.sleep(1 * 6000, async () => { await this.loop() })
         }
 
         console.log('run loop terminating')
