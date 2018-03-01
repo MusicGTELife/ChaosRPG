@@ -53,6 +53,17 @@ MonsterTable.SPIDER = _(
         { 'id': st.ACCURACY.id, 'value': 100 }
     ])
 
+MonsterTable.SCORPION = _(
+    0x0004, 'Scorpion', mc.BEAST, wf.MELEE_1H, 60, [
+        { 'id': st.DEX.id, 'value': 8 },
+        { 'id': st.INT.id, 'value': 2 },
+        { 'id': st.STR.id, 'value': 6 },
+        { 'id': st.VIT.id, 'value': 6 },
+        { 'id': st.BASE_MATK.id, 'value': 2 },
+        { 'id': st.BASE_ATK.id, 'value': 2 },
+        { 'id': st.ACCURACY.id, 'value': 100 }
+    ])
+
 MonsterTable.SKELETON_WARRIOR = _(
     0x0100, 'Skeleton Warrior', mc.UNDEAD, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 75, [
         { 'id': st.DEX.id, 'value': 4 },
