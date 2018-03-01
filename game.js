@@ -1084,9 +1084,9 @@ class Game {
             .setColor(7682618)
 
         if (isPreCombat) {
-            embed.setDescription(`\`\`\`ml\n${unitAClass} and ${unitBClass} have been seleced for combat.\`\`\``)
-            embed.addField(`\`${unitAName}\``, this.unitInfoStatsBody(unitA), true)
-            embed.addField(`\`${unitBName}\``, this.unitInfoStatsBody(unitB), true)
+            embed.setDescription(`\`\`\`ml\n${unitAName} ${unitAClass} and ${unitBName} ${unitBClass} have been selected for combat.\`\`\``)
+            embed.addField('Stats', this.unitInfoStatsBody(unitA), true)
+            embed.addField('Stats', this.unitInfoStatsBody(unitB), true)
         } else {
             embed.addField(`\`${unitAName}\` ${unitAClass}`, this.unitInfoStatsBody(unitA), true)
             embed.addField(`\`${unitBName}\` ${unitBClass}`, this.unitInfoStatsBody(unitB), true)
