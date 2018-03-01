@@ -1068,7 +1068,7 @@ class Game {
         return unitInfo
     }
 
-    createCombatInfoEmbed(unitA, unitB, isPreCombat) {
+    createCombatInfoEmbed(unitA, unitB, dmgA, dmgB, output, isPreCombat) {
         let unitAName = unitA.name
         let unitBName = unitB.name
         let unitAClass = 'Monster'
@@ -1083,13 +1083,26 @@ class Game {
         let embed = new Discord.RichEmbed()
             .setColor(7682618)
 
-        if (isPreCombat) {
+        if (output === '')
             embed.setDescription(`\`\`\`ml\n${unitAName} ${unitAClass} and ${unitBName} ${unitBClass} have been selected for combat.\`\`\``)
+
+        if (isPreCombat) {
             embed.addField('Stats', this.unitInfoStatsBody(unitA), true)
             embed.addField('Stats', this.unitInfoStatsBody(unitB), true)
         } else {
-            embed.addField(`\`${unitAName}\` ${unitAClass}`, this.unitInfoStatsBody(unitA), true)
-            embed.addField(`\`${unitBName}\` ${unitBClass}`, this.unitInfoStatsBody(unitB), true)
+            let statsA = this.unitInfoStatsBody(unitA)
+            let statsB = this.unitInfoStatsBody(unitB)
+            if (dmgA !== '')
+                statsA += `\n\n${dmgA}`
+            if (dmgB !== '')
+                statsB += `\n\n${dmgB}`
+
+            embed.addField(`\`${unitAName}\``, statsA, true)
+            embed.addField(`\`${unitBName}\``, statsB, true)
+            if (output !== '') {
+                embed.addBlankField()
+                embed.addField('Combat result', output)
+            }
         }
 
         return embed
@@ -1119,48 +1132,56 @@ class Game {
             return false
         }
 
-        // let guild = await combatContext.game.gameDb.getGuildSettings(combatContext.guild)
-        // let channel = await combatContext.game.discord.channels.get(guild.game_channel)
-
+        let output = ''
         let dmgA = ''
         let dmgB = ''
-        let output = ''
+
+        results.filter(r => r.type === CombatEventType.PLAYER_DAMAGE.id ||
+                r.type === CombatEventType.MONSTER_DAMAGE.id ||
+                r.type === CombatEventType.BLOCK.id)
+            .map(r => {
+                if (r.type === CombatEventType.PLAYER_DAMAGE.id ||
+                    r.type === CombatEventType.MONSTER_DAMAGE.id) {
+                    let dmg = r.data.getDamage()
+                    let total = dmg.physical.damage + dmg.magic.damage
+
+                    let physString = dmg.physical.damage.toString()
+                    const physCrit = dmg.physical.is_crit
+                    if (physCrit)
+                        physString = `**${physString}**`
+
+                    let magicString = dmg.magic.damage.toString()
+                    const magicCrit = dmg.magic.is_crit
+                    if (magicCrit)
+                        magicString = `**${magicString}**`
+
+                    let out = `took ${total} (${physString}:${magicString})\n`
+
+                    if (r.attacker.id === combatContext.unitA.id)
+                        dmgB += out
+                    else
+                        dmgA += out
+                }
+
+                if (r.type === CombatEventType.BLOCK.id) {
+                    if (r.attacker.id === combatContext.unitA.id)
+                        dmgB += 'blocked'
+                    else
+                        dmgA += 'blocked'
+                }
+            })
+
+        results = results.filter(r => r.type === CombatEventType.PLAYER_DEATH.id ||
+                r.type === CombatEventType.MONSTER_DEATH.id ||
+                r.type === CombatEventType.PLAYER_EXPERIENCE.id ||
+                r.type === CombatEventType.PLAYER_LEVEL.id ||
+                r.type === CombatEventType.MONSTER_ITEM_DROP.id)
 
         const eventCount = results.length
         let idx = 0
         results.map(r => {
             const atkName = `${UnitUtil.getName(r.attacker)}`
             const defName = `${UnitUtil.getName(r.defender)}`
-
-            if (r.type === CombatEventType.PLAYER_DAMAGE.id ||
-                    r.type === CombatEventType.MONSTER_DAMAGE.id) {
-                let dmg = r.data.getDamage()
-                let total = dmg.physical.damage + dmg.magic.damage
-
-                let physString = dmg.physical.damage.toString()
-                const physCrit = dmg.physical.is_crit
-                if (physCrit)
-                    physString = `**${physString}**`
-
-                let magicString = dmg.magic.damage.toString()
-                const magicCrit = dmg.magic.is_crit
-                if (magicCrit)
-                    magicString = `**${magicString}**`
-
-                let out = `took ${total} (${physString}:${magicString})\n`
-
-                if (r.attacker.id === combatContext.unitA.id)
-                    dmgB += out
-                else
-                    dmgA += out
-            }
-
-            if (r.type === CombatEventType.BLOCK.id) {
-                if (r.attacker.id === combatContext.unitA.id)
-                    dmgB += 'blocked'
-                else
-                    dmgA += 'blocked'
-            }
 
             if (r.type === CombatEventType.PLAYER_DEATH.id ||
                     r.type === CombatEventType.MONSTER_DEATH.id)
@@ -1179,21 +1200,13 @@ class Game {
 
             if (idx > 0 && idx < eventCount - 1)
                 output += ' '
-
             idx++
         })
 
         if (output !== '')
             Markdown.c(output, 'ml')
 
-        let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB)
-        if (output !== '') {
-            embed.addField('Combat', output)
-        } else {
-            embed.addField(`\`${combatContext.unitA.name}\``, dmgA || 'died', true)
-            embed.addField(`\`${combatContext.unitB.name}\``, dmgB || 'died', true)
-        }
-
+        let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB, dmgA, dmgB, output)
         await combatContext.message.edit(embed)
 
         return true
@@ -1283,7 +1296,7 @@ class Game {
                 if (!units || units.length !== 2)
                     return false
 
-                let embed = this.createCombatInfoEmbed(units[0], units[1], true)
+                let embed = this.createCombatInfoEmbed(units[0], units[1], '', '', '', true)
 
                 combatCtx.message = await channel.send(embed)
                 combatCtx.unitA = units[0]
