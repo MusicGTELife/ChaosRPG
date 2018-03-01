@@ -6,7 +6,6 @@ const { SecureRNG } = require('../rng')
 const { StatTable, StatFlag } = require('../stattable')
 const { UnitType } = require('../unit')
 
-// const { MonsterClass } = require('../monsterclass')
 const { MonsterRarity } = require('../monsterrarity')
 const { MonsterTable } = require('../monstertable')
 
@@ -73,32 +72,31 @@ class MonsterUtil extends UnitUtil {
         if (!isPrimary && (weaponFlags & WeaponFlags.CAN_DUAL_WIELD) !== 0)
             return []
 
-        let weapons = ItemUtil.getItemClassEntries([ ItemClass.WEAPON ])
-
-        let choices = weapons.filter(i => {
-            if (i.item_sub_class === WeaponClass.MELEE_1H) {
-                if ((weaponFlags & WeaponFlags.MELEE_1H) !== 0 ||
+        let choices = ItemUtil.getItemClassEntries([ ItemClass.WEAPON ])
+            .filter(i => {
+                if (i.item_sub_class === WeaponClass.MELEE_1H) {
+                    if ((weaponFlags & WeaponFlags.MELEE_1H) !== 0 ||
                         (weaponFlags & WeaponFlags.ANY_MELEE) !== 0)
-                    return true
-            } else if (i.item_sub_class === WeaponClass.MELEE_2H) {
-                if ((weaponFlags & WeaponFlags.MELEE_2H) !== 0 ||
+                        return true
+                } else if (i.item_sub_class === WeaponClass.MELEE_2H) {
+                    if ((weaponFlags & WeaponFlags.MELEE_2H) !== 0 ||
                         (weaponFlags & WeaponFlags.ANY_MELEE) !== 0)
-                    return true
-            } else if (i.item_sub_class === WeaponClass.CASTING_1H) {
-                if ((weaponFlags & WeaponFlags.CASTING_1H) !== 0 ||
+                        return true
+                } else if (i.item_sub_class === WeaponClass.CASTING_1H) {
+                    if ((weaponFlags & WeaponFlags.CASTING_1H) !== 0 ||
                         (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
-                    return true
-            } else if (i.item_sub_class === WeaponClass.CASTING_2H) {
-                if ((weaponFlags & WeaponFlags.CASTING_2H) !== 0 ||
+                        return true
+                } else if (i.item_sub_class === WeaponClass.CASTING_2H) {
+                    if ((weaponFlags & WeaponFlags.CASTING_2H) !== 0 ||
                         (weaponFlags & WeaponFlags.ANY_CASTING) !== 0)
-                    return true
-            } else if (i.item_sub_class === WeaponClass.RANGED) {
-                if ((weaponFlags & WeaponFlags.RANGED) !== 0)
-                    return true
-            }
+                        return true
+                } else if (i.item_sub_class === WeaponClass.RANGED) {
+                    if ((weaponFlags & WeaponFlags.RANGED) !== 0)
+                        return true
+                }
 
-            return false
-        })
+                return false
+            })
 
         return choices
     }
@@ -202,7 +200,7 @@ class MonsterUtil extends UnitUtil {
             if ((statEntry.flags & StatFlag.BASE) !== 0) {
                 if (statEntry.id !== StatTable.BASE_ATK.id && statEntry.id !== StatTable.BASE_MATK.id) {
                     let statBonus = e.value + e.value *
-                        (Math.pow(level, 1.11) *
+                        (Math.pow(level, 1.10) *
                         (1 + tierEntry.id * 0.25) *
                         (1 + rarity * 0.25)) / 10
 
