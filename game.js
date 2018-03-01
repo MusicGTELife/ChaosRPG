@@ -11,7 +11,7 @@ const { CombatContext, CombatEventType } = require('./combat')
 const { Storage } = require('./storage')
 const { StatTable } = require('./stattable')
 const { GameCommands } = require('./gamecommands')
-const { getExperienceForLevel } = require('./experience')
+const { getExperienceForLevel } = require('./experience') // TODO|FIXME move to unit
 
 const { UnitType } = require('./unit')
 const { PlayerType } = require('./player')
@@ -1116,7 +1116,6 @@ class Game {
         return true
     }
 
-    // FIXME push anything not related to discord into combat module
     async doCombat(combatContext) {
         console.log('doCombat')
         if (!combatContext) {
