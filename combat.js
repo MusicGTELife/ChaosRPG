@@ -285,6 +285,9 @@ class CombatContext {
         }
         events = events.concat(result)
 
+        let guildSettings = await this.game.gameDb.getGuildSettings(this.guild)
+        this.game.updateGuildRngState(guildSettings, this.combatRngCtx, this.monsterRngCtx, this.itemRngCtx)
+
         return events
     }
 

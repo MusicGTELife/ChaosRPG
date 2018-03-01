@@ -347,7 +347,7 @@ class Game {
     }
 
     createPlayerStatsEmbed(unit) {
-        const statsBody = Game.unitInfoStatsBody(unit, true)
+        const statsBody = this.unitInfoStatsBody(unit, true)
         let embed = new Discord.RichEmbed().setColor(7682618)
             .addField('Character Stats', `*\`${unit.name}\`*\n${statsBody}`)
 
@@ -358,7 +358,7 @@ class Game {
         return embed
     }
 
-    static unitInfoStatsBody(unit, showEmoji = false) {
+    unitInfoStatsBody(unit, showEmoji = false) {
         if (!unit)
             return ''
 
@@ -399,7 +399,7 @@ class Game {
         return unitInfo
     }
 
-    static createCombatInfoEmbed(unitA, unitB, dmgA, dmgB, output, isPreCombat) {
+    createCombatInfoEmbed(unitA, unitB, dmgA, dmgB, output, isPreCombat) {
         let unitAName = unitA.name
         let unitBName = unitB.name
         let unitAClass = 'Monster'
@@ -418,11 +418,11 @@ class Game {
             embed.setDescription(`\`\`\`ml\n${unitAName} ${unitAClass} and ${unitBName} ${unitBClass} have been selected for combat.\`\`\``)
 
         if (isPreCombat) {
-            embed.addField('Stats', Game.unitInfoStatsBody(unitA), true)
-            embed.addField('Stats', Game.unitInfoStatsBody(unitB), true)
+            embed.addField('Stats', this.unitInfoStatsBody(unitA), true)
+            embed.addField('Stats', this.unitInfoStatsBody(unitB), true)
         } else {
-            let statsA = Game.unitInfoStatsBody(unitA)
-            let statsB = Game.unitInfoStatsBody(unitB)
+            let statsA = this.unitInfoStatsBody(unitA)
+            let statsB = this.unitInfoStatsBody(unitB)
             if (dmgA !== '')
                 statsA += `\n\n${dmgA}`
             if (dmgB !== '')
@@ -437,6 +437,35 @@ class Game {
         }
 
         return embed
+    }
+
+    async updateGuildRngState(guildSettings, combatRngCtx, monsterRngCtx, itemRngCtx) {
+        if (!guildSettings) {
+            process.exit(1)
+
+            return
+        }
+
+        if (combatRngCtx) {
+            guildSettings.combat_rng_state.rng_secret = combatRngCtx.secret
+            guildSettings.combat_rng_state.rng_counter = combatRngCtx.counter
+            guildSettings.combat_rng_state.rng_offset = combatRngCtx.currentOffset
+        }
+
+        if (monsterRngCtx) {
+            guildSettings.monster_rng_state.rng_secret = monsterRngCtx.secret
+            guildSettings.monster_rng_state.rng_counter = monsterRngCtx.counter
+            guildSettings.monster_rng_state.rng_offset = monsterRngCtx.currentOffset
+        }
+
+        if (itemRngCtx) {
+            guildSettings.item_rng_state.rng_secret = itemRngCtx.secret
+            guildSettings.item_rng_state.rng_counter = itemRngCtx.counter
+            guildSettings.item_rng_state.rng_offset = itemRngCtx.currentOffset
+        }
+
+        console.log('gsettings', guildSettings)
+        await guildSettings.save()
     }
 
     async doCombat(combatContext) {
@@ -530,7 +559,7 @@ class Game {
         if (output !== '')
             Markdown.c(output, 'ml')
 
-        let embed = Game.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB, dmgA, dmgB, output)
+        let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB, dmgA, dmgB, output)
         await combatContext.message.edit(embed)
 
         return true
@@ -565,7 +594,11 @@ class Game {
 
             let combatRngCtx = this.secureRng.getContext(`${guildSettings.guild}-combat_rng`)
             if (!combatRngCtx) {
-                combatRngCtx = new SecureRNGContext(guildSettings.combat_rng_state.rng_secret)
+                combatRngCtx = new SecureRNGContext(
+                    guildSettings.combat_rng_state.rng_secret,
+                    guildSettings.combat_rng_state.rng_counter,
+                    guildSettings.combat_rng_state.rng_offset
+                )
                 if (!this.secureRng.addContext(combatRngCtx, `${guildSettings.guild}-combat_rng`)) {
                     console.log('unable to add combat RNG context')
 
@@ -575,7 +608,11 @@ class Game {
 
             let itemRngCtx = this.secureRng.getContext(`${guildSettings.guild}-item_rng`)
             if (!itemRngCtx) {
-                itemRngCtx = new SecureRNGContext(guildSettings.item_rng_state.rng_secret)
+                itemRngCtx = new SecureRNGContext(
+                    guildSettings.item_rng_state.rng_secret,
+                    guildSettings.item_rng_state.rng_counter,
+                    guildSettings.item_rng_state.rng_offset
+                )
                 if (!this.secureRng.addContext(itemRngCtx, `${guildSettings.guild}-item_rng`)) {
                     console.log('unable to add item RNG context')
 
@@ -585,7 +622,11 @@ class Game {
 
             let monsterRngCtx = this.secureRng.getContext(`${guildSettings.guild}-monster_rng`)
             if (!monsterRngCtx) {
-                monsterRngCtx = new SecureRNGContext(guildSettings.monster_rng_state.rng_secret)
+                monsterRngCtx = new SecureRNGContext(
+                    guildSettings.monster_rng_state.rng_secret,
+                    guildSettings.monster_rng_state.rng_counter,
+                    guildSettings.monster_rng_state.rng_offset
+                )
                 if (!this.secureRng.addContext(monsterRngCtx, `${guildSettings.guild}-monster_rng`)) {
                     console.log('unable to add monster RNG context')
 
@@ -626,15 +667,15 @@ class Game {
                 if (!units || units.length !== 2)
                     return false
 
-                let embed = Game.createCombatInfoEmbed(units[0], units[1], '', '', '', true)
+                let embed = this.createCombatInfoEmbed(units[0], units[1], '', '', '', true)
 
                 combatCtx.message = await channel.send(embed)
                 combatCtx.unitA = units[0]
                 combatCtx.unitB = units[1]
                 combatCtx.inCombat = true
-
-                return true
             }
+
+            await this.updateGuildRngState(guildSettings, combatRngCtx, monsterRngCtx, itemRngCtx)
 
             return this.doCombat(combatCtx)
         }))
