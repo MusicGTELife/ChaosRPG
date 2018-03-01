@@ -212,6 +212,20 @@ class MonsterUtil extends UnitUtil {
             }
         })
 
+        let items = this.generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity)
+        if (!items) {
+            console.log('failed to generate monster items')
+            process.exit(1)
+
+            return null
+        }
+
+        // okay the monster and items are generated, pass them back back
+        // to the caller for saving in the database
+        return { unit, items }
+    }
+
+    generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity) {
         // FIXME move to datatable
         let monsterItems = ({
             [MonsterRarity.COMMON.id]: { 'min': 2, 'max': 3 },
@@ -343,9 +357,7 @@ class MonsterUtil extends UnitUtil {
 
         // console.log('items', items)
 
-        // okay the monster and items are generated, pass them back back
-        // to the caller for saving in the database
-        return { unit, items }
+        return items
     }
 }
 
