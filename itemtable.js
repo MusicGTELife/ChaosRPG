@@ -51,7 +51,7 @@ ItemTable.CRACKED_WAND = _(0x0001, 'Cracked Wand', sf.INVENTORY | sf.ARM, ic.WEA
     true
 )
 ItemTable.CRACKED_STAFF = _(0x0002, 'Cracked Staff', sf.INVENTORY | sf.ARM, ic.WEAPON, ac.CASTING_2H,
-    [ cr(st.INT.id, 1), cr(st.VIT.id, 1) ], [ ci(st.BASE_ATK.id, 2, 2), ci(st.BASE_MATK.id, 3, 3) ],
+    [ cr(st.INT.id, 1), cr(st.VIT.id, 1) ], [ ci(st.BASE_ATK.id, 2, 2), ci(st.BASE_MATK.id, 4, 4) ],
     true
 )
 ItemTable.CRACKED_BOW = _(0x0003, 'Cracked Bow', sf.INVENTORY | sf.ARM, ic.WEAPON, ac.RANGED,
