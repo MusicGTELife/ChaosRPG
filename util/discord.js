@@ -14,55 +14,70 @@ Markdown.c = Markdown.code
 const CommandTrigger = '.'
 
 class Command {
-    static createHandler(name, argsMin, argsMax, confirm, ctx, func, onReaction) {
-        return {
-            name,
-            'args_min': argsMin,
-            'args_max': argsMax,
-            confirm,
+    constructor(name, commandHandler, ctx, args, message, timeout) {
+        this.name = name
+        this.commandHandler = commandHandler
+        this.ctx = ctx
+        this.args = args
+        this.message = message
+        this.response = null
 
-            'ctx': ctx,
-            'func': func,
-            'onReaction': onReaction
+        this.timeout = timeout
+        this.timer = null
+        if (this.timeout > 0)
+            this.timer = setTimeout(() => { this.deleter() }, timeout)
+    }
+
+    deleter() {
+        if (this.response) {
+            // console.log('response deleted')
+            this.response.delete()
         }
+    }
+
+    refresh() {
+        if (this.timeout <= 0)
+            return
+
+        if (this.timer)
+            clearTimeout(this.timer)
+
+        this.timer = setTimeout(() => { this.deleter() }, this.timeout)
+        // console.log('timer refreshed')
     }
 }
 
-// TODO|FIXME unify command and tracked command
 class CommandHandler {
-    constructor(name, ctx, args, func, onReaction, message) {
-        this.name = name
-        this.ctx = ctx
+    constructor(game, handlers) {
+        this.game = game
+        this.handlers = new Map()
+        this.trackedCommands = new Map()
 
-        this.args = args
-        this.func = func || null
-
-        this.onReaction = onReaction || null
-
-        this.message = message || null
+        Object.values(handlers).map(h => {
+            let handler = CommandHandler.createHandler(
+                h.name, h.argsMin, h.argsMax, h.confirm, this.game, h.Command, h.timeout
+            )
+            if (handler)
+                this.handlers.set(h.name, handler)
+        })
     }
 
-    async run() {
-        return await this.func()
+    static createHandler(name, argsMin, argsMax, confirm, ctx, command, timeout) {
+        return {
+            name, argsMin, argsMax, confirm,
+            ctx, 'Command': command, timeout
+        }
     }
 
-    static getCommandEntry(commands, name) {
-        return Object.values(commands).find(c => c.name === name.toLowerCase())
+    getHandler(name) {
+        return this.handlers.get(name)
     }
 
-    static setHandler(commands, name, ctx, func, onReaction) {
-        let command = CommandHandler.getCommandEntry(commands, name)
-        if (!command)
-            return null
-
-        command.ctx = ctx
-        command.func = func
-        command.onReaction = onReaction || null
-
-        return command
+    setHandler(name, handler) {
+        return this.handlers.set(name, handler)
     }
 
-    static parseCommand(commands, message) {
+    parseCommand(message) {
         if (message.content.charAt(0) !== CommandTrigger)
             return null
 
@@ -73,8 +88,8 @@ class CommandHandler {
             return null
         }
 
-        let command = CommandHandler.getCommandEntry(commands, args[0])
-        if (!command) {
+        let handler = this.getHandler(args[0])
+        if (!handler) {
             console.log('unable to parse as command', args[0])
 
             return null
@@ -84,45 +99,18 @@ class CommandHandler {
         if (args.length)
             args.shift()
 
-        if (args.length > command.args_max || args.length < command.args_min) {
-            console.log('invalid number of args', command)
+        if (args.length > handler.argsMax || args.length < handler.argsMin) {
+            console.log('invalid number of args', handler)
 
             return null
         }
 
-        let handler = new CommandHandler(
-            command.name, command.ctx, args,
-            command.func, command.onReaction, message
+        let command = new handler.Command(
+            this, this.game, args, message, handler.timeout
         )
+        console.log(command)
 
-        return handler
-    }
-}
-
-// TODO|FIXME timer cancellation
-class TrackedCommand {
-    constructor(tracked, command, timeout) {
-        this.tracked = tracked
-        this.command = command
-        this.timeout = timeout
-
-        this.timer = setTimeout(() => { this.deleter() }, timeout)
-    }
-
-    deleter() {
-        console.log('timer expired')
-        if (this.command.response) {
-            this.command.response.delete()
-            this.tracked.delete(this.command.response.id)
-            console.log('response deleted')
-        }
-    }
-
-    refresh(timeout) {
-        this.timeout = timeout
-        clearTimeout(this.timer)
-        this.timer = setTimeout(() => { this.deleter() }, timeout)
-        console.log('timer refreshed')
+        return command
     }
 }
 
@@ -149,4 +137,4 @@ class DiscordUtil {
     }
 }
 
-module.exports = { Markdown, DiscordUtil, Command, TrackedCommand, CommandHandler }
+module.exports = { Markdown, DiscordUtil, CommandHandler, Command }

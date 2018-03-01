@@ -61,12 +61,6 @@ class CombatEvent {
         this.type = type
         this.data = data
     }
-
-    getResult() {
-        return {
-            attacker, defender, type, data
-        }
-    }
 }
 
 class CombatContext {
@@ -218,7 +212,7 @@ class CombatContext {
 
             console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
 
-            const monsterData = this.game.monster.generate(this.monsterRngCtx, this.itemRngCtx, code, level, monsterRarity.id)
+            const monsterData = MonsterUtil.generate(this.monsterRngCtx, this.itemRngCtx, code, level, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
 
@@ -355,8 +349,8 @@ class CombatContext {
             matk.value = Math.round(matk.value * (1 + roll / 10000))
         }
 
-        let physDmg = this.resolveDamageDealt(atk, def)
-        let magicDmg = this.resolveDamageDealt(matk, mdef)
+        let physDmg = CombatContext.resolveDamageDealt(atk, def)
+        let magicDmg = CombatContext.resolveDamageDealt(matk, mdef)
         let dmg = new Damage(
             { 'damage': physDmg, 'is_crit': pCrit },
             { 'damage': magicDmg, 'is_crit': mCrit }
@@ -447,7 +441,7 @@ class CombatContext {
             console.log('will drop item', i)
 
             i.owner = this.attacker.id
-            let equipSuccess = this.game.unit.equipItem(this.attacker, null, i, slot.id, slot.slot)
+            let equipSuccess = UnitUtil.equipItem(this.attacker, null, i, slot.id, slot.slot)
             if (!equipSuccess) {
                 console.log('unable to equip item in empty inv slot')
 
@@ -476,7 +470,7 @@ class CombatContext {
         return events
     }
 
-    resolveDamageDealt(attack, defense) {
+    static resolveDamageDealt(attack, defense) {
         // const pDef = defense.value/100
         let dmg = Math.ceil(attack.value * attack.value / (attack.value + defense.value * 0.1))
         if (dmg < 0) {

@@ -116,7 +116,7 @@ class MonsterUtil extends UnitUtil {
         return Math.floor(exp)
     }
 
-    getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, monsterCode, primaryChoice) {
+    static getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, monsterCode, primaryChoice) {
         const entry = MonsterUtil.getMonsterTableEntry(monsterCode)
         let choices = MonsterUtil.getMonsterWeaponChoices(entry.code, false)
         let choice = null
@@ -140,7 +140,7 @@ class MonsterUtil extends UnitUtil {
                     c.item_sub_class !== WeaponClass.CASTING_2H
             })
 
-            choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
+            choice = ItemUtil.getRandomItemEntry(itemRngCtx, choices)
             console.log('monster is dual-wielding', primaryChoice, choices, choice)
         } else {
             // generate a shield, quiver or a spell book for the second hand
@@ -154,7 +154,7 @@ class MonsterUtil extends UnitUtil {
                 choiceTypes.push(ArmorClass.QUIVER)
 
             choices = ItemUtil.getItemSubClassEntries(ItemClass.ARMOR, choiceTypes)
-            choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
+            choice = ItemUtil.getRandomItemEntry(itemRngCtx, choices)
             console.log('monster gets shield type', choices, choice)
         }
 
@@ -182,7 +182,7 @@ class MonsterUtil extends UnitUtil {
 
     // Monster generation is fun, we can't have simple idiomatic code all of
     // the time; this is one bad ass fothermucker
-    generate(monsterRngCtx, itemRngCtx, code, level, rarity) {
+    static generate(monsterRngCtx, itemRngCtx, code, level, rarity) {
         const tierEntry = Object.values(Tier).find(t => t.level_min <= level && t.level_max >= level)
         if (!tierEntry)
             return null
@@ -210,7 +210,7 @@ class MonsterUtil extends UnitUtil {
             }
         })
 
-        let items = this.generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity)
+        let items = MonsterUtil.generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity)
         if (!items) {
             console.log('failed to generate monster items')
             process.exit(1)
@@ -223,7 +223,7 @@ class MonsterUtil extends UnitUtil {
         return { unit, items }
     }
 
-    generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity) {
+    static generateMonsterItems(monsterRngCtx, itemRngCtx, code, tierEntry, rarity) {
         // FIXME move to datatable
         let monsterItems = ({
             [MonsterRarity.COMMON.id]: { 'min': 2, 'max': 3 },
@@ -259,7 +259,7 @@ class MonsterUtil extends UnitUtil {
             return null
         }
 
-        let choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
+        let choice = ItemUtil.getRandomItemEntry(itemRngCtx, choices)
         if (!choice) {
             console.log('unable to get primary weapon choice entry', code)
 
@@ -303,7 +303,7 @@ class MonsterUtil extends UnitUtil {
                 // primary weapon is not two-handed or, generate a shield, quiver or
                 // spellbook for casters based upon the first items type
 
-                choice = this.getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, code, primaryChoice)
+                choice = MonsterUtil.getSecondaryWeaponChoice(monsterRngCtx, itemRngCtx, code, primaryChoice)
                 if (!choice) {
                     console.log('unable to get item choice generating monster')
                     process.exit(1)
@@ -323,7 +323,7 @@ class MonsterUtil extends UnitUtil {
                     return null
                 }
                 choices = choices.concat(ItemUtil.getItemClassEntries([ ItemClass.JEWEL ]))
-                choice = this.game.item.getRandomItemTableEntry(itemRngCtx, choices)
+                choice = ItemUtil.getRandomItemEntry(itemRngCtx, choices)
                 if (!choice) {
                     console.log('unable to get armor choice')
 

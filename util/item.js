@@ -35,7 +35,7 @@ class ItemUtil {
     }
 
     // entries an array of item table entries already read from the item tables
-    getRandomItemTableEntry(itemRngCtx, entries) {
+    static getRandomItemEntry(itemRngCtx, entries) {
         if (entries.length === 0)
             return null
 

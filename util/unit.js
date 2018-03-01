@@ -101,7 +101,7 @@ class UnitUtil {
             }
 
             // equip the item on the unit
-            if (!this.equipItemByType(unit, items, i)) {
+            if (!UnitUtil.equipItemByType(unit, items, i)) {
                 console.log('unable to equip item', i)
                 process.exit(1)
             }
@@ -262,6 +262,12 @@ class UnitUtil {
             }
 
             if (ItemUtil.isShieldClass(item)) {
+                if (armItems.arm_right && ItemUtil.isTwoHanded(armItems.arm_right))
+                    return false
+
+                if (armItems.arm_left && ItemUtil.isTwoHanded(armItems.arm_left))
+                    return false
+
                 if (itemEntry.item_sub_class === ArmorClass.SHIELD) {
                     return !ItemUtil.isRanged(armItems.arm_right) &&
                             !ItemUtil.isRanged(armItems.arm_left)
@@ -306,7 +312,7 @@ class UnitUtil {
         return met
     }
 
-    equipItem(unit, items, item, node, slot) {
+    static equipItem(unit, items, item, node, slot) {
         if (!unit) {
             console.log('no unit')
             process.exit(1)
@@ -359,7 +365,7 @@ class UnitUtil {
         return true
     }
 
-    unequipItem(unit, items, item, nodeId, slotId) {
+    static unequipItem(unit, items, item, nodeId, slotId) {
         if (!unit || !items || !item)
             return false
 
@@ -383,7 +389,7 @@ class UnitUtil {
         return true
     }
 
-    equipItemByType(unit, items, item) {
+    static equipItemByType(unit, items, item) {
         if (!unit)
             return false
 
@@ -420,7 +426,7 @@ class UnitUtil {
 
         // console.log('equipItemByType found slot', entry)
 
-        return this.equipItem(unit, items, item, entry.id, entry.slot)
+        return UnitUtil.equipItem(unit, items, item, entry.id, entry.slot)
     }
 
     async getItems(unit) {
