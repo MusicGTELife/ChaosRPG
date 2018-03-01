@@ -1020,8 +1020,10 @@ class Game {
     createPlayerStatsEmbed(unit) {
         const statsBody = this.unitInfoStatsBody(unit, true)
         let embed = new Discord.RichEmbed().setColor(7682618)
-            .addField(`\`*${unit.name}\`*`, `**${unit.descriptor.stat_points_remaining}** stat points are available`, true)
-            .addField('Character Stats', statsBody)
+            .addField('Character Stats', `*\`${unit.name}\`*\n${statsBody}`)
+
+        if (unit.descriptor.stat_points_remaining)
+            embed.addField(`Remaining`, `**${unit.descriptor.stat_points_remaining}** stat points are available`, true)
 
         // console.log(embed)
         return embed
