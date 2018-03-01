@@ -2,11 +2,11 @@ const crypto = require('crypto')
 // const assert = require('assert')
 
 class SecureRNGContext {
-    constructor(secret, counter) {
+    constructor(secret, counter, offset) {
         if ((typeof secret) !== 'string')
             throw new TypeError('You must supply a string secret')
 
-        if (counter !== undefined && (typeof counter) !== 'number')
+        if (counter !== undefined && (typeof counter !== 'number'))
             throw new TypeError('You must supply a numeric counter')
 
         if (secret === '')
@@ -15,7 +15,7 @@ class SecureRNGContext {
         this.secret = secret
         this.hmacBits = 256
         this.counter = counter || 0
-        this.currentOffset = 0
+        this.currentOffset = offset || 0
 
         this.hmac = crypto.createHmac('sha256', secret).update(this.counter.toString())
             .digest()
