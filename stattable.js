@@ -30,6 +30,10 @@ StatTable.BASE_ATK = _(0x0110, StatFlag.BASE, 'BaseAtk', 'Base attack', 0, 65536
 StatTable.BASE_MATK = _(0x0111, StatFlag.BASE, 'BaseMAtk', 'Base magic attack', 0, 65536)
 StatTable.ACCURACY = _(0x0120, StatFlag.BASE, 'Acc', 'Accuracy', 0, 4096)
 StatTable.REACTION = _(0x0121, StatFlag.BASE, 'React', 'Reaction', 0, 4096)
+StatTable.REFLECT_ATK = _(0x0130, StatFlag.BASE, 'RefAtk', 'Reflect attack', 0, 100)
+StatTable.REFLECT_MATK = _(0x0131, StatFlag.BASE, 'RefMAtk', 'Reflect magic attack', 0, 100)
+StatTable.LEECH_ATK = _(0x0132, StatFlag.BASE, 'LeechAtk', 'Leech attack', 0, 100)
+StatTable.LEECH_MATK = _(0x0133, StatFlag.BASE, 'LeechMAtk', 'Leech magic attack', 0, 100)
 
 StatTable.HP = _(0x0200, StatFlag.BASE, 'HP', 'Hit points', 0, 65536)
 StatTable.ATK = _(0x0212, StatFlag.BASE, 'Atk', 'Attack rating', 0, 65536)
@@ -48,6 +52,10 @@ StatTable.UNIT_BASE_MATK = _(0x8031, StatFlag.UNIT, 'UnitBaseMAtk', 'Unit base m
 StatTable.UNIT_ACCURACY = _(0x8040, StatFlag.UNIT, 'UnitAcc', 'Unit accuracy', 0, 4096)
 StatTable.UNIT_REACTION = _(0x8041, StatFlag.UNIT, 'UnitReact', 'Unit reaction', 0, 4096)
 StatTable.UNIT_BLOCK = _(0x8042, StatFlag.UNIT, 'UnitBlock', 'Unit chance to block', 0, 65536)
+StatTable.UNIT_REFLECT_ATK = _(0x8050, StatFlag.UNIT, 'UnitRefAtk', 'Unit reflect attack', 0, 100)
+StatTable.UNIT_REFLECT_MATK = _(0x8051, StatFlag.UNIT, 'UnitRefMAtk', 'Unit reflect magic attack', 0, 100)
+StatTable.UNIT_LEECH_ATK = _(0x8052, StatFlag.UNIT, 'UnitLeechAtk', 'Unit leech attack', 0, 100)
+StatTable.UNIT_LEECH_MATK = _(0x8053, StatFlag.UNIT, 'UnitLeechMAtk', 'Unit leech magic attack', 0, 100)
 
 StatTable.UNIT_HP = _(0x8100, StatFlag.UNIT, 'UnitHP', 'Unit hit Points', 0, 65536)
 StatTable.UNIT_HP_MAX = _(0x8101, StatFlag.UNIT, 'UnitHPMax', 'Unit max hit points', 0, 65536)
