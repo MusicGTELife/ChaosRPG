@@ -1,8 +1,13 @@
 const { Table } = require('./tableutil')
 const { StatTable } = require('./stattable')
 
-const ItemModClass = { }
+const ItemModFlags = { }
+ItemModFlags.OFFENSIVE = 0x01
+ItemModFlags.DEFENSIVE = 0x01 << 1
 
+ItemModFlags.MULTI = ItemModFlags.OFFENSIVE | ItemModFlags.DEFENSIVE
+
+const ItemModClass = { }
 ItemModClass.MINOR = { 'id': 0x01, 'name': 'Minor' }
 ItemModClass.MAJOR = { 'id': 0x02, 'name': 'Major' }
 ItemModClass.IMPLICIT = { 'id': 0xff, 'name': 'Implicit' }
