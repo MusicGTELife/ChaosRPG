@@ -58,7 +58,7 @@ ItemTable.CRACKED_BOW = _(0x0003, 'Cracked Bow', sf.INVENTORY | sf.ARM, ic.WEAPO
     [ cr(st.STR.id, 1), cr(st.DEX.id, 1) ], [ ci(st.BASE_ATK.id, 3, 3) ],
     true
 )
-ItemTable.CRACKED_DAGGER = _(0x0004, 'Cracked Dagger', sf.INVENTORY | sf.ARM, ic.WEAPON, ac.MELEE_1H,
+ItemTable.CRACKED_DAGGER = _(0x0004, 'Cracked Dagger', sf.INVENTORY | sf.ARM, ic.WEAPON, ac.CASTING_1H,
     [ cr(st.STR.id, 1), cr(st.DEX.id, 1) ], [ ci(st.BASE_ATK.id, 1, 1), ci(st.BASE_MATK.id, 2, 2) ],
     true
 )
@@ -105,7 +105,11 @@ ItemTable.ROBE = _(0x05c0, 'Robe', sf.INVENTORY | sf.BODY, ic.ARMOR, ac.BODY_ARM
 )
 
 ItemTable.SMALL_SHIELD = _(0x0600, 'Small Shield', sf.INVENTORY | sf.ARM, ic.ARMOR, ac.SHIELD,
-    [ cr(st.DEX.id, 2), cr(st.STR.id, 4) ], [ ci(st.BLOCK.id, 5, 10), ci(st.DEF.id, 5, 10) ],
+    [ cr(st.DEX.id, 2), cr(st.STR.id, 4) ], [ ci(st.BLOCK.id, 5, 10), ci(st.DEF.id, 10, 15) ],
+    false
+)
+ItemTable.SPIKED_SHIELD = _(0x0601, 'Spiked Shield', sf.INVENTORY | sf.ARM, ic.ARMOR, ac.SHIELD,
+    [ cr(st.DEX.id, 4), cr(st.STR.id, 6) ], [ ci(st.BLOCK.id, 3, 5), ci(st.BASE_ATK.id, 1, 3) ],
     false
 )
 ItemTable.APPRENTICE_BOOK = _(0x0700, "Apprentice's Spell Book", sf.INVENTORY | sf.ARM, ic.ARMOR, ac.SPELLBOOK,
@@ -118,12 +122,16 @@ ItemTable.QUIVER = _(0x0800, 'Quiver', sf.INVENTORY | sf.ARM, ic.ARMOR, ac.QUIVE
 )
 
 // Weapons
-ItemTable.DAGGER = _(0x1000, 'Dagger', sf.INVENTORY | sf.ARM, ic.WEAPON, wc.MELEE_1H,
+ItemTable.DAGGER = _(0x1000, 'Dagger', sf.INVENTORY | sf.ARM, ic.WEAPON, wc.CASTING_1H,
     [ cr(st.DEX.id, 4), cr(st.STR.id, 4) ], [ ci(st.BASE_ATK.id, 1, 2), ci(st.BASE_MATK.id, 2, 3) ],
     false
 )
 ItemTable.RAPIER = _(0x1080, 'Rapier', sf.INVENTORY | sf.ARM, ic.WEAPON, wc.MELEE_1H,
     [ cr(st.DEX.id, 4), cr(st.STR.id, 6) ], [ ci(st.BASE_ATK.id, 3, 5) ],
+    false
+)
+ItemTable.SHORT_SWORD = _(0x1081, 'Short Sword', sf.INVENTORY | sf.ARM, ic.WEAPON, wc.MELEE_1H,
+    [ cr(st.DEX.id, 6), cr(st.STR.id, 4) ], [ ci(st.BASE_ATK.id, 2, 4), ci(st.ACCURACY.id, 10, 50) ],
     false
 )
 ItemTable.POLEARM = _(0x1100, 'Polearm', sf.INVENTORY | sf.ARM, ic.WEAPON, wc.MELEE_2H,
