@@ -485,23 +485,7 @@ class Game {
         await guildSettings.save()
     }
 
-    async doCombat(combatContext) {
-        console.log('doCombat')
-        if (!combatContext) {
-            console.log('no combat context in doCombat')
-            process.exit(1)
-
-            return false
-        }
-
-        // resolve attack
-        let results = await combatContext.resolveRound()
-        if (!results) {
-            console.log('failed to resolve attack')
-
-            return false
-        }
-
+    async printCombatEvents(combatContext, results) {
         let output = ''
         let dmgA = ''
         let dmgB = ''
@@ -541,17 +525,20 @@ class Game {
                 }
             })
 
-        results = results.filter(r => r.type === CombatEventType.PLAYER_DEATH.id ||
+        let deathResults = results.filter(r => r.type === CombatEventType.PLAYER_DEATH.id ||
                 r.type === CombatEventType.MONSTER_DEATH.id ||
                 r.type === CombatEventType.PLAYER_EXPERIENCE.id ||
                 r.type === CombatEventType.PLAYER_LEVEL.id ||
                 r.type === CombatEventType.MONSTER_ITEM_DROP.id)
 
-        const eventCount = results.length
+        const eventCount = deathResults.length
         let idx = 0
-        results.map(r => {
+        deathResults.map(r => {
             const atkName = `${UnitUtil.getName(r.attacker)}`
             const defName = `${UnitUtil.getName(r.defender)}`
+
+            if (idx > 0 && idx < eventCount)
+                output += ' '
 
             if (r.type === CombatEventType.PLAYER_DEATH.id ||
                     r.type === CombatEventType.MONSTER_DEATH.id)
@@ -568,16 +555,34 @@ class Game {
                 output += `**\`${defName}\`** has dropped their **${itemEntry.name}**.`
             }
 
-            if (idx > 0 && idx < eventCount - 1)
-                output += ' '
             idx++
         })
 
         if (output !== '')
-            Markdown.c(output, 'ml')
+            output = Markdown.c(output, 'ml')
 
         let embed = this.createCombatInfoEmbed(combatContext.unitA, combatContext.unitB, dmgA, dmgB, output)
         combatContext.message.edit(embed)
+    }
+
+    async doCombat(combatContext) {
+        console.log('doCombat')
+        if (!combatContext) {
+            console.log('no combat context in doCombat')
+            process.exit(1)
+
+            return false
+        }
+
+        // resolve attack
+        let results = await combatContext.resolveRound()
+        if (!results) {
+            console.log('failed to resolve attack')
+
+            return false
+        }
+
+        this.printCombatEvents(combatContext, results)
 
         return true
     }
