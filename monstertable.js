@@ -99,7 +99,6 @@ MonsterTable.CARRION_CROW = _(
         { 'id': st.BASE_MATK.id, 'value': 0 },
         { 'id': st.BASE_ATK.id, 'value': 2 },
         { 'id': st.ACCURACY.id, 'value': 60 }
-        // { 'id': st.LEECH_ATK.id, 'value': 10 }
     ])
 
 MonsterTable.VAMPIRE_BAT = _(
@@ -111,7 +110,6 @@ MonsterTable.VAMPIRE_BAT = _(
         { 'id': st.BASE_MATK.id, 'value': 1 },
         { 'id': st.BASE_ATK.id, 'value': 1 },
         { 'id': st.ACCURACY.id, 'value': 60 }
-        // { 'id': st.LEECH_MATK.id, 'value': 15 }
     ])
 
 MonsterTable.HARPY = _(
@@ -137,7 +135,7 @@ MonsterTable.RAT = _(
     ])
 
 MonsterTable.MAMMOTH = _(
-    0x0080, 'Mammoth', mc.BEAST, { 'min': t.TIER3.id, 'max': t.TIER7.id }, wf.MELEE_2H, 60, [
+    0x0080, 'Mammoth', mc.BEAST, { 'min': t.TIER3.id, 'max': t.TIER6.id }, wf.MELEE_2H, 60, [
         { 'id': st.DEX.id, 'value': 2 },
         { 'id': st.INT.id, 'value': 2 },
         { 'id': st.STR.id, 'value': 10 },
@@ -148,7 +146,7 @@ MonsterTable.MAMMOTH = _(
     ])
 
 MonsterTable.BASILISK = _(
-    0x0090, 'Basilisk', mc.HUMANOID, { 'min': t.TIER3.id, 'max': t.TIER9.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 100, [
+    0x0090, 'Basilisk', mc.HUMANOID, { 'min': t.TIER3.id, 'max': t.TIER6.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 8 },
         { 'id': st.INT.id, 'value': 8 },
         { 'id': st.STR.id, 'value': 10 },
@@ -159,7 +157,7 @@ MonsterTable.BASILISK = _(
     ])
 
 MonsterTable.WYVERN = _(
-    0x0091, 'Wyvern', mc.HUMANOID, { 'min': t.TIER4.id, 'max': t.TIER9.id }, wf.RANGED, 100, [
+    0x0091, 'Wyvern', mc.HUMANOID, { 'min': t.TIER4.id, 'max': t.TIER6.id }, wf.RANGED, 100, [
         { 'id': st.DEX.id, 'value': 10 },
         { 'id': st.INT.id, 'value': 10 },
         { 'id': st.STR.id, 'value': 8 },
@@ -251,7 +249,7 @@ MonsterTable.WILDMAN = _(
     ])
 
 MonsterTable.BLACKGUARD = _(
-    0x0210, 'Blackguard', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 90, [
+    0x0210, 'Blackguard', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 90, [
         { 'id': st.DEX.id, 'value': 6 },
         { 'id': st.INT.id, 'value': 2 },
         { 'id': st.STR.id, 'value': 8 },
@@ -262,7 +260,7 @@ MonsterTable.BLACKGUARD = _(
     ])
 
 MonsterTable.DEVOTED_ONE = _(
-    0x0211, 'Devoted One', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.CASTING_1H | wf.CAN_DUAL_WIELD, 90, [
+    0x0211, 'Devoted One', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.CASTING_1H | wf.CAN_DUAL_WIELD, 90, [
         { 'id': st.DEX.id, 'value': 8 },
         { 'id': st.INT.id, 'value': 9 },
         { 'id': st.STR.id, 'value': 4 },
@@ -273,7 +271,7 @@ MonsterTable.DEVOTED_ONE = _(
     ])
 
 MonsterTable.DARKSWORN_FOOTMAN = _(
-    0x0230, 'Darksworn Footman', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.ANY_MELEE, 90, [
+    0x0230, 'Darksworn Footman', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.ANY_MELEE, 90, [
         { 'id': st.DEX.id, 'value': 8 },
         { 'id': st.INT.id, 'value': 9 },
         { 'id': st.STR.id, 'value': 4 },
@@ -284,7 +282,7 @@ MonsterTable.DARKSWORN_FOOTMAN = _(
     ])
 
 MonsterTable.DARKSWORN_PRIEST = _(
-    0x0231, 'Darksworn Priest', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.ANY_CASTING, 90, [
+    0x0231, 'Darksworn Priest', mc.HUMANOID, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.ANY_CASTING, 90, [
         { 'id': st.DEX.id, 'value': 7 },
         { 'id': st.INT.id, 'value': 8 },
         { 'id': st.STR.id, 'value': 4 },
@@ -306,7 +304,7 @@ MonsterTable.WITCH = _(
     ])
 
 MonsterTable.WIZARD = _(
-    0x0281, 'Wizard', mc.HUMANOID, { 'min': t.TIER3.id, 'max': t.TIER8.id }, wf.ANY_CASTING | wf.CAN_DUAL_WIELD, 100, [
+    0x0281, 'Wizard', mc.HUMANOID, { 'min': t.TIER3.id, 'max': t.TIER6.id }, wf.ANY_CASTING | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 3 },
         { 'id': st.INT.id, 'value': 10 },
         { 'id': st.STR.id, 'value': 5 },
@@ -317,7 +315,7 @@ MonsterTable.WIZARD = _(
     ])
 
 MonsterTable.GIANT = _(
-    0x0290, 'Giant', mc.HUMANOID, { 'min': t.TIER1.id, 'max': t.TIER8.id }, wf.MELEE_2H | wf.CAN_DUAL_WIELD, 100, [
+    0x0290, 'Giant', mc.HUMANOID, { 'min': t.TIER1.id, 'max': t.TIER6.id }, wf.MELEE_2H | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 6 },
         { 'id': st.INT.id, 'value': 2 },
         { 'id': st.STR.id, 'value': 8 },
@@ -385,7 +383,7 @@ MonsterTable.BANSHEE = _(
     ])
 
 MonsterTable.WRAITH = _(
-    0x0304, 'Wraith', mc.ETHEREAL, { 'min': t.TIER3.id, 'max': t.TIER8.id }, wf.CASTING_1H, 100, [
+    0x0304, 'Wraith', mc.ETHEREAL, { 'min': t.TIER3.id, 'max': t.TIER6.id }, wf.CASTING_1H, 100, [
         { 'id': st.DEX.id, 'value': 5 },
         { 'id': st.INT.id, 'value': 5 },
         { 'id': st.STR.id, 'value': 6 },
@@ -431,7 +429,7 @@ MonsterTable.MISCREATION = _(
     ])
 
 MonsterTable.SUCCUBUS = _(
-    0x0403, 'Succubus', mc.DEMON, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.CASTING_1H | wf.CAN_DUAL_WIELD, 100, [
+    0x0403, 'Succubus', mc.DEMON, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.CASTING_1H | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 5 },
         { 'id': st.INT.id, 'value': 7 },
         { 'id': st.STR.id, 'value': 5 },
@@ -442,7 +440,7 @@ MonsterTable.SUCCUBUS = _(
     ])
 
 MonsterTable.TORMENTOR = _(
-    0x0404, 'Tormentor', mc.DEMON, { 'min': t.TIER2.id, 'max': t.TIER7.id }, wf.MELEE_1H | wf.CAN_DUAL_WIELD, 100, [
+    0x0404, 'Tormentor', mc.DEMON, { 'min': t.TIER2.id, 'max': t.TIER6.id }, wf.MELEE_1H | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 5 },
         { 'id': st.INT.id, 'value': 4 },
         { 'id': st.STR.id, 'value': 7 },
@@ -453,7 +451,7 @@ MonsterTable.TORMENTOR = _(
     ])
 
 MonsterTable.ARCHFIEND = _(
-    0x0405, 'Archfiend', mc.DEMON, { 'min': t.TIER3.id, 'max': t.TIER9.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 100, [
+    0x0405, 'Archfiend', mc.DEMON, { 'min': t.TIER3.id, 'max': t.TIER6.id }, wf.ANY_MELEE | wf.CAN_DUAL_WIELD, 100, [
         { 'id': st.DEX.id, 'value': 6 },
         { 'id': st.INT.id, 'value': 4 },
         { 'id': st.STR.id, 'value': 8 },
