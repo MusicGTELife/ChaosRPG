@@ -84,6 +84,7 @@ class GuildSettings extends Command {
                 return
             }
 
+            // TODO|FIXME hardcoded for now
             guildSettings = Guild.createSettings(
                 guild.id, game ? game.id : '', debug ? debug.id : '',
                 { 'rng_secret': 'test', 'rng_counter': 0, 'rng_offset': 0 },
@@ -91,7 +92,7 @@ class GuildSettings extends Command {
                 { 'rng_secret': 'test2', 'rng_counter': 0, 'rng_offset': 0 }
             )
             await this.ctx.gameDb.createGuildSettings(guildSettings)
-            console.log(guildSettings)
+            // console.log(guildSettings)
 
             settings.guilds.push(guild.id)
             settings.markModified('guilds')
@@ -252,8 +253,7 @@ class CreatePlayer extends Command {
             return
         }
 
-        let itemRngCtx = this.ctx.secureRng.getContext(`${this.message.guild.id}-item_rng`)
-        let starterItems = PlayerUtil.createStarterItems(itemRngCtx, type)
+        let starterItems = PlayerUtil.createStarterItems(type)
         if (!starterItems) {
             console.log('unable to create starter items')
             process.exit(1)

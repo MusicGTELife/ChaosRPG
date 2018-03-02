@@ -64,14 +64,12 @@ class CombatEvent {
 }
 
 class CombatContext {
-    constructor(game, guild, combatRngCtx, itemRngCtx, monsterRngCtx) {
+    constructor(game, guild, rngState) {
         this.inCombat = false
         this.game = game
         this.guild = guild
 
-        this.combatRngCtx = combatRngCtx
-        this.itemRngCtx = itemRngCtx
-        this.monsterRngCtx = monsterRngCtx
+        this.rngState = rngState
 
         this.unitA = null
         this.unitB = null
@@ -125,8 +123,8 @@ class CombatContext {
         let reactA = SU.getStat(this.unitA.stats, ST.UNIT_REACTION.id)
         let reactB = SU.getStat(this.unitB.stats, ST.UNIT_REACTION.id)
 
-        let magicA = SecureRNG.getRandomInt(this.combatRngCtx, 0, reactA.value)
-        let magicB = SecureRNG.getRandomInt(this.combatRngCtx, 0, reactB.value)
+        let magicA = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, reactA.value)
+        let magicB = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, reactB.value)
 
         if (magicA > magicB)
             this.setAttacker(this.unitA.id)
@@ -161,7 +159,7 @@ class CombatContext {
 
         let shuffled = online
         if (online.length > 1)
-            shuffled = SecureRNG.shuffleSequence(this.combatRngCtx, shuffled)
+            shuffled = SecureRNG.shuffleSequence(this.rngState.combatRngCtx, shuffled)
 
         await Promise.all(shuffled.map(async u => {
             // if (!UnitUtil.isAlive(u)) {
@@ -182,7 +180,7 @@ class CombatContext {
         units.push(shuffled.pop())
 
         let pvp = false
-        const wantPvp = SecureRNG.getRandomInt(this.combatRngCtx, 0, 127) === 127
+        const wantPvp = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, 127) === 127
         if (wantPvp) {
             online.map(o => {
                 const diff = Math.abs(o.level - units[0].level)
@@ -199,20 +197,20 @@ class CombatContext {
         } else {
             console.log('monster combat selected')
 
-            let magic = SecureRNG.getRandomInt(this.combatRngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
+            let magic = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, MonsterRarity.SUPERBOSS.rarity)
             const monsterRarity = CombatContext.getFightMonsterRarity(magic)
 
-            let shuffledTable = SecureRNG.shuffleSequence(this.monsterRngCtx, Object.values(MonsterTable))
+            let shuffledTable = SecureRNG.shuffleSequence(this.rngState.monsterRngCtx, Object.values(MonsterTable))
 
             // generate a monster
             const range = 1 + Math.round(units[0].level * 0.1)
             const code = shuffledTable.shift().code
-            const diff = SecureRNG.getRandomInt(this.monsterRngCtx, -(range * 2), range)
+            const diff = SecureRNG.getRandomInt(this.rngState.monsterRngCtx, -(range * 2), range)
             const level = Math.max(1, units[0].level + diff)
 
             console.log(`creating level ${level} ${monsterRarity.name}(${magic}) monster for combat`)
 
-            const monsterData = MonsterUtil.generate(this.monsterRngCtx, this.itemRngCtx, code, level, monsterRarity.id)
+            const monsterData = MonsterUtil.generate(this.rngState.monsterRngCtx, this.rngState.itemRngCtx, code, level, monsterRarity.id)
             if (!monsterData) {
                 console.log('failed creating a monster')
 
@@ -286,7 +284,7 @@ class CombatContext {
         events = events.concat(result)
 
         let guildSettings = await this.game.gameDb.getGuildSettings(this.guild)
-        this.game.updateGuildRngState(guildSettings, this.combatRngCtx, this.monsterRngCtx, this.itemRngCtx)
+        this.game.updateGuildRngState(guildSettings, this.rngState)
 
         return events
     }
@@ -312,12 +310,12 @@ class CombatContext {
         // let defendReact = SU.getStat(this.defender.stats, ST.UNIT_REACTION.id)
 
         // Unsure if I'll do dodge yet, but is so, it will be based on reaction
-        // let attackReactRoll = SecureRNG.getRandomInt(this.combatRngCtx, 0, attackReact.value)
-        // let defendReactRoll = SecureRNG.getRandomInt(this.combatRngCtx, 0, defendReact.value)
+        // let attackReactRoll = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, attackReact.value)
+        // let defendReactRoll = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, defendReact.value)
 
         let blocked = false
         if (block.value) {
-            let magic = SecureRNG.getRandomInt(this.combatRngCtx, 0, 100)
+            let magic = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, 100)
             if (magic <= block.value)
                 blocked = true
         }
@@ -339,7 +337,7 @@ class CombatContext {
         let pCrit = false
         if (atk.value && pAcc > 0.99) {
             pCrit = true
-            const roll = SecureRNG.getRandomInt(this.combatRngCtx, acc.value, 10000)
+            const roll = SecureRNG.getRandomInt(this.rngState.combatRngCtx, acc.value, 10000)
             atk.value = Math.round(atk.value * (1 + roll / 10000))
         }
 
@@ -348,7 +346,7 @@ class CombatContext {
         let mCrit = false
         if (matk.value && pAcc > 0.99) {
             mCrit = true
-            const roll = SecureRNG.getRandomInt(this.combatRngCtx, acc.value, 10000)
+            const roll = SecureRNG.getRandomInt(this.rngState.combatRngCtx, acc.value, 10000)
             matk.value = Math.round(matk.value * (1 + roll / 10000))
         }
 
@@ -428,7 +426,7 @@ class CombatContext {
         // Drop items
         // TODO|FIXME move drop rate to data table
         await Promise.all(monsterItems.map(async i => {
-            let magic = SecureRNG.getRandomInt(this.combatRngCtx, 0, 9)
+            let magic = SecureRNG.getRandomInt(this.rngState.combatRngCtx, 0, 9)
             if (magic < 8)
                 return this.game.gameDb.removeItem(i)
 
@@ -491,7 +489,7 @@ class CombatContext {
 
     getHitAccuracyRoll(unit, accuracy) {
         // Scale attack down according to accuracy roll
-        let pAcc = SecureRNG.getRandomInt(this.combatRngCtx, accuracy, 10000)
+        let pAcc = SecureRNG.getRandomInt(this.rngState.combatRngCtx, accuracy, 10000)
         let acc = Math.max(1, pAcc / 100)
 
         // console.log(`acc roll ${UnitUtil.getName(unit)} ${accuracy} ${pAcc} ${acc}`)

@@ -456,35 +456,6 @@ class Game {
         return embed
     }
 
-    async updateGuildRngState(guildSettings, combatRngCtx, monsterRngCtx, itemRngCtx) {
-        if (!guildSettings) {
-            process.exit(1)
-
-            return
-        }
-
-        if (combatRngCtx) {
-            guildSettings.combat_rng_state.rng_secret = combatRngCtx.secret
-            guildSettings.combat_rng_state.rng_counter = combatRngCtx.counter
-            guildSettings.combat_rng_state.rng_offset = combatRngCtx.currentOffset
-        }
-
-        if (monsterRngCtx) {
-            guildSettings.monster_rng_state.rng_secret = monsterRngCtx.secret
-            guildSettings.monster_rng_state.rng_counter = monsterRngCtx.counter
-            guildSettings.monster_rng_state.rng_offset = monsterRngCtx.currentOffset
-        }
-
-        if (itemRngCtx) {
-            guildSettings.item_rng_state.rng_secret = itemRngCtx.secret
-            guildSettings.item_rng_state.rng_counter = itemRngCtx.counter
-            guildSettings.item_rng_state.rng_offset = itemRngCtx.currentOffset
-        }
-
-        // console.log('gsettings', guildSettings)
-        await guildSettings.save()
-    }
-
     async printCombatEvents(combatContext, results) {
         let output = ''
         let dmgA = ''
@@ -565,6 +536,89 @@ class Game {
         combatContext.message.edit(embed)
     }
 
+    async updateGuildRngState(guildSettings, rngState) {
+        if (!guildSettings) {
+            process.exit(1)
+
+            return null
+        }
+
+        if (!rngState) {
+            process.exit(1)
+
+            return null
+        }
+
+        guildSettings.combat_rng_state.rng_secret = rngState.combatRngCtx.secret
+        guildSettings.combat_rng_state.rng_counter = rngState.combatRngCtx.counter
+        guildSettings.combat_rng_state.rng_offset = rngState.combatRngCtx.currentOffset
+
+        guildSettings.monster_rng_state.rng_secret = rngState.monsterRngCtx.secret
+        guildSettings.monster_rng_state.rng_counter = rngState.monsterRngCtx.counter
+        guildSettings.monster_rng_state.rng_offset = rngState.monsterRngCtx.currentOffset
+
+        guildSettings.item_rng_state.rng_secret = rngState.itemRngCtx.secret
+        guildSettings.item_rng_state.rng_counter = rngState.itemRngCtx.counter
+        guildSettings.item_rng_state.rng_offset = rngState.itemRngCtx.currentOffset
+
+        // console.log('gsettings', guildSettings)
+        await guildSettings.save()
+
+        return rngState
+    }
+
+    getGuildRngState(guildSettings) {
+        if (!guildSettings) {
+            process.exit(1)
+
+            return null
+        }
+
+        let combatRngCtx = this.secureRng.getContext(`${guildSettings.guild}-combat_rng`)
+        if (!combatRngCtx) {
+            combatRngCtx = new SecureRNGContext(
+                guildSettings.combat_rng_state.rng_secret,
+                guildSettings.combat_rng_state.rng_counter,
+                guildSettings.combat_rng_state.rng_offset
+            )
+            if (!this.secureRng.addContext(combatRngCtx, `${guildSettings.guild}-combat_rng`)) {
+                console.log('unable to add combat RNG context')
+
+                return null
+            }
+        }
+
+        let itemRngCtx = this.secureRng.getContext(`${guildSettings.guild}-item_rng`)
+        if (!itemRngCtx) {
+            itemRngCtx = new SecureRNGContext(
+                guildSettings.item_rng_state.rng_secret,
+                guildSettings.item_rng_state.rng_counter,
+                guildSettings.item_rng_state.rng_offset
+            )
+            if (!this.secureRng.addContext(itemRngCtx, `${guildSettings.guild}-item_rng`)) {
+                console.log('unable to add item RNG context')
+
+                return null
+            }
+        }
+
+        let monsterRngCtx = this.secureRng.getContext(`${guildSettings.guild}-monster_rng`)
+        if (!monsterRngCtx) {
+            monsterRngCtx = new SecureRNGContext(
+                guildSettings.monster_rng_state.rng_secret,
+                guildSettings.monster_rng_state.rng_counter,
+                guildSettings.monster_rng_state.rng_offset
+            )
+            if (!this.secureRng.addContext(monsterRngCtx, `${guildSettings.guild}-monster_rng`)) {
+                console.log('unable to add monster RNG context')
+
+                return null
+            }
+        }
+
+        return { combatRngCtx, monsterRngCtx, itemRngCtx }
+    }
+
     async doCombat(combatContext) {
         console.log('doCombat')
         if (!combatContext) {
@@ -614,52 +668,18 @@ class Game {
                 return
             }
 
-            let combatRngCtx = this.secureRng.getContext(`${guildSettings.guild}-combat_rng`)
-            if (!combatRngCtx) {
-                combatRngCtx = new SecureRNGContext(
-                    guildSettings.combat_rng_state.rng_secret,
-                    guildSettings.combat_rng_state.rng_counter,
-                    guildSettings.combat_rng_state.rng_offset
-                )
-                if (!this.secureRng.addContext(combatRngCtx, `${guildSettings.guild}-combat_rng`)) {
-                    console.log('unable to add combat RNG context')
+            let rngState = this.getGuildRngState(guildSettings)
+            if (!rngState) {
+                console.log('could no load rng state')
+                process.exit(1)
 
-                    return
-                }
-            }
-
-            let itemRngCtx = this.secureRng.getContext(`${guildSettings.guild}-item_rng`)
-            if (!itemRngCtx) {
-                itemRngCtx = new SecureRNGContext(
-                    guildSettings.item_rng_state.rng_secret,
-                    guildSettings.item_rng_state.rng_counter,
-                    guildSettings.item_rng_state.rng_offset
-                )
-                if (!this.secureRng.addContext(itemRngCtx, `${guildSettings.guild}-item_rng`)) {
-                    console.log('unable to add item RNG context')
-
-                    return
-                }
-            }
-
-            let monsterRngCtx = this.secureRng.getContext(`${guildSettings.guild}-monster_rng`)
-            if (!monsterRngCtx) {
-                monsterRngCtx = new SecureRNGContext(
-                    guildSettings.monster_rng_state.rng_secret,
-                    guildSettings.monster_rng_state.rng_counter,
-                    guildSettings.monster_rng_state.rng_offset
-                )
-                if (!this.secureRng.addContext(monsterRngCtx, `${guildSettings.guild}-monster_rng`)) {
-                    console.log('unable to add monster RNG context')
-
-                    return
-                }
+                return
             }
 
             // okay, look for this guilds combat context
             let combatCtx = this.combatContexts.get(guild.id)
             if (!combatCtx) {
-                combatCtx = new CombatContext(this, guild.id, combatRngCtx, itemRngCtx, monsterRngCtx)
+                combatCtx = new CombatContext(this, guild.id, rngState)
                 this.combatContexts.set(guild.id, combatCtx)
             }
 
@@ -697,7 +717,7 @@ class Game {
                 combatCtx.inCombat = true
             }
 
-            await this.updateGuildRngState(guildSettings, combatRngCtx, monsterRngCtx, itemRngCtx)
+            await this.updateGuildRngState(guildSettings, rngState)
 
             return this.doCombat(combatCtx)
         }))

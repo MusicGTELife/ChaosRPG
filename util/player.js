@@ -35,10 +35,7 @@ class PlayerUtil extends UnitUtil {
         return { unit, items }
     }
 
-    static createStarterItems(itemRngCtx, type) {
-        if (!itemRngCtx)
-            return null
-
+    static createStarterItems(type) {
         let weaponEntry = ({
             [PlayerType.MAGE.id]: ItemTable.CRACKED_WAND,
             [PlayerType.WARRIOR.id]: ItemTable.CRACKED_SWORD,
